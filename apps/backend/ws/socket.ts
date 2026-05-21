@@ -3,11 +3,9 @@ import { Server } from "socket.io";
 
 import { redis } from "../utils/redis.js"; 
 import {
-    chatHandlers,
     notificationHandlers,
-    presenceHandlers,
     submissionHandlers,
-} from "./handlers.js"; 
+} from "./handlers.js";
 
 let io: Server;
 
@@ -23,16 +21,15 @@ export const initializeSocketIO = (httpServer: HTTPServer) => {
     // Create a dedicated Redis subscriber to avoid blocking the main client
     const sub = redis.duplicate();
 
-    // Explicit TypeScript typings for callback parameters
-    sub.psubscribe("submission:*", (err: Error | null, count: number) => {
-        if (err) {
-            console.error("Failed to subscribe: %s", err.message);
-        } else {
+    sub.psubscribe("submission:*")
+        .then((count) => {
             console.log(
                 `Subscribed to ${count} channels. Listening for updates on submission:*`,
             );
-        }
-    });
+        })
+        .catch((err: Error) => {
+            console.error("Failed to subscribe: %s", err.message);
+        });
 
     // Added underscore to _pattern to bypass strict mode "unused variable" error
     sub.on("pmessage", (_pattern: string, channel: string, message: string) => {
@@ -65,9 +62,7 @@ export const initializeSocketIO = (httpServer: HTTPServer) => {
 
         
         submissionHandlers(socket);
-        chatHandlers(socket);
         notificationHandlers(socket);
-        presenceHandlers(socket);
 
         socket.on("disconnect", () => {
             console.log(`Client disconnected: ${socket.id}`);
