@@ -1,0 +1,108 @@
+// This is your Prisma schema file
+// learn more at https://pris.ly/d/prisma-schema
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+}
+
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(TEACHER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments Assignment[]
+  submissions Submission[]
+  rubrics     Rubric[]
+
+  @@map("users")
+}
+
+model Assignment {
+  id                String   @id @default(uuid())
+  title             String
+  description       String?
+  maxScore          Int      @default(100)
+  dueDate           DateTime?
+  requireUniqueId   Boolean  @default(false)
+  otp               String
+  status            FormStatus @default(DRAFT)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  teacherId         String
+  teacher           User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  submissions       Submission[]
+  
+  rubricId          String?
+  rubric            Rubric?      @relation(fields: [rubricId], references: [id], onDelete: SetNull)
+
+  @@index([teacherId])
+  @@map("assignments")
+}
+
+model Rubric {
+  id        String   @id @default(uuid())
+  name      String
+  criteria  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teacherId   String
+  teacher     User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+
+  @@index([teacherId])
+  @@map("rubrics")
+}
+
+model Submission {
+  id              String           @id @default(uuid())
+  fileKey         String           // S3 object key for internal reference
+  publicUrl       String           // CDN or presigned url
+  score           Int?
+  feedback        Json?            // Structured AI feedback is better than plain string
+  status          SubmissionStatus @default(PENDING)
+  studentUniqueId String?          // Roll number or external ID
+  
+  submittedAt     DateTime         @default(now())
+  gradedAt        DateTime?
+
+  studentId       String
+  student         User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  assignmentId    String
+  assignment      Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([assignmentId])
+  @@map("submissions")
+}
+
+enum SubmissionStatus {
+  PENDING
+  EVALUATING
+  REVIEWING
+  GRADED
+  FAILED
+}
