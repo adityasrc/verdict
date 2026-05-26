@@ -1,0 +1,53 @@
+# -----------------------------
+# Base Image (Node.js runtime)
+# -----------------------------
+FROM node:20-alpine AS base
+WORKDIR /app
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# -----------------------------
+# Dependencies Stage
+# -----------------------------
+FROM base AS deps
+
+# Copy package files and Prisma schema
+COPY package.json pnpm-lock.yaml* ./
+COPY prisma ./prisma/
+COPY prisma.config.ts ./
+
+# Install dependencies using pnpm
+RUN pnpm install
+
+# Generate Prisma client
+ENV DATABASE_URL="postgresql://dummy:5432/dummy"
+RUN pnpm exec prisma generate
+
+# -----------------------------
+# Build Stage (Build TypeScript)
+# -----------------------------
+FROM deps AS builder
+
+COPY . .
+
+# Build API and WebSocket into dist/
+RUN pnpm build
+
+# -----------------------------
+# Final Production Image
+# -----------------------------
+FROM base AS prod
+WORKDIR /app
+
+# Copy production node_modules (including generated Prisma client)
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy dist build output
+COPY --from=builder /app/dist ./dist
+
+# Copy prisma folder + config for DB schema + migration support
+COPY --from=deps /app/prisma ./prisma
+COPY --from=deps /app/prisma.config.ts ./
+
+# Default CMD (overridden in docker-compose)
+CMD ["node", "dist/index.js"]
