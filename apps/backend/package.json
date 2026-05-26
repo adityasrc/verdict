@@ -1,0 +1,51 @@
+{
+    "name": "verdict-backend",
+    "module": "index.ts",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "dev": "tsx watch index.ts",
+        "dev:worker": "tsx workers/SubmissionWorker.ts",
+        "build": "tsup index.ts workers/SubmissionWorker.ts ws-server.ts --outDir dist --format esm --target node20 --sourcemap",
+        "clean": "rm -rf dist",
+        "lint": "eslint .",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/bcryptjs": "^3.0.0",
+        "@types/cors": "^2.8.19",
+        "@types/express": "^5.0.6",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/multer": "^2.0.0",
+        "@types/node": "^20.0.0",
+        "@types/pg": "^8.20.0",
+        "@types/socket.io": "^3.0.2",
+        "eslint": "^9.17.0",
+        "globals": "^15.14.0",
+        "prisma": "^7.8.0",
+        "tsup": "^8.4.0",
+        "tsx": "^4.19.4",
+        "typescript": "^5.8.3",
+        "typescript-eslint": "^8.18.1"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.1051.0",
+        "@aws-sdk/s3-request-presigner": "^3.1051.0",
+        "@prisma/adapter-pg": "^7.8.0",
+        "@prisma/client": "^7.8.0",
+        "bcryptjs": "^3.0.3",
+        "bullmq": "^5.66.0",
+        "cors": "^2.8.5",
+        "dotenv": "^17.4.2",
+        "express": "^5.2.1",
+        "ioredis": "^5.8.2",
+        "jsonwebtoken": "^9.0.3",
+        "multer": "^1.4.5-lts.1",
+        "pg": "^8.21.0",
+        "socket.io": "^4.8.1",
+        "zod": "^4.4.3"
+    }
+}
