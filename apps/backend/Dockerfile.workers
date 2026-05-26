@@ -1,0 +1,63 @@
+# -----------------------------
+# Base image: Node.js
+# -----------------------------
+FROM node:20-alpine AS base
+WORKDIR /app
+# Install pnpm globally so all stages can use it
+RUN npm install -g pnpm
+
+# -----------------------------
+# Dependencies
+# -----------------------------
+FROM base AS deps
+
+COPY package.json pnpm-lock.yaml* ./
+COPY prisma ./prisma/
+COPY prisma.config.ts ./
+
+RUN pnpm install
+
+# Dummy URL to allow Prisma to generate the client without connecting to a real DB
+ENV DATABASE_URL="postgresql://dummy:5432/dummy"
+RUN pnpm exec prisma generate
+
+# -----------------------------
+# Build worker
+# -----------------------------
+FROM deps AS builder
+
+COPY . .
+
+# Compile TypeScript to JavaScript (Assumes a 'build' script exists in package.json)
+RUN pnpm run build
+
+# -----------------------------
+# Production image
+# -----------------------------
+FROM base AS prod
+WORKDIR /app
+
+# Install Python (runtime only, no build deps yet)
+RUN apk add --no-cache python3 py3-pip
+
+# Copy Node deps and Prisma client from the deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/prisma ./prisma
+
+# Copy Python requirements first
+COPY workers/python/requirements.txt ./workers/python/
+
+# Install Python deps with build tools, then remove build tools to save space
+RUN apk add --no-cache --virtual .build-deps build-base python3-dev cargo clang clang-dev clang-libs llvm && \
+    pip3 install --no-cache-dir --default-timeout=100 --retries=5 \
+    -r workers/python/requirements.txt --break-system-packages && \
+    apk del .build-deps
+
+# Copy Python scripts
+COPY workers/python ./workers/python
+
+# Copy the built worker files from the builder stage
+COPY --from=builder /app/dist ./dist
+
+# Run the compiled worker file using standard Node (path fixed for tsup output)
+CMD ["node", "dist/SubmissionWorker.js"]

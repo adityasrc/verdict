@@ -1,0 +1,27 @@
+# Development Dockerfile for Backend
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml* ./
+COPY prisma ./prisma/
+COPY prisma.config.ts ./
+
+# Install dependencies using pnpm
+RUN pnpm install
+
+# Generate Prisma Client
+RUN pnpm exec prisma generate
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose our agreed backend port
+EXPOSE 8600
+
+# Start the development server
+CMD ["pnpm", "dev"]
