@@ -1,7 +1,6 @@
 import "dotenv/config";
 import http from "http";
 import app from "./api/app.js";
-import router from "./api/router.js";
 import { initializeSocketIO } from "./ws/socket.js";
 import { redis } from "./utils/redis.js";
 import S3Client from "./utils/S3client.js";
@@ -10,14 +9,12 @@ const ServerConfig = {
     httpPort: process.env.HTTP_PORT || 8600,
 };
 
-app.use("/api", router);
-
 const httpServer = http.createServer(app);
 
 initializeSocketIO(httpServer);
 
 const startServer = async () => {
-    
+
     try {
         await redis.ping();
         console.log("Redis connected successfully");

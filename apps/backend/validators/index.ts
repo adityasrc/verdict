@@ -5,7 +5,7 @@ export const registerSchema = z.object({
     email: z.string().email("Invalid email format"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     name: z.string().min(2, "Name is required"),
-    // Role is intentionally not accepted from the client to prevent privilege escalation
+    role: z.enum(["STUDENT", "TEACHER"]).default("STUDENT"),
 });
 
 export const loginSchema = z.object({
@@ -19,7 +19,7 @@ export const createAssignmentSchema = z.object({
     description: z.string().optional(),
     maxScore: z.number().int().positive().default(100),
     requireUniqueId: z.boolean().default(false),
-    dueDate: z.coerce.date().optional(), 
+    dueDate: z.coerce.date().optional(),
     rubricId: z.string().uuid("Invalid Rubric ID format").optional(),
 });
 

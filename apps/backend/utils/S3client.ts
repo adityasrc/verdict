@@ -1,20 +1,22 @@
-import { S3Client as AWSS3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
+import { S3Client as AWSS3Client, HeadBucketCommand } from "@aws-sdk/client-s3";
 
 const s3 = new AWSS3Client({
-    region: "us-east-1",
-    endpoint: process.env.R2_ENDPOINT, 
+    region: "auto", // R2 requires 'auto'
+    endpoint: process.env.R2_ENDPOINT,
     credentials: {
         accessKeyId: process.env.ACCESSKEYID!,
         secretAccessKey: process.env.SECRETACCESSKEY!,
     },
-    // CRITICAL: Ye MinIO ko local par chalne deta hai bina SSL/DNS errors ke
     forcePathStyle: true,
 });
 
 const S3Client = {
     raw: s3,
     list: async () => {
-        const command = new ListBucketsCommand({});
+        // Connection test ke liye specific bucket ping karo, saari buckets list mat karo
+        const command = new HeadBucketCommand({
+            Bucket: process.env.BUCKET_NAME
+        });
         return await s3.send(command);
     }
 };

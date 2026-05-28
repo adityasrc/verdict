@@ -6,7 +6,10 @@ export class AssignmentManager {
         data: CreateAssignmentInput & { teacherId: string; otp: string }
     ) {
         return prisma.assignment.create({
-            data,
+            data: {
+                ...data,
+                status: "PUBLISHED",
+            },
         });
     }
 
