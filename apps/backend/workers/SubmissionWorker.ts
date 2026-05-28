@@ -2,9 +2,14 @@ import { Job, Worker } from "bullmq";
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import { SubmissionManager } from "../api/submission/submission.manager.js";
 import { prisma } from "../utils/db.js";
 import { redis } from "../utils/redis.js";
+
+// __dirname is not available in ESM modules — derive it from import.meta.url
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const submissionManager = new SubmissionManager();
 
@@ -16,7 +21,7 @@ enum SubmissionStatus {
 
 interface SubmissionJobData {
     id: string;
-    public_url: string;
+    publicUrl: string;
     score: number | null;
     feedback: string | null;
     status: SubmissionStatus;
@@ -51,7 +56,7 @@ function runPython(
         const script = path.join(__dirname, "python", "pdfParser.py");
         let extractedData: ParsedPage[] = [];
 
-        const proc = spawn("python3", [script, filePath, submissionId], {
+        const proc = spawn("python", [script, filePath, submissionId], {
             cwd: path.join(__dirname, "python"),
         });
 
@@ -121,7 +126,7 @@ function runGeminiGrader(
         console.log(`Using .env from: ${envPath}`);
 
         const proc = spawn(
-            "python3",
+            "python",
             [script, extractedDataJson, assignmentId, submissionId, contextJson],
             {
                 env: {
@@ -180,7 +185,7 @@ const worker = new Worker<SubmissionJobData>(
         console.log("Job received:", job.id);
         console.log("Job data:", job.data);
 
-        const { id, public_url, studentId, assignmentId } = job.data;
+        const { id, publicUrl, studentId, assignmentId } = job.data;
         console.log(`Processing submission ${id} for student ${studentId}`);
 
         redis.publish(
@@ -204,7 +209,7 @@ const worker = new Worker<SubmissionJobData>(
         const imagesDir = path.join(tmpDir, "extracted_images", id);
 
         try {
-            console.log(`Downloading PDF from: ${public_url}`);
+            console.log(`Downloading PDF from: ${publicUrl}`);
 
             redis.publish(
                 `submission:${id}`,
@@ -216,7 +221,12 @@ const worker = new Worker<SubmissionJobData>(
                 }),
             );
 
-            const buffer = await fetch(public_url).then((res) => res.arrayBuffer());
+            const buffer = await fetch(publicUrl).then((res) => {
+                if (!res.ok) {
+                    throw new Error(`Failed to download PDF: ${res.statusText}`);
+                }
+                return res.arrayBuffer();
+            });
             console.log(`Saving PDF to: ${pdfPath}`);
             fs.writeFileSync(pdfPath, Buffer.from(buffer));
             console.log(`PDF saved successfully`);

@@ -4,7 +4,7 @@ import os
 import google.generativeai as genai
 import PIL.Image
 
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-2.5-flash"
 
 def publish(event):
     """Print JSON event to stdout for Node.js to capture"""

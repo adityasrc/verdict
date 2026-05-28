@@ -41,7 +41,7 @@ export class AuthManager {
                 email: input.email,
                 password: hashedPassword,
                 name: input.name,
-                role: "STUDENT", // Always default to STUDENT; role cannot be set by the client
+                role: input.role,
             },
             select: {
                 id: true,
@@ -143,7 +143,8 @@ export class AuthManager {
     verifyAccessToken(token: string): TokenPayload | null {
         try {
             return jwt.verify(token, this.JWT_SECRET) as TokenPayload;
-        } catch {
+        } catch (err) {
+            console.error("JWT verify error:", err);
             return null;
         }
     }
