@@ -26,10 +26,12 @@ export default defineConfig([
             // Allow unused vars prefixed with _
             "@typescript-eslint/no-unused-vars": [
                 "warn",
-                { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+                { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" },
             ],
             // Allow explicit any
             "@typescript-eslint/no-explicit-any": "off",
+            // Namespaces are valid for global Express type augmentation
+            "@typescript-eslint/no-namespace": "off",
             // Prefer const
             "prefer-const": "warn",
             // No console in production (warn only)

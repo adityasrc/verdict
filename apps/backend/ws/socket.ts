@@ -1,11 +1,17 @@
 import type { Server as HTTPServer } from "http";
-import { Server } from "socket.io";
+import { Server, type Socket } from "socket.io";
+import jwt from "jsonwebtoken";
 
-import { redis } from "../utils/redis.js"; 
+import { redis } from "../utils/redis.js";
 import {
     notificationHandlers,
     submissionHandlers,
 } from "./handlers.js";
+
+interface AuthenticatedSocket extends Socket {
+    userId: string;
+    role: string;
+}
 
 let io: Server;
 
@@ -51,21 +57,44 @@ export const initializeSocketIO = (httpServer: HTTPServer) => {
                         eventWithId,
                     );
                 }
-            } catch (error) {
+            } catch (_error) {
                 console.error("Failed to parse message:", message);
             }
         }
     });
 
-    io.on("connection", (socket) => {
-        console.log(`Client connected: ${socket.id}`);
+    // Reject any client that does not send a valid JWT in the handshake
+    io.use((socket, next) => {
+        const token = socket.handshake.auth?.token as string | undefined;
 
-        
-        submissionHandlers(socket);
-        notificationHandlers(socket);
+        if (!token) {
+            return next(new Error("Authentication required"));
+        }
+
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            return next(new Error("Server misconfiguration"));
+        }
+
+        try {
+            const decoded = jwt.verify(token, secret) as { userId: string; role: string };
+            (socket as AuthenticatedSocket).userId = decoded.userId;
+            (socket as AuthenticatedSocket).role = decoded.role;
+            next();
+        } catch {
+            next(new Error("Invalid or expired token"));
+        }
+    });
+
+    io.on("connection", (socket) => {
+        const authedSocket = socket as AuthenticatedSocket;
+        console.log(`Client connected: ${authedSocket.id} (user: ${authedSocket.userId})`);
+
+        submissionHandlers(authedSocket);
+        notificationHandlers(authedSocket);
 
         socket.on("disconnect", () => {
-            console.log(`Client disconnected: ${socket.id}`);
+            console.log(`Client disconnected: ${authedSocket.id}`);
         });
     });
 

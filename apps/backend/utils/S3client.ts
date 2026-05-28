@@ -1,13 +1,13 @@
 import { S3Client as AWSS3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
 
 const s3 = new AWSS3Client({
-    region: "auto",
-    endpoint: process.env.R2_ENDPOINT,
+    region: "us-east-1",
+    endpoint: process.env.R2_ENDPOINT, 
     credentials: {
-        accessKeyId: process.env.ACCESSKEYID || "minioadmin",
-        secretAccessKey: process.env.SECRETACCESSKEY || "minioadmin",
+        accessKeyId: process.env.ACCESSKEYID!,
+        secretAccessKey: process.env.SECRETACCESSKEY!,
     },
-    // Required for MinIO local development to prevent subdomain routing
+    // CRITICAL: Ye MinIO ko local par chalne deta hai bina SSL/DNS errors ke
     forcePathStyle: true,
 });
 

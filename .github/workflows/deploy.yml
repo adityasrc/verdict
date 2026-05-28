@@ -1,0 +1,77 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  REPO_PATH: /home/satwaraa/lpu_auto_assignment_grading   # Path to repo on server
+
+jobs:
+  deploy:
+    name: Deploy to Server via SSH
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code (for reference)
+        uses: actions/checkout@v4
+
+      - name: Set image tag from git SHA
+        run: |
+          # Use first 7 characters of git SHA as image tag
+          # This auto-increments with every commit!
+          echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+          echo "📌 Image tag will be: ${GITHUB_SHA::7}"
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          REPO_PATH: ${{ env.REPO_PATH }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          envs: IMAGE_TAG,REPO_PATH
+          command_timeout: 30m
+          script: |
+            set -e
+
+            echo "🚀 Starting deployment..."
+            echo "🏷️ Image tag: $IMAGE_TAG (auto-generated from git SHA)"
+
+            # Navigate to repo directory
+            cd $REPO_PATH
+            echo "📁 Current directory: $(pwd)"
+
+            # Pull latest code
+            echo "📥 Pulling latest code..."
+            git fetch origin
+            git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
+            git pull
+
+            # Stop existing containers
+            echo "🛑 Stopping existing containers..."
+            docker compose down || true
+
+            # Build and start with docker-compose
+            echo "🐳 Building and starting containers..."
+            docker compose up -d --build
+
+            # Wait for containers to be healthy
+            echo "⏳ Waiting for containers to start..."
+            sleep 15
+
+            # Verify deployment
+            echo "✅ Verifying deployment..."
+            docker compose ps
+
+            # Health check
+            echo "🏥 Running health check..."
+            curl -s http://localhost:8600/api/health || echo "Health check pending..."
+
+            echo "🎉 Deployment complete with image tag: $IMAGE_TAG"
