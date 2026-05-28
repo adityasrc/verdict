@@ -1,4 +1,4 @@
-import { Award, BarChart3, FileText, FolderClock, Plus, Search, Share2, X } from 'lucide-react';
+import { Award, BarChart3, FileText, FolderClock, Plus, PlusCircle, Search, Share2, X } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
@@ -331,9 +331,17 @@ const Dashboard: React.FC = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">
-                                    Rubric (Optional)
-                                </label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-medium">
+                                        Rubric (Optional)
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsRubricManagerOpen(true)}
+                                        className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-medium flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded">
+                                        <PlusCircle className="h-3 w-3" /> Create Rubric
+                                    </button>
+                                </div>
                                 <select
                                     value={selectedRubricId}
                                     onChange={(e) => {
