@@ -1,4 +1,5 @@
 import { ArrowRight, Check, Lock, Mail, User as UserIcon } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../app/store";
@@ -20,7 +21,6 @@ const Signup: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted - starting signup process");
     try {
       const response = await signup({ email, password, name, role }).unwrap();
       dispatch(
@@ -33,96 +33,38 @@ const Signup: React.FC = () => {
       navigate("/dashboard");
     } catch (err: unknown) {
       const apiError = err as { data?: { message?: string } };
-      console.error("Signup error:", err);
-      toast.error(apiError?.data?.message || "Signup failed! Please try again.");
+      toast.error(apiError?.data?.message || "Signup failed. Please try again.");
     }
   };
 
-  const features = [
-    "Uncapped AI evaluations",
-    "Deep performance analytics",
-    "Student-first portal",
-    "Real-time event sync",
-  ];
-
   return (
-    <div className="w-full h-[calc(100vh-64px)] flex bg-white dark:bg-[#030712] text-gray-900 dark:text-white overflow-hidden transition-colors duration-300">
-      {/* Left Side - Visual Feature List */}
-      <div className="hidden lg:flex w-1/2 relative bg-gray-50 dark:bg-[#09090b] flex-col justify-center px-12 xl:px-24">
-        {/* Background Effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white dark:from-[#030712] via-indigo-50 dark:via-indigo-950/20 to-white dark:to-[#030712]"></div>
-        <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-gray-200 dark:via-gray-800 to-transparent"></div>
-
-        <div className="relative z-10 space-y-12">
-          <div>
-            <div className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-sm font-medium mb-6">
-              <span className="flex h-2 w-2 rounded-full bg-indigo-500 dark:bg-indigo-400 mr-2 animate-pulse"></span>
-              High-Agency Platform
-            </div>
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
-              Grade with <br />
-              <span className="text-indigo-600 dark:text-indigo-500">
-                Extreme Agency
-              </span>
-            </h2>
+    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <Link to="/" className="flex items-center justify-center gap-2.5 mb-8 group">
+          <div className="bg-violet-600 p-1.5 rounded-lg transition-transform group-hover:scale-105">
+            <BookOpen className="h-5 w-5 text-white" strokeWidth={2} />
           </div>
+          <span className="font-bold text-xl tracking-tight text-white">Verdict</span>
+        </Link>
 
-          <div className="space-y-5">
-            {features.map((feature, idx) => (
-              <div
-                key={idx}
-                className="flex items-center space-x-4 animate-fade-in"
-                style={{ animationDelay: `${idx * 100}ms` }}
-              >
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 flex items-center justify-center">
-                  <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-500" />
-                </div>
-                <span className="text-gray-600 dark:text-gray-300 font-medium">
-                  {feature}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-8 border-t border-gray-200 dark:border-gray-800">
-            <p className="text-sm text-gray-500 italic">
-              "Finally, an academic platform built with actual taste."
-            </p>
-            <div className="flex mt-4 -space-x-2">
-              {[1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="w-8 h-8 rounded-full border-2 border-white dark:border-[#030712] bg-gray-300 dark:bg-gray-600"
-                ></div>
-              ))}
-              <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-white dark:border-[#030712] bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 font-medium">
-                +2k
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Side - Signup Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-16 relative">
-        <div className="w-full max-w-sm space-y-8 relative z-10">
-          <div className="text-center lg:text-left">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-xl shadow-black/40">
+          <div className="text-center mb-7">
+            <h1 className="text-xl font-semibold text-white tracking-tight">
               Create an account
-            </h2>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Set up your workspace in seconds.
+            </h1>
+            <p className="text-sm text-zinc-500 mt-1">
+              Enter your details to get started
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1">
-              <Label htmlFor="name" className="text-xs uppercase text-gray-500 ml-1">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="name" className="text-xs font-medium text-zinc-400">
                 Full Name
               </Label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <UserIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
+                  <UserIcon className="h-4 w-4 text-zinc-600 group-focus-within:text-violet-400 transition-colors" />
                 </div>
                 <Input
                   id="name"
@@ -130,19 +72,19 @@ const Signup: React.FC = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Jane Doe"
-                  className="pl-10 h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50"
+                  className="pl-9 h-10 rounded-lg bg-zinc-950 border-zinc-800 text-white text-sm placeholder:text-zinc-600 focus:border-violet-500/60 focus:ring-violet-500/20"
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="email" className="text-xs uppercase text-gray-500 ml-1">
-                Work Email
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs font-medium text-zinc-400">
+                Email
               </Label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400 dark:text-gray-500 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
+                  <Mail className="h-4 w-4 text-zinc-600 group-focus-within:text-violet-400 transition-colors" />
                 </div>
                 <Input
                   id="email"
@@ -150,19 +92,19 @@ const Signup: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="pl-10 h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50"
+                  className="pl-9 h-10 rounded-lg bg-zinc-950 border-zinc-800 text-white text-sm placeholder:text-zinc-600 focus:border-violet-500/60 focus:ring-violet-500/20"
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="password" className="text-xs uppercase text-gray-500 ml-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-xs font-medium text-zinc-400">
                 Password
               </Label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400 dark:text-gray-500 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
+                  <Lock className="h-4 w-4 text-zinc-600 group-focus-within:text-violet-400 transition-colors" />
                 </div>
                 <Input
                   id="password"
@@ -170,46 +112,64 @@ const Signup: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minimum 8 characters"
-                  className="pl-10 h-12 rounded-xl bg-gray-50 dark:bg-gray-900/50"
+                  className="pl-9 h-10 rounded-lg bg-zinc-950 border-zinc-800 text-white text-sm placeholder:text-zinc-600 focus:border-violet-500/60 focus:ring-violet-500/20"
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="role" className="text-xs uppercase text-gray-500 ml-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="role" className="text-xs font-medium text-zinc-400">
                 Role
               </Label>
               <select
+                id="role"
                 value={role}
                 onChange={(e) =>
                   setRole(e.target.value as "STUDENT" | "TEACHER" | "ADMIN")
                 }
-                className="block w-full px-3 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all shadow-sm"
+                className="block w-full h-10 px-3 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-sm focus:outline-none focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/20 transition-all"
               >
-                <option value="STUDENT">Student</option>
-                <option value="TEACHER">Teacher</option>
-                <option value="ADMIN">Admin</option>
+                <option value="STUDENT" className="bg-zinc-900">Student</option>
+                <option value="TEACHER" className="bg-zinc-900">Teacher</option>
+                <option value="ADMIN" className="bg-zinc-900">Admin</option>
               </select>
             </div>
 
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-all hover:scale-[1.02] shadow-[0_0_20px_-5px_rgba(79,70,229,0.3)]"
+              className="w-full h-10 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-all mt-2"
             >
-              {isLoading ? "Creating account..." : "Get Started"}
-              {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
+              {isLoading ? "Creating account..." : (
+                <span className="flex items-center justify-center gap-2">
+                  Sign Up
+                  <ArrowRight className="h-4 w-4" />
+                </span>
+              )}
             </Button>
           </form>
 
-          <p className="text-center text-sm text-gray-500">
+          <div className="mt-6 pt-5 border-t border-zinc-800/60">
+            <div className="flex flex-col gap-2">
+              {["Rubric-based AI grading", "Real-time grading updates", "Export results instantly"].map((item) => (
+                <div key={item} className="flex items-center gap-2">
+                  <div className="flex-shrink-0 w-4 h-4 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-violet-400" />
+                  </div>
+                  <span className="text-xs text-zinc-500">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-center text-sm text-zinc-500 mt-5">
             Already have an account?{" "}
             <Link
               to="/login"
-              className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors"
+              className="font-semibold text-violet-400 hover:text-violet-300 transition-colors"
             >
-              Log in instead
+              Sign in
             </Link>
           </p>
         </div>

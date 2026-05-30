@@ -1,37 +1,52 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { 
-  BookOpen, 
-  LayoutDashboard, 
-  LogOut, 
-  Moon, 
-  Sun, 
-  User, 
-  Menu, 
-  X 
+import {
+  BookOpen,
+  LayoutDashboard,
+  LogOut,
+  User,
+  Menu,
+  X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button"; // Shadcn Button
+import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "../app/store";
-import { useTheme } from "../context/ThemeContext";
 import { logout, selectCurrentUser } from "../features/auth/authSlice";
 
-const Navbar: React.FC = () => {
+const Navbar = () => {
   const user = useAppSelector(selectCurrentUser);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
 
-  // Your Flowboard patterns
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -39,116 +54,154 @@ const Navbar: React.FC = () => {
     navigate("/login");
   };
 
-  // Dynamic class for frosted glass effect
-  const navBackgroundClass = isScrolled 
-    ? "bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200/60 dark:border-zinc-800/60 shadow-sm py-2" 
-    : "bg-transparent border-b border-transparent py-4";
+  const logoHref = "/";
 
   return (
-    <header className={`fixed top-0 z-50 w-full transition-all duration-300 ${navBackgroundClass}`}>
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6">
-        
-        {/* Logo */}
-        <div className="flex items-center">
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="bg-violet-600 dark:bg-violet-500 p-1.5 rounded-xl transition-transform group-hover:rotate-6">
-              <BookOpen className="h-5 w-5 text-white" strokeWidth={2.5} />
-            </div>
-            <span className="font-bold text-[20px] tracking-tight text-zinc-900 dark:text-zinc-50">
-              Verdict
-            </span>
-          </Link>
-        </div>
+    <header
+      className={`fixed top-0 z-50 w-full transition-all duration-300 ${
+        isScrolled
+          ? "bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/50"
+          : "bg-transparent border-b border-transparent"
+      }`}
+    >
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
+        <Link to={logoHref} className="flex items-center gap-2.5 group">
+          <div className="bg-violet-600 p-1.5 rounded-lg transition-transform group-hover:scale-105">
+            <BookOpen className="h-5 w-5 text-white" strokeWidth={2} />
+          </div>
+          <span className="font-bold text-xl tracking-tight text-white">
+            Verdict
+          </span>
+        </Link>
 
-        {/* Desktop Navigation & Auth */}
-        <div className="hidden md:flex items-center gap-4">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-400 transition-colors"
-            aria-label="Toggle Theme"
-          >
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-
+        <div className="hidden md:flex items-center gap-3">
           {user ? (
-            <div className="flex items-center gap-4 pl-4 border-l border-zinc-200 dark:border-zinc-800">
-              <Button variant="ghost" size="sm" className="text-[13px] font-medium text-zinc-600 dark:text-zinc-300" asChild>
+            <div className="flex items-center gap-3 pl-3 border-l border-zinc-800">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 h-9"
+                asChild
+              >
                 <Link to="/dashboard">
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   Dashboard
                 </Link>
               </Button>
-              
-              <div className="flex items-center gap-2 text-[13px] font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 px-3 py-1.5 rounded-full">
-                <User size={14} className="text-violet-600 dark:text-violet-400" />
-                {user.email}
+
+              <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800">
+                <User size={14} className="text-violet-400" />
+                <span className="truncate max-w-[140px]">{user.email}</span>
               </div>
 
-              <Button 
-                variant="destructive" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleLogout}
-                className="text-[13px] font-medium rounded-full shadow-sm hover:shadow-md transition-all"
+                className="text-sm font-medium text-zinc-500 hover:text-red-400 hover:bg-red-950/30 h-9"
               >
-                <LogOut className="mr-2 h-4 w-4" /> Exit
+                <LogOut className="mr-2 h-4 w-4" />
+                Log Out
               </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-800">
-              <Button variant="ghost" size="sm" className="text-[13px] font-medium text-zinc-600 dark:text-zinc-300" asChild>
+            <div className="flex items-center gap-3 pl-3 border-l border-zinc-800">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 h-9"
+                asChild
+              >
                 <Link to="/login">Log In</Link>
               </Button>
-              <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white text-[13px] font-medium rounded-full px-5 shadow-md hover:shadow-violet-500/25 transition-all" asChild>
+              <Button
+                size="sm"
+                className="bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-medium h-9 px-5"
+                asChild
+              >
                 <Link to="/signup">Get Started</Link>
               </Button>
             </div>
           )}
         </div>
 
-        {/* Mobile Menu Toggle */}
-        <div className="flex md:hidden items-center gap-3">
-          <button onClick={toggleTheme} className="p-2 text-zinc-500 dark:text-zinc-400">
-            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-          <button 
-            className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+        <div className="flex md:hidden items-center gap-2">
+          <button
+            className="p-2 rounded-lg hover:bg-zinc-800 transition-colors"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-menu"
           >
-            {isMobileMenuOpen ? <X className="h-6 w-6 text-zinc-900 dark:text-zinc-100" /> : <Menu className="h-6 w-6 text-zinc-900 dark:text-zinc-100" />}
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5 text-white" />
+            ) : (
+              <Menu className="h-5 w-5 text-white" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 top-[72px] z-40 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-lg animate-in fade-in slide-in-from-top-4 duration-300">
-          <nav className="flex flex-col p-8 gap-6">
-            {user ? (
-              <>
-                <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 p-4 rounded-xl">
-                  <User size={18} className="text-violet-600 dark:text-violet-400" />
-                  <span className="truncate">{user.email}</span>
-                </div>
-                <Button className="w-full py-6 text-lg rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900" asChild>
-                  <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>Go to Dashboard</Link>
-                </Button>
-                <Button variant="destructive" className="w-full py-6 text-lg rounded-xl" onClick={handleLogout}>
-                  Exit / Logout
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" className="w-full py-6 text-lg rounded-xl dark:border-zinc-800" asChild>
-                  <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>Log In</Link>
-                </Button>
-                <Button className="w-full py-6 text-lg bg-violet-600 hover:bg-violet-700 text-white rounded-xl" asChild>
-                  <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)}>Get Started</Link>
-                </Button>
-              </>
-            )}
-          </nav>
-        </div>
-      )}
+      <div
+        id="mobile-menu"
+        ref={menuRef}
+        className={`md:hidden fixed inset-0 top-16 z-40 bg-zinc-950/98 backdrop-blur-xl transition-all duration-200 ${
+          isMobileMenuOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        aria-hidden={!isMobileMenuOpen}
+      >
+        <nav
+          className={`flex flex-col p-6 gap-4 transition-transform duration-200 ${
+            isMobileMenuOpen ? "translate-y-0" : "-translate-y-2"
+          }`}
+        >
+          {user ? (
+            <>
+              <div className="flex items-center gap-3 text-sm text-zinc-400 bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                <User size={18} className="text-violet-400 shrink-0" />
+                <span className="truncate">{user.email}</span>
+              </div>
+              <Button
+                className="w-full py-5 text-base rounded-xl bg-white text-zinc-950"
+                asChild
+              >
+                <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                  Dashboard
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full py-5 text-base rounded-xl border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                onClick={handleLogout}
+              >
+                Log Out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                className="w-full py-5 text-base rounded-xl border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                asChild
+              >
+                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  Log In
+                </Link>
+              </Button>
+              <Button
+                className="w-full py-5 text-base bg-white text-zinc-950 rounded-xl"
+                asChild
+              >
+                <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                  Get Started
+                </Link>
+              </Button>
+            </>
+          )}
+        </nav>
+      </div>
     </header>
   );
 };
