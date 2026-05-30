@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "../../app/store";
 import type { AuthState, User } from "../../types";
 
+// Read persisted auth immediately on load
 const userJson = localStorage.getItem("user");
 const accessToken = localStorage.getItem("accessToken");
 const refreshToken = localStorage.getItem("refreshToken");
@@ -47,7 +48,9 @@ const authSlice = createSlice({
 
 export const { setCredentials, logout } = authSlice.actions;
 
+// Two ways to check auth - use whichever fits the context
 export const selectCurrentUser = (state: RootState) => state.auth.user;
 export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
+export const selectAccessToken = (state: RootState) => state.auth.accessToken;
 
 export default authSlice.reducer;
