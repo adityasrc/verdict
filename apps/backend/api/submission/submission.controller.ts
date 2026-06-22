@@ -13,6 +13,7 @@ import {
     submissionActionSchema
 } from "../../validators/index.js";
 import { Prisma } from "@prisma/client";
+import rateLimit from "express-rate-limit";
 
 export class SubmissionController {
     public router = Router();
@@ -25,8 +26,16 @@ export class SubmissionController {
     private initializeRoutes() {
         this.router.use(authMiddleware);
 
+        const otpLimiter = rateLimit({
+            windowMs: 15 * 60 * 1000, // 15 minutes
+            limit: 10, // Limit each IP to 10 requests per `window` (here, per 15 minutes).
+            message: "Too many OTP attempts, please try again after 15 minutes",
+            standardHeaders: 'draft-8', 
+            legacyHeaders: false, 
+        });
+
         this.router.post("/", requireRole("STUDENT"), catchAsync(this.createSubmission.bind(this)));
-        this.router.post("/verifyAssignmentOtp", requireRole("STUDENT"), catchAsync(this.verifyAssignmentOtp.bind(this)));
+        this.router.post("/verifyAssignmentOtp", requireRole("STUDENT"), otpLimiter, catchAsync(this.verifyAssignmentOtp.bind(this)));
         this.router.get("/uploadUrl", requireRole("STUDENT"), catchAsync(this.getUploadUrl.bind(this)));
         this.router.get("/my-submissions", requireRole("STUDENT"), catchAsync(this.getMySubmissions.bind(this)));
 
