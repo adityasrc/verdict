@@ -13,7 +13,7 @@ const s3 = new AWSS3Client({
 const S3Client = {
     raw: s3,
     list: async () => {
-        // Connection test ke liye specific bucket ping karo, saari buckets list mat karo
+        // Ping the specific bucket to test connection — don't list all buckets
         const command = new HeadBucketCommand({
             Bucket: process.env.BUCKET_NAME
         });

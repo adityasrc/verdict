@@ -120,7 +120,7 @@ export class SubmissionManager {
 
         // Generates the URL using the centralized Client.raw which has forcePathStyle enabled
         const url = await getSignedUrl(Client.raw, command, {
-            expiresIn: 60,
+            expiresIn: 600, // 10 minutes — 60s was too tight with OTP step
         });
 
         return { url, key };
@@ -130,7 +130,7 @@ export class SubmissionManager {
         submissionId: string,
         data: {
             score: number;
-            feedback: any;
+            feedback: string;
             status: "GRADED" | "REVIEWING" | "PENDING";
         },
     ) {

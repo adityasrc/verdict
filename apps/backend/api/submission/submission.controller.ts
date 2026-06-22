@@ -193,7 +193,7 @@ export class SubmissionController {
             throw new AppError("Submission not found or access denied", 404);
         }
 
-        await prisma.submission.update({
+        const updatedSubmission = await prisma.submission.update({
             where: { id: submissionId },
             data: {
                 status: "PENDING",
@@ -202,7 +202,7 @@ export class SubmissionController {
             },
         });
 
-        await submissionQueue.add("grade_assignment", submission, {
+        await submissionQueue.add("grade_assignment", updatedSubmission, {
             attempts: 3,
             backoff: { type: "exponential", delay: 5000 },
             removeOnComplete: true,

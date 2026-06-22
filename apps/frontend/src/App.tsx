@@ -25,7 +25,6 @@ const Layout = () => {
       <Navbar />
       <Outlet />
       {!hideFooter && <Footer />}
-      <Toaster richColors position="bottom-right" />
     </div>
   );
 };
@@ -33,7 +32,6 @@ const Layout = () => {
 const AuthLayout = () => (
   <div className="min-h-screen bg-zinc-950 text-white">
     <Outlet />
-    <Toaster richColors position="bottom-right" />
   </div>
 );
 
@@ -66,20 +64,23 @@ const NotFound = () => (
 
 function App() {
   return (
-    <Routes>
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-      </Route>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Onboarding />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/assignment/:assignmentId/submissions" element={<ProtectedRoute><AssignmentSubmissions /></ProtectedRoute>} />
-        <Route path="/upload/:assignmentId" element={<ProtectedRoute><AssignmentUpload /></ProtectedRoute>} />
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
+    <>
+      <Toaster richColors position="bottom-right" />
+      <Routes>
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+        </Route>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Onboarding />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/assignment/:assignmentId/submissions" element={<ProtectedRoute><AssignmentSubmissions /></ProtectedRoute>} />
+          <Route path="/upload/:assignmentId" element={<ProtectedRoute><AssignmentUpload /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </>
   );
 }
 
-export default App;
+export default App;
