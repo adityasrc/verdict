@@ -202,7 +202,9 @@ const AssignmentUpload: React.FC = () => {
                 return;
             }
 
-            if (apiError?.status === 403 || backendMessage?.toLowerCase() === 'invalid otp') {
+            if (backendMessage === 'You do not have permission to perform this action') {
+                setOtpError('Permission denied: You must be logged in as a Student to submit.');
+            } else if (apiError?.status === 403 || backendMessage?.toLowerCase() === 'invalid otp') {
                 setOtpError('Authorization Failed: Invalid Key.');
             } else {
                 setOtpError('System fault. Retry verification.');
