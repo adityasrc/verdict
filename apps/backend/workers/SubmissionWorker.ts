@@ -56,7 +56,7 @@ function runPython(
         const script = path.join(__dirname, "python", "pdfParser.py");
         let extractedData: ParsedPage[] = [];
 
-        const proc = spawn("python", [script, filePath, submissionId], {
+        const proc = spawn(process.env.PYTHON_BIN || "python3", [script, filePath, submissionId], {
             cwd: path.join(__dirname, "python"),
         });
 
@@ -126,7 +126,7 @@ function runGeminiGrader(
         console.log(`Using .env from: ${envPath}`);
 
         const proc = spawn(
-            "python",
+            process.env.PYTHON_BIN || "python3",
             [script, extractedDataJson, assignmentId, submissionId, contextJson],
             {
                 env: {
@@ -197,6 +197,12 @@ const worker = new Worker<SubmissionJobData>(
                 studentId,
             }),
         );
+
+        // Mark as EVALUATING so the UI doesn't show it stuck as PENDING
+        await prisma.submission.update({
+            where: { id },
+            data: { status: "EVALUATING" },
+        });
 
         await job.updateProgress(5);
 
@@ -348,7 +354,11 @@ ${evaluation.feedback}
 
             return true;
         } catch (error: any) {
-            console.error(`Job ${job.id} failed:`, error);
+            // Update status to FAILED in DB so it doesn't stay stuck as PENDING
+            await prisma.submission.update({
+                where: { id },
+                data: { status: "FAILED" },
+            }).catch(() => {}); // best-effort — don't throw again if DB is also down
 
             redis.publish(
                 `submission:${id}`,

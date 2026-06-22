@@ -42,7 +42,7 @@ export class AuthController {
 
     public async getCurrentUser(req: Request, res: Response) {
         // Assuming req.user is populated by authMiddleware
-        const userId = (req as any).user.id; 
+        const userId = req.user!.id; 
         
         const result = await this._authManager.getCurrentUser(userId);
         return res.status(200).json({ success: true, data: result });

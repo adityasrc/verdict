@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 const AssignmentSubmissions: React.FC = () => {
     const { assignmentId } = useParams<{ assignmentId: string }>();
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
     const { data: assignmentData } = useGetAssignmentQuery(assignmentId || '', {
         skip: !assignmentId,
@@ -78,15 +79,13 @@ const AssignmentSubmissions: React.FC = () => {
     };
 
     const handleAllowResubmission = async (submissionId: string) => {
-        if (!confirm('Purge this record? This cannot be undone.')) {
-            return;
-        }
         try {
             await allowResubmission({ submissionId }).unwrap();
-            toast.success('Record purged. Candidate cleared for resubmission.');
+            toast.success('Submission deleted. Student can now resubmit.');
             setSelectedSubmission(null);
+            setConfirmDeleteId(null);
         } catch {
-            toast.error('Failed to purge record.');
+            toast.error('Failed to allow resubmission.');
         }
     };
 
@@ -274,9 +273,9 @@ const AssignmentSubmissions: React.FC = () => {
                                             <Button 
                                                 variant="outline" 
                                                 size="sm"
-                                                onClick={() => handleAllowResubmission(submission.id)}
+                                                onClick={() => setConfirmDeleteId(submission.id)}
                                                 className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-500 dark:border-red-900/50 dark:hover:bg-red-900/20">
-                                                Purge
+                                                Delete
                                             </Button>
                                         </div>
                                     </div>
@@ -325,8 +324,11 @@ const AssignmentSubmissions: React.FC = () => {
                                     </Button>
                                     <Button
                                         variant="destructive"
-                                        onClick={() => handleAllowResubmission(selectedSubmission.id)}>
-                                        Purge Record
+                                        onClick={() => {
+                                            setConfirmDeleteId(selectedSubmission.id);
+                                            setSelectedSubmission(null);
+                                        }}>
+                                        Delete &amp; Allow Resubmission
                                     </Button>
                                 </div>
                             </div>
@@ -351,6 +353,33 @@ const AssignmentSubmissions: React.FC = () => {
                             </a>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+            {/* Confirm Delete Dialog */}
+            <Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Submission</DialogTitle>
+                        <DialogDescription>
+                            This will permanently delete the submission and allow the student to resubmit. This cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex gap-3 mt-4">
+                        <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => setConfirmDeleteId(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            className="flex-1"
+                            onClick={() => confirmDeleteId && handleAllowResubmission(confirmDeleteId)}
+                        >
+                            Delete
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
