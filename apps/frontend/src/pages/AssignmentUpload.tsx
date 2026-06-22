@@ -78,7 +78,7 @@ const AssignmentUpload: React.FC = () => {
         }) => {
             if (event.error) {
                 setGradingStatus('failed');
-                setProgressLogs((prev) => [...prev, `❌ Error: ${event.error}`]);
+                setProgressLogs((prev) => [...prev, `[ERROR] ${event.error}`]);
                 return;
             }
 
@@ -87,38 +87,38 @@ const AssignmentUpload: React.FC = () => {
             let logMessage = '';
             switch (event.step) {
                 case 'submission_started':
-                    logMessage = '🚀 Initiating execution pipeline...';
+                    logMessage = '[SYS] Initiating execution pipeline...';
                     break;
                 case 'downloading_pdf':
-                    logMessage = '⬇️ Acquiring payload...';
+                    logMessage = '[INFO] Acquiring payload...';
                     break;
                 case 'pdf_downloaded':
-                    logMessage = '✅ Payload secured.';
+                    logMessage = '[SUCCESS] Payload secured.';
                     break;
                 case 'parsing_started':
-                    logMessage = '📄 Parsing document architecture...';
+                    logMessage = '[INFO] Parsing document architecture...';
                     break;
                 case 'page_parsed':
-                    logMessage = `📄 Reading fragment ${event.page}/${event.total_pages}...`;
+                    logMessage = `[INFO] Reading fragment ${event.page}/${event.total_pages}...`;
                     break;
                 case 'parsing_completed':
-                    logMessage = '✅ Structural analysis complete.';
+                    logMessage = '[SUCCESS] Structural analysis complete.';
                     break;
                 case 'gemini_started':
-                    logMessage = '🤖 Verdict AI initialized.';
+                    logMessage = '[SYS] Verdict AI initialized.';
                     break;
                 case 'gemini_processing':
-                    logMessage = '🧠 Synthesizing evaluation matrix...';
+                    logMessage = '[INFO] Synthesizing evaluation matrix...';
                     break;
                 case 'gemini_completed':
-                    logMessage = '✨ Analysis finalized.';
+                    logMessage = '[SUCCESS] Analysis finalized.';
                     break;
                 case 'grading_completed':
-                    logMessage = `🎉 Verdict generated. Score: ${event.score}/${event.maxScore || 100}`;
+                    logMessage = `[SUCCESS] Verdict generated. Score: ${event.score}/${event.maxScore || 100}`;
                     setGradingStatus('completed');
                     break;
                 default:
-                    if (event.step) logMessage = `ℹ️ ${event.step}`;
+                    if (event.step) logMessage = `[INFO] ${event.step}`;
             }
 
             if (logMessage) {
@@ -202,7 +202,9 @@ const AssignmentUpload: React.FC = () => {
                 return;
             }
 
-            if (apiError?.status === 403 || backendMessage?.toLowerCase() === 'invalid otp') {
+            if (backendMessage === 'You do not have permission to perform this action') {
+                setOtpError('Permission denied: You must be logged in as a Student to submit.');
+            } else if (apiError?.status === 403 || backendMessage?.toLowerCase() === 'invalid otp') {
                 setOtpError('Authorization Failed: Invalid Key.');
             } else {
                 setOtpError('System fault. Retry verification.');
