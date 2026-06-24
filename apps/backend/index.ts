@@ -5,6 +5,9 @@ import { initializeSocketIO } from "./ws/socket.js";
 import { redis } from "./utils/redis.js";
 import S3Client from "./utils/S3client.js";
 
+// Start the background worker in the same process
+import "./workers/SubmissionWorker.js";
+
 const ServerConfig = {
     httpPort: process.env.HTTP_PORT || 8600,
 };
