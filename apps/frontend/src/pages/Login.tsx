@@ -1,13 +1,8 @@
-import { ArrowRight, Lock, Mail } from "lucide-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen } from "lucide-react";
 import { useAppDispatch } from "../app/store";
 import { useLoginMutation } from "../features/auth/authApi";
 import { setCredentials } from "../features/auth/authSlice";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import { toast } from "sonner";
 
 const Login: React.FC = () => {
@@ -38,87 +33,75 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <Link to="/" className="flex items-center justify-center gap-2.5 mb-8 group">
-          <div className="bg-violet-600 p-1.5 rounded-lg transition-transform group-hover:scale-105">
-            <BookOpen className="h-5 w-5 text-white" strokeWidth={2} />
+        <Link to="/" className="flex items-center justify-center gap-3 mb-8 group">
+          <div className="bg-primary border-[2px] border-on-surface brutal-shadow flex items-center justify-center p-2 brutal-button">
+            <span className="material-symbols-outlined text-on-primary" style={{fontVariationSettings: "'FILL' 1"}}>menu_book</span>
           </div>
-          <span className="font-bold text-xl tracking-tight text-white">Verdict</span>
+          <span className="font-headline-md text-headline-md font-black uppercase tracking-tighter text-on-surface">
+            Verdict
+          </span>
         </Link>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-xl shadow-black/40">
-          <div className="text-center mb-7">
-            <h1 className="text-xl font-semibold text-white tracking-tight">
-              Welcome back
+        <div className="bg-surface border-[4px] border-on-surface p-8 brutal-shadow relative">
+          <div className="absolute -top-4 -left-4 bg-accent-yellow text-on-surface px-4 py-1 border-[4px] border-on-surface font-label-caps font-bold uppercase tracking-widest brutal-shadow z-10">
+            Welcome Back
+          </div>
+          <div className="text-center mb-8 mt-4">
+            <h1 className="font-headline-md text-2xl font-black uppercase text-on-surface tracking-tighter">
+              Sign In
             </h1>
-            <p className="text-sm text-zinc-500 mt-1">
-              Sign in to your workspace
+            <p className="font-body-md text-on-surface-variant mt-2 font-bold uppercase">
+              Access your workspace
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-medium text-zinc-400">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="email" className="block font-label-caps uppercase font-bold text-on-surface">
                 Email
-              </Label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-zinc-600 group-focus-within:text-violet-400 transition-colors" />
-                </div>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="pl-9 h-10 rounded-lg bg-zinc-950 border-zinc-800 text-white text-sm placeholder:text-zinc-600 focus:border-violet-500/60 focus:ring-violet-500/20"
-                  required
-                />
-              </div>
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+                className="w-full h-12 px-4 border-[4px] border-on-surface bg-surface text-on-surface font-body-md placeholder:text-on-surface-variant focus:outline-none focus:border-primary brutal-shadow transition-colors"
+                required
+              />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-xs font-medium text-zinc-400">
+            <div className="space-y-2">
+              <label htmlFor="password" className="block font-label-caps uppercase font-bold text-on-surface">
                 Password
-              </Label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-zinc-600 group-focus-within:text-violet-400 transition-colors" />
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="pl-9 h-10 rounded-lg bg-zinc-950 border-zinc-800 text-white text-sm placeholder:text-zinc-600 focus:border-violet-500/60 focus:ring-violet-500/20"
-                  required
-                />
-              </div>
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full h-12 px-4 border-[4px] border-on-surface bg-surface text-on-surface font-body-md placeholder:text-on-surface-variant focus:outline-none focus:border-primary brutal-shadow transition-colors"
+                required
+              />
             </div>
 
-            <Button
+            <button
               type="submit"
               disabled={isLoading}
-              className="w-full h-10 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-all mt-2"
+              className="w-full h-12 mt-4 bg-primary text-on-primary border-[4px] border-on-surface font-label-caps uppercase font-bold tracking-widest brutal-shadow brutal-button hover:bg-primary-container transition-colors disabled:opacity-50"
             >
-              {isLoading ? (
-                <span className="animate-pulse">Signing in...</span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  Sign In
-                  <ArrowRight className="h-4 w-4" />
-                </span>
-              )}
-            </Button>
+              {isLoading ? "Signing in..." : "Sign In"}
+            </button>
           </form>
 
-          <p className="text-center text-sm text-zinc-500 mt-6">
-            Don&apos;t have an account?{" "}
+          <p className="text-center font-body-md font-bold text-on-surface-variant mt-8">
+            Don't have an account?{" "}
             <Link
               to="/signup"
-              className="font-semibold text-violet-400 hover:text-violet-300 transition-colors"
+              className="text-primary hover:underline uppercase"
             >
               Sign up
             </Link>

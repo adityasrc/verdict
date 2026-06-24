@@ -1,9 +1,7 @@
-import { Award, BarChart3, FileText, FolderClock, Plus, PlusCircle, Share2 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../app/store';
-import MeshBackground from '../components/MeshBackground';
 import RubricManager from '../components/RubricManager';
 import {
     Dialog,
@@ -12,19 +10,24 @@ import {
     DialogHeader,
     DialogTitle,
 } from '../components/ui/dialog';
-import { Button } from '../components/ui/button';
 import { useSocket } from '../context/SocketContext';
 import {
-    useAllowResubmissionMutation,
     useCreateAssignmentMutation,
     useGetRecentSubmissionsQuery,
     useGetTeacherAssignmentsQuery,
-    useReEvaluateSubmissionMutation,
 } from '../features/assignments/assignmentApi';
 import { selectCurrentUser } from '../features/auth/authSlice';
 import { useGetRubricsQuery } from '../features/rubrics/rubricApi';
 import type { Submission } from '../types';
 import { toast } from 'sonner';
+
+/** Returns a time-appropriate greeting based on the current hour. */
+function getGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+}
 
 const Dashboard: React.FC = () => {
     const user = useAppSelector(selectCurrentUser);
@@ -32,41 +35,16 @@ const Dashboard: React.FC = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isRubricManagerOpen, setIsRubricManagerOpen] = useState(false);
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const isTeacher = user?.role === 'TEACHER';
     const { socket } = useSocket();
 
-    // Track grading progress for each submission
-    const [gradingProgress, setGradingProgress] = useState<
-        Record<
-            string,
-            {
-                step: string;
-                percent: number;
-                status: 'processing' | 'completed' | 'failed';
-            }
-        >
-    >({});
+    const [gradingProgress, setGradingProgress] = useState<Record<string, { step: string; percent: number; status: 'processing' | 'completed' | 'failed' }>>({});
 
-    // API Hooks
-    const {
-        data: assignmentsData,
-        isLoading: isAssignmentsLoading,
-        refetch: refetchAssignments,
-    } = useGetTeacherAssignmentsQuery(undefined, {
-        skip: !isTeacher,
-    });
-    const {
-        data: submissionsData,
-        isLoading: isSubmissionsLoading,
-        refetch: refetchSubmissions,
-    } = useGetRecentSubmissionsQuery();
+    const { data: assignmentsData, isLoading: isAssignmentsLoading, refetch: refetchAssignments } = useGetTeacherAssignmentsQuery(undefined, { skip: !isTeacher });
+    const { data: submissionsData, refetch: refetchSubmissions } = useGetRecentSubmissionsQuery();
     const { data: rubricsData } = useGetRubricsQuery(undefined, { skip: !isTeacher });
     const [createAssignment, { isLoading: isCreating }] = useCreateAssignmentMutation();
-    const [reEvaluateSubmission] = useReEvaluateSubmissionMutation();
-    const [allowResubmission] = useAllowResubmissionMutation();
 
-    // Form State
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [dueDate, setDueDate] = useState('');
@@ -74,612 +52,316 @@ const Dashboard: React.FC = () => {
     const [selectedRubricId, setSelectedRubricId] = useState<string>('');
     const [requireUniqueId, setRequireUniqueId] = useState(false);
 
-    const activeAssignments = useMemo(
-        () => assignmentsData?.data || [],
-        [assignmentsData?.data],
-    );
+    const activeAssignments = useMemo(() => assignmentsData?.data || [], [assignmentsData?.data]);
+    const recentSubmissions = submissionsData?.data || [];
 
     useEffect(() => {
         if (!socket || !isTeacher) return;
-
-        const handleGradingProgress = (event: {
-            submissionId: string;
-            step?: string;
-            percent?: number;
-            error?: string;
-            score?: number;
-        }) => {
+        const handleGradingProgress = (event: any) => {
             let displayStatus: 'pending' | 'downloading' | 'grading' | 'graded' | 'failed' = 'pending';
-            if (event.error) {
-                displayStatus = 'failed';
-            } else if (event.step === 'grading_completed') {
+            if (event.error) displayStatus = 'failed';
+            else if (event.step === 'grading_completed') {
                 displayStatus = 'graded';
                 refetchSubmissions();
                 refetchAssignments();
-            } else if (
-                event.step === 'downloading_pdf' ||
-                event.step === 'pdf_downloaded' ||
-                event.step === 'submission_started'
-            ) {
-                displayStatus = 'downloading';
-            } else if (
-                event.step === 'parsing_started' ||
-                event.step === 'page_parsed' ||
-                event.step === 'parsing_completed' ||
-                event.step === 'gemini_started' ||
-                event.step === 'gemini_processing' ||
-                event.step === 'gemini_completed'
-            ) {
-                displayStatus = 'grading';
-            }
+            } else if (['downloading_pdf', 'pdf_downloaded', 'submission_started'].includes(event.step)) displayStatus = 'downloading';
+            else displayStatus = 'grading';
 
             setGradingProgress((prev) => ({
                 ...prev,
                 [event.submissionId]: {
                     step: displayStatus,
                     percent: event.percent || 0,
-                    status: event.error
-                        ? 'failed'
-                        : event.step === 'grading_completed'
-                            ? 'completed'
-                            : 'processing',
+                    status: event.error ? 'failed' : event.step === 'grading_completed' ? 'completed' : 'processing',
                 },
             }));
         };
-
         socket.on('assignment-grading-progress', handleGradingProgress);
-
-        const handleNewSubmission = (_event: { assignmentId: string }) => {
-            refetchAssignments();
-            refetchSubmissions();
-        };
-
-        socket.on('new-submission', handleNewSubmission);
-
+        socket.on('new-submission', () => { refetchAssignments(); refetchSubmissions(); });
         return () => {
             socket.off('assignment-grading-progress', handleGradingProgress);
-            socket.off('new-submission', handleNewSubmission);
+            socket.off('new-submission');
         };
     }, [socket, isTeacher, refetchAssignments, refetchSubmissions]);
 
-    // Watch all active assignments for grading updates (teachers only)
     useEffect(() => {
         if (!socket || !isTeacher || !activeAssignments.length) return;
-
-        activeAssignments.forEach((assignment) => {
-            socket.emit('watch-assignment', assignment.id);
-        });
-
-        return () => {
-            activeAssignments.forEach((assignment) => {
-                socket.emit('unwatch-assignment', assignment.id);
-            });
-        };
+        activeAssignments.forEach((a) => socket.emit('watch-assignment', a.id));
+        return () => activeAssignments.forEach((a) => socket.emit('unwatch-assignment', a.id));
     }, [socket, isTeacher, activeAssignments]);
 
     const handleCreateAssignment = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await createAssignment({
-                title,
-                description,
-                dueDate,
-                maxScore: parseInt(maxScore),
-                rubricId: selectedRubricId || undefined,
-                requireUniqueId,
-            }).unwrap();
+            await createAssignment({ title, description, dueDate, maxScore: parseInt(maxScore), rubricId: selectedRubricId || undefined, requireUniqueId }).unwrap();
             setIsCreateModalOpen(false);
-            setTitle('');
-            setDescription('');
-            setDueDate('');
-            setSelectedRubricId('');
-            setRequireUniqueId(false);
+            setTitle(''); setDescription(''); setDueDate(''); setSelectedRubricId(''); setRequireUniqueId(false);
             toast.success('Assignment created successfully!');
         } catch (error) {
-            console.error('Failed to create assignment', error);
             toast.error('Failed to create assignment');
         }
     };
 
     const handleShareLink = async (assignmentId: string) => {
         const link = `${window.location.origin}/upload/${assignmentId}`;
-        try {
-            await navigator.clipboard.writeText(link);
-            toast.success('Submission link copied to clipboard');
-        } catch {
-            window.prompt('Copy this link manually:', link);
-        }
+        try { await navigator.clipboard.writeText(link); toast.success('Link copied'); }
+        catch { window.prompt('Copy this link manually:', link); }
     };
 
-    const handleReEvaluate = async (submissionId: string) => {
-        try {
-            await reEvaluateSubmission({ submissionId }).unwrap();
-            toast.success('Submission queued for re-evaluation');
-        } catch {
-            toast.error('Failed to trigger re-evaluation');
-        }
-    };
-
-    const handleAllowResubmission = async (submissionId: string) => {
-        try {
-            await allowResubmission({ submissionId }).unwrap();
-            toast.success('Submission deleted. Student can now resubmit.');
-            setConfirmDeleteId(null);
-            setSelectedSubmission(null);
-        } catch {
-            toast.error('Failed to allow resubmission');
-        }
-    };
-
-    const recentSubmissions = submissionsData?.data || [];
-
-    // Calculate stats
+    // Derived Stats
     const pendingCount = recentSubmissions.filter((s) => s.status === 'PENDING').length;
     const gradedCount = recentSubmissions.filter((s) => s.status === 'GRADED').length;
-    // Calculate average score for graded submissions
-    const gradedSubmissions = recentSubmissions.filter(
-        (s) => s.status === 'GRADED' && s.score !== null
-    );
-    const avgScore =
-        gradedSubmissions.length > 0
-            ? Math.round(
-                gradedSubmissions.reduce((acc, s) => acc + (s.score || 0), 0) /
-                gradedSubmissions.length
-            )
-            : 0;
+    const gradedSubmissions = recentSubmissions.filter((s) => s.status === 'GRADED' && s.score !== null);
+    const avgScore = gradedSubmissions.length > 0 ? Math.round(gradedSubmissions.reduce((acc, s) => acc + (s.score || 0), 0) / gradedSubmissions.length) : 0;
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-zinc-100 px-4 pt-24 pb-8 relative overflow-hidden">
-            {/* Mesh Background */}
-            <MeshBackground />
-            {/* Rubric Manager Modal */}
+        <div className="w-full">
             {isRubricManagerOpen && <RubricManager onClose={() => setIsRubricManagerOpen(false)} />}
 
+            {/* Create Assignment Modal */}
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <DialogContent className="max-w-md bg-zinc-900 border-zinc-800 text-white">
+                <DialogContent className="max-w-md bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none">
                     <DialogHeader>
-                        <DialogTitle className="text-white">Create Assignment</DialogTitle>
-                        <DialogDescription className="text-zinc-500">
-                            Fill in the details to create a new assignment.
-                        </DialogDescription>
+                        <DialogTitle className="font-headline-md text-headline-md uppercase font-black">New Assignment</DialogTitle>
+                        <DialogDescription className="font-body-md text-on-surface-variant">Fill in the details to create a new graded assignment.</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleCreateAssignment} className="space-y-4 mt-2">
                         <div>
-                            <label className="block text-sm font-medium mb-1.5 text-zinc-300">Title</label>
-                            <input
-                                type="text"
-                                required
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="w-full px-3 py-2.5 rounded-lg border border-zinc-800 bg-zinc-950 text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                                placeholder="Assignment Title"
-                            />
+                            <label className="block font-label-caps text-label-caps mb-1">Title</label>
+                            <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow brutal-button" placeholder="Assignment Title" />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1.5 text-zinc-300">Description</label>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                className="w-full px-3 py-2.5 rounded-lg border border-zinc-800 bg-zinc-950 text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all resize-none"
-                                rows={3}
-                                placeholder="Instructions..."
-                            />
+                            <label className="block font-label-caps text-label-caps mb-1">Instructions</label>
+                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow brutal-button resize-none" rows={3} placeholder="Instructions..." />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1.5 text-zinc-300">Due Date</label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-zinc-800 bg-zinc-950 text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                                />
+                                <label className="block font-label-caps text-label-caps mb-1">Due Date</label>
+                                <input type="date" required value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full px-3 py-2 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow brutal-button" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1.5 text-zinc-300">Max Score</label>
-                                <input
-                                    type="number"
-                                    required
-                                    value={maxScore}
-                                    onChange={(e) => setMaxScore(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-zinc-800 bg-zinc-950 text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                                />
+                                <label className="block font-label-caps text-label-caps mb-1">Max Score</label>
+                                <input type="number" required value={maxScore} onChange={(e) => setMaxScore(e.target.value)} className="w-full px-3 py-2 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow brutal-button" />
                             </div>
                         </div>
                         <div>
-                            <div className="flex justify-between items-center mb-1.5">
-                                <label className="block text-sm font-medium text-zinc-300">Rubric (Optional)</label>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsRubricManagerOpen(true)}
-                                    className="text-xs text-violet-400 hover:text-violet-300 font-medium flex items-center gap-1 bg-violet-500/10 px-2 py-1 rounded transition-colors"
-                                >
-                                    <PlusCircle className="h-3 w-3" /> Create Rubric
-                                </button>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block font-label-caps text-label-caps">Rubric</label>
+                                <button type="button" onClick={() => setIsRubricManagerOpen(true)} className="text-xs text-primary font-bold hover:underline">Create Rubric</button>
                             </div>
-                            <select
-                                value={selectedRubricId}
-                                onChange={(e) => {
-                                    const rubricId = e.target.value;
-                                    setSelectedRubricId(rubricId);
-                                    if (rubricId && rubricsData?.data) {
-                                        const selectedRubric = rubricsData.data.find(r => r.id === rubricId);
-                                        if (selectedRubric?.criteria) {
-                                            const totalPoints = selectedRubric.criteria.reduce(
-                                                (sum, criterion) => sum + (criterion.points || 0),
-                                                0
-                                            );
-                                            if (totalPoints > 0) setMaxScore(totalPoints.toString());
-                                        }
-                                    }
-                                }}
-                                className="w-full px-3 py-2.5 rounded-lg border border-zinc-800 bg-zinc-950 text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all"
-                            >
-                                <option value="" className="bg-zinc-900">No Rubric</option>
-                                {rubricsData?.data.map((rubric) => (
-                                    <option key={rubric.id} value={rubric.id} className="bg-zinc-900">
-                                        {rubric.name} ({rubric.criteria.reduce((sum, c) => sum + (c.points || 0), 0)} pts)
-                                    </option>
-                                ))}
+                            <select value={selectedRubricId} onChange={(e) => setSelectedRubricId(e.target.value)} className="w-full px-3 py-2 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow brutal-button">
+                                <option value="">No Rubric</option>
+                                {rubricsData?.data.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                             </select>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <input
-                                type="checkbox"
-                                id="requireUniqueId"
-                                checked={requireUniqueId}
-                                onChange={(e) => setRequireUniqueId(e.target.checked)}
-                                className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-violet-600 focus:ring-violet-500/50"
-                            />
-                            <label htmlFor="requireUniqueId" className="text-sm text-zinc-400">
-                                Require University ID on submission
-                            </label>
-                        </div>
-                        <Button
-                            type="submit"
-                            disabled={isCreating}
-                            className="w-full bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50"
-                        >
+                        <button type="submit" disabled={isCreating} className="w-full bg-primary text-on-primary py-3 font-label-caps text-label-caps border-[4px] border-on-surface brutal-shadow brutal-button uppercase tracking-wide mt-4">
                             {isCreating ? 'Creating...' : 'Create Assignment'}
-                        </Button>
+                        </button>
                     </form>
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
-                <DialogContent className="max-w-sm bg-zinc-900 border-zinc-800 text-white">
-                    <DialogHeader>
-                        <DialogTitle className="text-white">Delete Submission</DialogTitle>
-                        <DialogDescription className="text-zinc-500">
-                            This will permanently delete the submission and allow the student to resubmit. This action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex gap-3 mt-4">
-                        <Button
-                            variant="outline"
-                            className="flex-1 border-zinc-800 text-zinc-300 hover:bg-zinc-800"
-                            onClick={() => setConfirmDeleteId(null)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                            onClick={() => confirmDeleteId && handleAllowResubmission(confirmDeleteId)}
-                        >
-                            Delete
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            <div className="max-w-7xl mx-auto">
-                <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-white">
-                            {isTeacher ? 'Instructor Dashboard' : 'Student Dashboard'}
-                        </h1>
-                        <p className="text-zinc-500 mt-1 text-sm">
-                            Overview for {user?.email}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        {isTeacher && (
-                            <button
-                                onClick={() => setIsCreateModalOpen(true)}
-                                className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                            >
-                                <Plus className="h-4 w-4" />
-                                <span>Create Assignment</span>
+            {/* Teacher Dashboard View */}
+            {isTeacher ? (
+                <>
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                        <div>
+                            <h2 className="font-headline-xl text-headline-lg-mobile md:text-headline-xl text-on-surface uppercase tracking-tighter font-black">Welcome Back, <br/>{user?.name || user?.email?.split('@')[0] || 'Educator'}.</h2>
+                        </div>
+                        <div className="flex gap-4 flex-col sm:flex-row">
+                            <button onClick={() => setIsRubricManagerOpen(true)} className="bg-surface text-on-surface border-[4px] border-on-surface px-6 py-3 font-label-caps text-label-caps uppercase tracking-wide brutal-shadow brutal-button flex items-center gap-2 hover:bg-surface-variant">
+                                <span className="material-symbols-outlined">format_list_bulleted</span> Manage Rubrics
                             </button>
-                        )}
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                    <div className="bg-zinc-900/60 backdrop-blur-sm border border-violet-500/20 p-6 rounded-2xl shadow-[0_0_30px_-10px_rgba(139,92,246,0.25)]">
-                        <div className="flex items-center gap-4 mb-2">
-                            <div className="p-2 bg-violet-500/20 rounded-lg">
-                                <FolderClock className="h-6 w-6 text-violet-400" />
-                            </div>
-                            <h3 className="text-zinc-300 font-medium">
-                                {isTeacher ? 'To Grade' : 'Pending'}
-                            </h3>
-                        </div>
-                        <p className="text-4xl font-bold text-white mt-2">{pendingCount}</p>
-                    </div>
-                    <div className="bg-zinc-900/60 backdrop-blur-sm border border-emerald-500/20 p-6 rounded-2xl shadow-[0_0_30px_-10px_rgba(16,185,129,0.2)]">
-                        <div className="flex items-center gap-4 mb-2">
-                            <div className="p-2 bg-emerald-500/20 rounded-lg">
-                                <Award className="h-6 w-6 text-emerald-400" />
--                            </div>
-                            <h3 className="text-zinc-300 font-medium">
-                                {isTeacher ? 'Graded This Week' : 'Completed'}
-                            </h3>
-                        </div>
-                        <p className="text-4xl font-bold text-white mt-2">{gradedCount}</p>
-                    </div>
-                    <div className="bg-zinc-900/60 backdrop-blur-sm border border-purple-500/20 p-6 rounded-2xl shadow-[0_0_30px_-10px_rgba(168,85,247,0.2)]">
-                        <div className="flex items-center gap-4 mb-2">
-                            <div className="p-2 bg-purple-500/20 rounded-lg">
-                                <BarChart3 className="h-6 w-6 text-purple-400" />
-                            </div>
-                            <h3 className="text-zinc-300 font-medium">Avg Score</h3>
-                        </div>
-                        <p className="text-4xl font-bold text-white mt-2">{avgScore}%</p>
-                    </div>
-                </div>
-
-                {isTeacher && (
-                    <div className="bg-zinc-900/30 border border-zinc-800 rounded-2xl overflow-hidden backdrop-blur-sm mb-10">
-                        <div className="px-6 py-5 border-b border-zinc-800 flex justify-between items-center">
-                            <h2 className="text-lg font-semibold text-white">Active Assignments</h2>
-                            <button
-                                onClick={() => setIsRubricManagerOpen(true)}
-                                className="text-sm text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors"
-                                aria-label="Manage rubrics"
-                            >
-                                <FileText className="h-4 w-4" /> Manage Rubrics
+                            <button onClick={() => setIsCreateModalOpen(true)} className="bg-primary text-on-primary border-[4px] border-on-surface px-6 py-3 font-label-caps text-label-caps uppercase tracking-wide brutal-shadow brutal-button flex items-center gap-2 hover:bg-primary-container">
+                                <span className="material-symbols-outlined">add</span> New Assessment
                             </button>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-zinc-800">
-                                <thead className="bg-zinc-900/50">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Title</th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Due Date</th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">OTP</th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Submissions</th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-zinc-800 bg-transparent">
-                                    {isAssignmentsLoading ? (
-                                        Array.from({ length: 3 }).map((_, i) => (
-                                            <tr key={i}>
-                                                <td colSpan={5} className="px-6 py-4">
-                                                    <div className="h-4 bg-zinc-800 rounded animate-pulse w-3/4" />
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : activeAssignments.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={5} className="px-6 py-8 text-center text-sm text-zinc-500">
-                                                No assignments yet. Create your first one.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        activeAssignments.map((item) => (
-                                            <tr key={item.id} className="hover:bg-zinc-800/30 transition-colors">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-200">{item.title}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-500">
-                                                    {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'No due date'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-zinc-500">{item.otp}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-500">{item._count?.submissions || 0}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                    <div className="flex gap-4">
-                                                        <button
-                                                            onClick={() => navigate(`/assignment/${item.id}/submissions`)}
-                                                            className="flex items-center gap-1 text-violet-400 hover:text-violet-300 transition-colors"
-                                                            aria-label={`View submissions for ${item.title}`}
-                                                        >
-                                                            <FileText className="h-4 w-4" />
-                                                            Submissions
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleShareLink(item.id)}
-                                                            className="flex items-center gap-1 text-zinc-400 hover:text-zinc-300 transition-colors"
-                                                            aria-label={`Copy submission link for ${item.title}`}
-                                                        >
-                                                            <Share2 className="h-4 w-4" />
-                                                            Share
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
                     </div>
-                )}
 
-                <div className="bg-zinc-900/30 border border-zinc-800 rounded-2xl overflow-hidden backdrop-blur-sm">
-                    <div className="px-6 py-5 border-b border-zinc-800">
-                        <h2 className="text-lg font-semibold text-white">
-                            {isTeacher ? 'Recent Submissions' : 'My Submissions'}
-                        </h2>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-zinc-800">
-                            <thead className="bg-zinc-900/50">
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Assignment</th>
-                                    {isTeacher && (
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Student</th>
-                                    )}
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Submitted</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Score</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-800 bg-transparent">
-                                {isSubmissionsLoading ? (
-                                    Array.from({ length: 4 }).map((_, i) => (
-                                        <tr key={i}>
-                                            <td colSpan={isTeacher ? 6 : 5} className="px-6 py-4">
-                                                <div className="h-4 bg-zinc-800 rounded animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : recentSubmissions.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={isTeacher ? 6 : 5} className="px-6 py-8 text-center text-sm text-zinc-500">
-                                            No submissions yet.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    recentSubmissions.map((item) => (
-                                        <tr key={item.id} className="hover:bg-zinc-800/30 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-200">
-                                                {item.assignment?.title || 'Unknown Assignment'}
-                                            </td>
-                                            {isTeacher && (
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
-                                                    {item.student?.name || item.student?.email || 'Unknown Student'}
-                                                </td>
-                                            )}
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-500">
-                                                {new Date(item.submittedAt).toLocaleDateString()}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {gradingProgress[item.id]?.status === 'processing' ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="animate-spin h-4 w-4 border-2 border-violet-500 border-t-transparent rounded-full" />
-                                                        <span className="text-sm text-violet-400 capitalize">
-                                                            {gradingProgress[item.id].step || 'Processing'}
-                                                        </span>
-                                                    </div>
-                                                ) : gradingProgress[item.id]?.status === 'failed' ? (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                                                        Failed
-                                                    </span>
-                                                ) : (
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                                                        item.status === 'GRADED'
-                                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                                    }`}>
-                                                        {item.status === 'GRADED' ? 'Graded' : 'Pending'}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-zinc-300">
-                                                {item.score !== null ? `${item.score}/${item.assignment?.maxScore || 100}` : '—'}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                <div className="flex gap-4 items-center">
-                                                    <button
-                                                        onClick={() => setSelectedSubmission(item)}
-                                                        className="text-violet-400 hover:text-violet-300 transition-colors"
-                                                        aria-label={`View summary for ${item.assignment?.title}`}
-                                                    >
-                                                        View
-                                                    </button>
-                                                    {isTeacher && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => handleReEvaluate(item.id)}
-                                                                className="text-amber-400 hover:text-amber-300 transition-colors"
-                                                                aria-label={`Re-evaluate submission for ${item.assignment?.title}`}
-                                                            >
-                                                                Re-evaluate
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setConfirmDeleteId(item.id)}
-                                                                className="text-red-400 hover:text-red-300 transition-colors"
-                                                                aria-label={`Delete submission for ${item.assignment?.title}`}
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
-                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-zinc-900 border-zinc-800 text-white">
-                    <DialogHeader>
-                        <DialogTitle className="text-white">Submission Summary</DialogTitle>
-                        <DialogDescription className="text-zinc-500">
-                            Detailed feedback and score for{' '}
-                            {selectedSubmission?.assignment?.title || 'Assignment'}
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    {selectedSubmission && (
-                        <div className="space-y-6 mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                        <div className="bg-surface border-[4px] border-on-surface brutal-shadow p-6 flex flex-col justify-between">
+                            <div className="flex justify-between items-start mb-6">
+                                <span className="font-label-mono text-label-mono uppercase text-on-surface-variant">Active Assmts</span>
+                                <span className="material-symbols-outlined text-primary">assignment</span>
+                            </div>
                             <div>
-                                <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Score</h3>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-3xl font-bold text-violet-400">
-                                        {selectedSubmission.score ?? '—'}
-                                    </span>
-                                    <span className="text-zinc-500 text-sm">/ {selectedSubmission.assignment?.maxScore || 100}</span>
-                                </div>
+                                <span className="font-headline-lg text-headline-lg font-black block mb-1">{activeAssignments.length}</span>
                             </div>
+                        </div>
+                        <div className="bg-primary border-[4px] border-on-surface brutal-shadow p-6 flex flex-col justify-between text-on-primary">
+                            <div className="flex justify-between items-start mb-6">
+                                <span className="font-label-mono text-label-mono uppercase opacity-90">Pending Grades</span>
+                                <span className="material-symbols-outlined">hourglass_top</span>
+                            </div>
+                            <div>
+                                <span className="font-headline-lg text-headline-lg font-black block mb-1">{pendingCount}</span>
+                            </div>
+                        </div>
+                        <div className="bg-secondary border-[4px] border-on-surface brutal-shadow p-6 flex flex-col justify-between text-on-secondary">
+                            <div className="flex justify-between items-start mb-6">
+                                <span className="font-label-mono text-label-mono uppercase opacity-90">Total Graded</span>
+                                <span className="material-symbols-outlined">done_all</span>
+                            </div>
+                            <div>
+                                <span className="font-headline-lg text-headline-lg font-black block mb-1">{gradedCount}</span>
+                            </div>
+                        </div>
+                        <div className="bg-accent-blue border-[4px] border-on-surface brutal-shadow p-6 flex flex-col justify-between text-on-surface">
+                            <div className="flex justify-between items-start mb-6">
+                                <span className="font-label-mono text-label-mono uppercase opacity-90">Avg. Score</span>
+                                <span className="material-symbols-outlined">analytics</span>
+                            </div>
+                            <div>
+                                <span className="font-headline-lg text-headline-lg font-black block mb-1">{avgScore}%</span>
+                            </div>
+                        </div>
+                    </div>
 
-                            {isTeacher && (
-                                <div>
-                                    <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Actions</h3>
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={() => handleReEvaluate(selectedSubmission.id)}
-                                            className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium transition-colors border border-amber-500/20"
-                                        >
-                                            Re-evaluate (AI)
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setConfirmDeleteId(selectedSubmission.id);
-                                                setSelectedSubmission(null);
-                                            }}
-                                            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-sm font-medium transition-colors border border-red-500/20"
-                                        >
-                                            Delete & Allow Resubmission
-                                        </button>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 flex flex-col gap-6">
+                            <div className="flex justify-between items-end border-b-[4px] border-on-surface pb-4">
+                                <h3 className="font-headline-md text-headline-md font-black uppercase tracking-tight">Active Grading Pipelines</h3>
+                            </div>
+                            {isAssignmentsLoading ? <p>Loading...</p> : activeAssignments.map((assignment) => (
+                                <div key={assignment.id} className="bg-surface border-[4px] border-on-surface p-0 flex flex-col brutal-shadow">
+                                    <div className="bg-on-surface text-surface px-4 py-2 flex justify-between items-center">
+                                        <span className="font-label-mono text-[12px] uppercase tracking-widest">{assignment.otp}</span>
+                                        <span className="font-label-mono text-[12px] bg-secondary text-on-secondary px-2 border-[2px] border-transparent font-bold">ACTIVE</span>
+                                    </div>
+                                    <div className="p-6">
+                                        <h4 className="font-headline-md text-[20px] font-bold mb-2 uppercase">{assignment.title}</h4>
+                                        <div className="flex justify-between font-label-mono text-[12px] text-on-surface-variant mb-4">
+                                            <span>Submissions: {assignment._count?.submissions || 0}</span>
+                                            <span>Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'N/A'}</span>
+                                        </div>
+                                        <div className="flex gap-4 mt-6">
+                                            <button onClick={() => navigate(`/assignment/${assignment.id}/submissions`)} className="flex-1 bg-surface border-[4px] border-on-surface py-2 font-label-caps text-label-caps uppercase brutal-shadow brutal-button hover:bg-primary hover:text-on-primary">
+                                                Review Submissions
+                                            </button>
+                                            <button onClick={() => handleShareLink(assignment.id)} className="p-2 border-[4px] border-on-surface bg-surface brutal-shadow brutal-button flex items-center justify-center hover:bg-surface-variant">
+                                                <span className="material-symbols-outlined">share</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            )}
+                            ))}
+                        </div>
 
-                            <div>
-                                <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-3">Feedback</h3>
-                                <div className="bg-zinc-950 p-4 rounded-lg text-sm prose prose-invert max-w-none border border-zinc-800">
-                                    <ReactMarkdown>
-                                        {selectedSubmission.feedback || 'No feedback available.'}
-                                    </ReactMarkdown>
+                        <div className="lg:col-span-1 flex flex-col">
+                            <div className="flex justify-between items-end border-b-[4px] border-on-surface pb-4 mb-6">
+                                <h3 className="font-headline-md text-headline-md font-black uppercase tracking-tight flex items-center gap-2">
+                                    <span className="w-3 h-3 bg-secondary border-[2px] border-on-surface animate-pulse"></span>
+                                    Live Output
+                                </h3>
+                            </div>
+                            <div className="flex-1 bg-on-surface border-[4px] border-on-surface p-4 font-label-mono text-label-mono overflow-y-auto h-[600px] flex flex-col gap-2 relative brutal-shadow">
+                                <div className="text-surface-variant opacity-50 mb-4 border-b-[2px] border-surface-variant pb-2 text-xs">
+                                    Listening for grading activity...
+                                </div>
+                                {recentSubmissions.slice(0, 10).map((sub) => {
+                                    const progress = gradingProgress[sub.id];
+                                    const statusText = progress ? progress.step : sub.status;
+                                    const isError = progress?.status === 'failed';
+                                    const isDone = sub.status === 'GRADED' || progress?.status === 'completed';
+                                    return (
+                                        <div key={sub.id} className="flex gap-4 text-xs mb-2">
+                                            <span className="text-surface-variant w-12 flex-shrink-0">{new Date(sub.submittedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                            <span className={isError ? "text-error" : isDone ? "text-secondary-fixed" : "text-primary-fixed"}>
+                                                [{sub.assignment?.title.substring(0, 8)}] {sub.student?.email?.split('@')[0] || 'Unknown'} - {statusText.toUpperCase()}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                                <div className="flex gap-4 mt-auto pt-4">
+                                    <span className="text-surface-variant animate-pulse">_</span>
+                                    <span className="text-surface-variant">Awaiting next task...</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </>
+            ) : (
+                /* Student Dashboard View */
+                <>
+                    <section className="mb-16">
+                        <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+                            <div className="flex-1 bg-surface border-[4px] border-on-surface brutal-shadow p-8 lg:p-12 relative overflow-hidden">
+                                <div className="absolute -right-16 -top-16 w-64 h-64 border-[4px] border-on-surface rounded-full opacity-10 pointer-events-none"></div>
+                                <h2 className="font-headline-xl text-headline-xl md:text-[80px] leading-none font-black text-on-surface tracking-tighter uppercase mb-4 relative z-10">
+                                    {getGreeting()},<br /><span className="text-primary">{user?.name || user?.email?.split('@')[0] || 'Student'}!</span>
+                                </h2>
+                                <p className="font-body-lg text-body-lg text-on-surface-variant max-w-md relative z-10">
+                                    You have {pendingCount} pending assignments.
+                                </p>
+                            </div>
+                            <div className="lg:w-1/3 bg-accent-yellow border-[4px] border-on-surface brutal-shadow flex flex-col">
+                                <div className="bg-on-surface text-surface px-6 py-3 font-label-caps text-label-caps border-b-[4px] border-on-surface flex justify-between items-center font-bold">
+                                    <span>Status</span>
+                                    <span className="material-symbols-outlined text-accent-yellow">priority_high</span>
+                                </div>
+                                <div className="flex-1 p-8 flex flex-col justify-center items-center text-center">
+                                    <span className="material-symbols-outlined text-[64px] mb-4 text-on-surface" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>
+                                    <div className="font-headline-md text-headline-md text-on-surface font-black uppercase">All Caught Up</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+                        <section>
+                            <div className="flex justify-between items-end mb-6 border-b-[4px] border-on-surface pb-2">
+                                <h3 className="font-headline-md text-headline-md font-black uppercase tracking-tight">Recent Feedback</h3>
+                            </div>
+                            <div className="space-y-6">
+                                {recentSubmissions.filter(s => s.status === 'GRADED').slice(0, 3).map(sub => (
+                                    <div key={sub.id} className="bg-surface border-[4px] border-on-surface brutal-shadow flex flex-col h-full hover:-translate-y-1 hover:brutal-shadow-lg transition-all duration-200">
+                                        <div className="bg-secondary text-on-secondary px-4 py-2 font-label-caps text-label-caps border-b-[4px] border-on-surface flex justify-between items-center font-bold">
+                                            <span>{sub.assignment?.title}</span>
+                                            <span className="material-symbols-outlined text-sm">science</span>
+                                        </div>
+                                        <div className="p-6 flex-1 flex flex-col justify-center items-center bg-secondary-fixed border-b-[4px] border-on-surface relative">
+                                            <div className="font-headline-xl text-headline-xl font-black text-on-surface leading-none mb-2">
+                                                {sub.score}<span className="text-headline-md font-headline-md text-on-surface-variant">/{sub.assignment?.maxScore || 100}</span>
+                                            </div>
+                                            <div className="font-label-mono text-label-mono font-bold bg-surface border-[2px] border-on-surface px-3 py-1 uppercase">{sub.score! >= 90 ? 'Excellent' : 'Graded'}</div>
+                                        </div>
+                                        <div className="p-4 bg-surface flex justify-between items-center">
+                                            <span className="font-body-md text-body-md font-bold truncate pr-4">Submission ID: {sub.id.substring(0,6)}</span>
+                                            <button onClick={() => setSelectedSubmission(sub)} className="w-10 h-10 border-[2px] border-on-surface flex items-center justify-center bg-primary text-on-primary brutal-shadow brutal-button flex-shrink-0">
+                                                <span className="material-symbols-outlined">arrow_forward</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {recentSubmissions.filter(s => s.status === 'GRADED').length === 0 && (
+                                    <div className="p-6 border-[4px] border-on-surface bg-surface-variant font-label-mono uppercase text-center">No recent feedback</div>
+                                )}
+                            </div>
+                        </section>
+                    </div>
+                </>
+            )}
 
-                            <a
-                                href={selectedSubmission.publicUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block w-full py-3 text-center border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors font-medium text-zinc-300 text-sm"
-                            >
-                                View Original PDF
-                            </a>
+            {/* Submission Detail Modal */}
+            <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none">
+                    <DialogHeader>
+                        <DialogTitle className="font-headline-md text-headline-md font-black uppercase border-b-[4px] border-on-surface pb-2">Feedback Summary</DialogTitle>
+                    </DialogHeader>
+                    {selectedSubmission && (
+                        <div className="space-y-6 mt-4 font-body-md">
+                            <div className="flex gap-4">
+                                <div className="bg-secondary-fixed border-[4px] border-on-surface p-4 inline-block brutal-shadow">
+                                    <h3 className="font-label-caps text-label-caps uppercase font-bold mb-1">Score</h3>
+                                    <div className="font-headline-lg font-black text-on-surface">{selectedSubmission.score}<span className="text-headline-md">/{selectedSubmission.assignment?.maxScore || 100}</span></div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="font-label-caps text-label-caps uppercase font-bold mb-2">AI Analysis</h3>
+                                <div className="bg-surface-variant border-[4px] border-on-surface p-4 prose max-w-none text-on-surface brutal-shadow">
+                                    <ReactMarkdown>{selectedSubmission.feedback || 'No feedback.'}</ReactMarkdown>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </DialogContent>
