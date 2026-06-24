@@ -2,6 +2,7 @@ import { useSelector } from 'react-redux';
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import { Footer } from './components/Footer';
+import SidebarLayout from './components/SidebarLayout';
 import { selectCurrentUser } from './features/auth/authSlice';
 import AssignmentSubmissions from './pages/AssignmentSubmissions';
 import AssignmentUpload from './pages/AssignmentUpload';
@@ -21,7 +22,7 @@ const Layout = () => {
     location.pathname.startsWith('/upload');
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-surface text-on-surface">
       <Navbar />
       <Outlet />
       {!hideFooter && <Footer />}
@@ -30,7 +31,7 @@ const Layout = () => {
 };
 
 const AuthLayout = () => (
-  <div className="min-h-screen bg-zinc-950 text-white">
+  <div className="min-h-screen bg-surface text-on-surface">
     <Outlet />
   </div>
 );
@@ -51,14 +52,17 @@ PublicRoute.displayName = 'PublicRoute';
 
 const NotFound = () => (
   <div className="min-h-[80vh] flex flex-col items-center justify-center px-4">
-    <h1 className="text-6xl font-bold text-zinc-800 mb-4">404</h1>
-    <p className="text-zinc-500 mb-6">Page not found</p>
-    <Link
-      to="/dashboard"
-      className="px-4 py-2 bg-white text-zinc-950 rounded-lg text-sm font-medium hover:bg-zinc-200 transition-colors"
-    >
-      Go to Dashboard
-    </Link>
+    <div className="border-[4px] border-on-surface brutal-shadow p-12 text-center bg-surface">
+      <h1 className="text-8xl font-black text-on-surface mb-4 uppercase tracking-tighter">404</h1>
+      <p className="font-label-mono text-on-surface-variant uppercase font-bold mb-8">Page not found</p>
+      <Link
+        to="/dashboard"
+        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary border-[4px] border-on-surface font-label-caps uppercase font-bold brutal-shadow brutal-button hover:bg-primary-container"
+      >
+        <span className="material-symbols-outlined">arrow_back</span>
+        Go to Dashboard
+      </Link>
+    </div>
   </div>
 );
 
@@ -73,6 +77,8 @@ function App() {
         </Route>
         <Route element={<Layout />}>
           <Route path="/" element={<Onboarding />} />
+        </Route>
+        <Route element={<SidebarLayout />}>
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/assignment/:assignmentId/submissions" element={<ProtectedRoute><AssignmentSubmissions /></ProtectedRoute>} />
           <Route path="/upload/:assignmentId" element={<ProtectedRoute><AssignmentUpload /></ProtectedRoute>} />
