@@ -158,8 +158,8 @@ const AssignmentSubmissions: React.FC = () => {
                                             [Grading Failed]
                                         </span>
                                     ) : (
-                                        <span className={`font-label-mono font-bold uppercase px-3 py-1 border-[2px] border-on-surface brutal-shadow ${submission.status === 'GRADED' ? 'bg-secondary text-on-secondary' : 'bg-surface text-on-surface'}`}>
-                                            {submission.status === 'GRADED' ? 'Evaluated' : 'Pending'}
+                                        <span className={`font-label-mono font-bold uppercase px-3 py-1 border-[2px] border-on-surface brutal-shadow ${submission.status === 'GRADED' ? 'bg-secondary text-on-secondary' : submission.status === 'FAILED' ? 'bg-error text-on-error' : 'bg-surface text-on-surface'}`}>
+                                            {submission.status === 'GRADED' ? 'Evaluated' : submission.status === 'FAILED' ? 'Failed' : 'Pending'}
                                         </span>
                                     )}
                                     {submission.score !== null && (
