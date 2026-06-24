@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { io, Socket } from 'socket.io-client';
 import { getWsUrl } from '../config';
+import { selectAccessToken } from '../features/auth/authSlice';
 
 interface SocketContextType {
     socket: Socket | null;
@@ -16,10 +18,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [isConnected, setIsConnected] = useState(false);
     // Use a ref so the effect doesn't re-run on every render
     const socketRef = useRef<Socket | null>(null);
+    
+    // Listen to token changes from Redux
+    const token = useSelector(selectAccessToken);
 
     useEffect(() => {
         // Don't connect if there's no token — user is not logged in
-        const token = localStorage.getItem('accessToken');
         if (!token) return;
 
         const wsUrl = getWsUrl();
@@ -51,7 +55,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             socketInstance.disconnect();
             socketRef.current = null;
         };
-    }, []); // Only run once on mount — reconnect handled by socket.io internally
+    }, [token]); // Reconnect when the token changes (e.g. login, logout, refresh)
 
     return (
         <SocketContext.Provider value={{ socket, isConnected }}>

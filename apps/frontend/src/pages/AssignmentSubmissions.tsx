@@ -1,9 +1,6 @@
-import { Download, User } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useParams } from 'react-router-dom';
-import MeshBackground from '../components/MeshBackground';
-import { Button } from '../components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -26,16 +23,12 @@ const AssignmentSubmissions: React.FC = () => {
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-    const { data: assignmentData } = useGetAssignmentQuery(assignmentId || '', {
-        skip: !assignmentId,
-    });
+    const { data: assignmentData } = useGetAssignmentQuery(assignmentId || '', { skip: !assignmentId });
     const {
         data: submissionsData,
         isLoading,
         refetch: refetchSubmissions,
-    } = useGetAssignmentSubmissionsQuery(assignmentId || '', {
-        skip: !assignmentId,
-    });
+    } = useGetAssignmentSubmissionsQuery(assignmentId || '', { skip: !assignmentId });
 
     const assignment = assignmentData?.data;
     const submissions = submissionsData?.data || [];
@@ -45,19 +38,13 @@ const AssignmentSubmissions: React.FC = () => {
 
     const handleExportToExcel = () => {
         if (!submissions.length) return;
-
         const headers = ['ID', 'Name', 'Score'];
         const rows = submissions.map((s) => [
             s.studentUniqueId || '',
             s.student?.name || 'Unknown',
             s.score !== null && s.score !== undefined ? s.score.toString() : '',
         ]);
-
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-        ].join('\n');
-
+        const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -73,9 +60,7 @@ const AssignmentSubmissions: React.FC = () => {
         try {
             await reEvaluateSubmission({ submissionId }).unwrap();
             toast.success('Re-evaluation forced.');
-        } catch {
-            toast.error('Failed to trigger re-evaluation.');
-        }
+        } catch { toast.error('Failed to trigger re-evaluation.'); }
     };
 
     const handleAllowResubmission = async (submissionId: string) => {
@@ -84,80 +69,34 @@ const AssignmentSubmissions: React.FC = () => {
             toast.success('Submission deleted. Student can now resubmit.');
             setSelectedSubmission(null);
             setConfirmDeleteId(null);
-        } catch {
-            toast.error('Failed to allow resubmission.');
-        }
+        } catch { toast.error('Failed to allow resubmission.'); }
     };
 
     const { socket } = useSocket();
-
-    const [gradingProgress, setGradingProgress] = useState<
-        Record<
-            string,
-            {
-                step: string;
-                percent: number;
-                status: 'processing' | 'completed' | 'failed';
-            }
-        >
-    >({});
+    const [gradingProgress, setGradingProgress] = useState<Record<string, { step: string; percent: number; status: 'processing' | 'completed' | 'failed' }>>({});
 
     useEffect(() => {
         if (!socket || !assignmentId) return;
-
-        const handleGradingProgress = (event: {
-            submissionId: string;
-            step?: string;
-            percent?: number;
-            error?: string;
-            score?: number;
-        }) => {
+        const handleGradingProgress = (event: any) => {
             let displayStatus: 'pending' | 'downloading' | 'grading' | 'graded' | 'failed' = 'pending';
-            if (event.error) {
-                displayStatus = 'failed';
-            } else if (event.step === 'grading_completed') {
-                displayStatus = 'graded';
-                refetchSubmissions();
-            } else if (
-                event.step === 'downloading_pdf' ||
-                event.step === 'pdf_downloaded' ||
-                event.step === 'submission_started'
-            ) {
-                displayStatus = 'downloading';
-            } else if (
-                event.step === 'parsing_started' ||
-                event.step === 'page_parsed' ||
-                event.step === 'parsing_completed' ||
-                event.step === 'gemini_started' ||
-                event.step === 'gemini_processing' ||
-                event.step === 'gemini_completed'
-            ) {
-                displayStatus = 'grading';
-            }
+            if (event.error) displayStatus = 'failed';
+            else if (event.step === 'grading_completed') { displayStatus = 'graded'; refetchSubmissions(); }
+            else if (['downloading_pdf', 'pdf_downloaded', 'submission_started'].includes(event.step)) displayStatus = 'downloading';
+            else displayStatus = 'grading';
 
             setGradingProgress((prev) => ({
                 ...prev,
                 [event.submissionId]: {
                     step: displayStatus,
                     percent: event.percent || 0,
-                    status: event.error
-                        ? 'failed'
-                        : event.step === 'grading_completed'
-                          ? 'completed'
-                          : 'processing',
+                    status: event.error ? 'failed' : event.step === 'grading_completed' ? 'completed' : 'processing',
                 },
             }));
         };
 
         socket.emit('watch-assignment', assignmentId);
         socket.on('assignment-grading-progress', handleGradingProgress);
-
-        const handleNewSubmission = (event: { assignmentId: string }) => {
-            if (event.assignmentId === assignmentId) {
-                refetchSubmissions();
-            }
-        };
-
+        const handleNewSubmission = (event: any) => { if (event.assignmentId === assignmentId) refetchSubmissions(); };
         socket.on('new-submission', handleNewSubmission);
 
         return () => {
@@ -168,217 +107,141 @@ const AssignmentSubmissions: React.FC = () => {
     }, [socket, assignmentId, refetchSubmissions]);
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#030712] text-gray-900 dark:text-gray-100 px-4 pt-24 pb-8 relative overflow-hidden">
-            <MeshBackground />
-            <div className="max-w-7xl mx-auto relative z-10">
-                <div className="flex justify-between items-start mb-8 border-b border-gray-200 dark:border-gray-800 pb-6">
-                    <div>
-                        <h1 className="text-2xl font-bold mb-1 tracking-tight text-gray-900 dark:text-white">
-                            {assignment?.title || 'Execution Records'}
-                        </h1>
-                        <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">
-                            {submissions.length} payloads registered
-                        </p>
-                    </div>
-                    {submissions.length > 0 && (
-                        <Button 
-                            variant="outline" 
-                            onClick={handleExportToExcel}
-                            className="gap-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-[#09090b]">
-                            <Download className="h-4 w-4" />
-                            Export Data
-                        </Button>
+        <div className="w-full">
+            <header className="mb-12 border-b-[4px] border-on-surface pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                <div>
+                    <h1 className="font-headline-xl text-headline-lg-mobile md:text-headline-xl font-black text-on-surface uppercase tracking-tighter leading-none mb-2">
+                        {assignment?.title || 'Submissions'}
+                    </h1>
+                    <p className="font-body-lg text-body-lg text-on-surface-variant border-l-4 border-primary pl-4 mt-4 uppercase font-bold">
+                        {submissions.length} submissions received
+                    </p>
+                </div>
+                {submissions.length > 0 && (
+                    <button onClick={handleExportToExcel} className="bg-primary text-on-primary border-[4px] border-on-surface px-6 py-3 font-label-caps text-label-caps uppercase tracking-wide brutal-shadow brutal-button flex items-center gap-2 hover:bg-primary-container">
+                        <span className="material-symbols-outlined">download</span> Export Data
+                    </button>
+                )}
+            </header>
+
+            {isLoading ? (
+                <div className="text-center py-12 font-label-mono uppercase font-bold">Loading submissions...</div>
+            ) : (
+                <div className="space-y-6">
+                    {submissions.length === 0 ? (
+                        <div className="bg-surface border-[4px] border-on-surface p-12 text-center brutal-shadow font-label-mono uppercase font-bold text-on-surface-variant">
+                            Zero submissions found.
+                        </div>
+                    ) : (
+                        submissions.map((submission) => (
+                            <div key={submission.id} className="bg-surface border-[4px] border-on-surface flex flex-col sm:flex-row justify-between items-start sm:items-stretch gap-0 brutal-shadow transition-all hover:translate-y-1">
+                                <div className="p-6 flex-1 flex flex-col md:flex-row gap-6 items-start md:items-center">
+                                    <div className="w-12 h-12 bg-surface-variant border-[2px] border-on-surface flex items-center justify-center brutal-shadow flex-shrink-0">
+                                        <span className="material-symbols-outlined text-on-surface">person</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-headline-md text-headline-md font-bold uppercase">{submission.student?.name || 'Unknown Student'}</h3>
+                                        {submission.studentUniqueId && <span className="font-label-mono text-xs bg-secondary-fixed px-2 py-1 border-[2px] border-on-surface inline-block mt-2 font-bold uppercase">ID: {submission.studentUniqueId}</span>}
+                                        <p className="font-label-mono text-[12px] text-on-surface-variant mt-2 uppercase">
+                                            Submitted: {new Date(submission.submittedAt).toLocaleString()}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div className="border-t-[4px] sm:border-t-0 sm:border-l-[4px] border-on-surface p-6 flex flex-col justify-center items-end bg-surface-variant min-w-[250px]">
+                                    {gradingProgress[submission.id]?.status === 'processing' ? (
+                                        <span className="font-label-mono text-primary font-bold uppercase animate-pulse">
+                                            [{gradingProgress[submission.id].step || 'Processing'}]
+                                        </span>
+                                    ) : gradingProgress[submission.id]?.status === 'failed' ? (
+                                        <span className="font-label-mono text-error font-bold uppercase">
+                                            [Grading Failed]
+                                        </span>
+                                    ) : (
+                                        <span className={`font-label-mono font-bold uppercase px-3 py-1 border-[2px] border-on-surface brutal-shadow ${submission.status === 'GRADED' ? 'bg-secondary text-on-secondary' : 'bg-surface text-on-surface'}`}>
+                                            {submission.status === 'GRADED' ? 'Evaluated' : 'Pending'}
+                                        </span>
+                                    )}
+                                    {submission.score !== null && (
+                                        <p className="font-headline-md text-headline-md font-black mt-4">
+                                            {submission.score}<span className="text-body-md text-on-surface-variant">/{assignment?.maxScore || 100}</span>
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex flex-row sm:flex-col border-t-[4px] sm:border-t-0 sm:border-l-[4px] border-on-surface">
+                                    <button onClick={() => setSelectedSubmission(submission)} className="flex-1 px-4 py-4 bg-primary text-on-primary font-label-caps uppercase font-bold hover:bg-primary-container border-r-[4px] sm:border-r-0 sm:border-b-[4px] border-on-surface brutal-button">
+                                        Inspect
+                                    </button>
+                                    <button onClick={() => handleReEvaluate(submission.id)} className="flex-1 px-4 py-4 bg-accent-yellow text-on-surface font-label-caps uppercase font-bold hover:bg-yellow-400 border-r-[4px] sm:border-r-0 sm:border-b-[4px] border-on-surface brutal-button">
+                                        Re-eval
+                                    </button>
+                                    <button onClick={() => setConfirmDeleteId(submission.id)} className="flex-1 px-4 py-4 bg-error text-on-error font-label-caps uppercase font-bold hover:bg-red-700 brutal-button">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ))
                     )}
                 </div>
+            )}
 
-                {isLoading ? (
-                    <div className="text-center py-12 font-mono text-gray-500 text-sm">Retrieving telemetry...</div>
-                ) : (
-                    <div className="space-y-4">
-                        {submissions.length === 0 ? (
-                            <div className="bg-white dark:bg-gray-900/50 p-8 rounded-2xl text-center border border-gray-200 dark:border-gray-800 backdrop-blur-sm">
-                                <p className="text-gray-500 font-mono text-sm">Zero records found.</p>
-                            </div>
-                        ) : (
-                            submissions.map((submission) => (
-                                <div
-                                    key={submission.id}
-                                    className="bg-white dark:bg-gray-900/80 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 backdrop-blur-sm transition-all hover:border-indigo-500/50">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-gray-100 dark:bg-[#09090b] rounded-full border border-gray-200 dark:border-gray-800">
-                                            <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="font-semibold text-lg tracking-tight">
-                                                    {submission.student?.name || 'Unknown Target'}
-                                                </h3>
-                                                {submission.studentUniqueId && (
-                                                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-mono font-medium rounded-md border border-gray-200 dark:border-gray-700">
-                                                        ID: {submission.studentUniqueId}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                Logged:{' '}
-                                                {new Date(submission.submittedAt).toLocaleDateString()}{' '}
-                                                [{new Date(submission.submittedAt).toLocaleTimeString()}]
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-4 w-full sm:w-auto">
-                                        <div className="text-right">
-                                            {gradingProgress[submission.id]?.status === 'processing' ? (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="animate-spin h-3.5 w-3.5 border-2 border-indigo-500 border-t-transparent rounded-full" />
-                                                    <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 capitalize">
-                                                        {gradingProgress[submission.id].step || 'Processing'}
-                                                    </span>
-                                                </div>
-                                            ) : gradingProgress[submission.id]?.status === 'failed' ? (
-                                                <span className="inline-block px-2.5 py-0.5 rounded-md text-xs font-medium bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/50">
-                                                    Execution Failed
-                                                </span>
-                                            ) : (
-                                                <span
-                                                    className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-medium border ${
-                                                        submission.status === 'GRADED'
-                                                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-900/50'
-                                                            : 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900/50'
-                                                    }`}>
-                                                    {submission.status === 'GRADED' ? 'Evaluated' : 'Pending'}
-                                                </span>
-                                            )}
-                                            {submission.score !== null && (
-                                                <p className="text-sm font-bold mt-1.5 tracking-tight">
-                                                    Score: {submission.score}/{assignment?.maxScore || 100}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2 ml-2">
-                                            <Button 
-                                                variant="default" 
-                                                size="sm"
-                                                onClick={() => setSelectedSubmission(submission)}>
-                                                Inspect
-                                            </Button>
-                                            <Button 
-                                                variant="outline" 
-                                                size="sm"
-                                                onClick={() => handleReEvaluate(submission.id)}
-                                                className="text-yellow-600 border-yellow-200 hover:bg-yellow-50 dark:text-yellow-500 dark:border-yellow-900/50 dark:hover:bg-yellow-900/20">
-                                                Re-eval
-                                            </Button>
-                                            <Button 
-                                                variant="outline" 
-                                                size="sm"
-                                                onClick={() => setConfirmDeleteId(submission.id)}
-                                                className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-500 dark:border-red-900/50 dark:hover:bg-red-900/20">
-                                                Delete
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
-            </div>
-
-            <Dialog
-                open={!!selectedSubmission}
-                onOpenChange={(open) => !open && setSelectedSubmission(null)}>
-                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            {/* Inspect Dialog */}
+            <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
+                <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none">
                     <DialogHeader>
-                        <DialogTitle>Execution Log</DialogTitle>
-                        <DialogDescription>
-                            Verdict parameters for {selectedSubmission?.student?.name}
+                        <DialogTitle className="font-headline-md text-headline-md font-black uppercase border-b-[4px] border-on-surface pb-2">Submission Details</DialogTitle>
+                        <DialogDescription className="font-label-mono text-on-surface-variant uppercase pt-2">
+                            Grading results for {selectedSubmission?.student?.name}
                         </DialogDescription>
                     </DialogHeader>
-
                     {selectedSubmission && (
-                        <div className="space-y-6 mt-4">
-                            <div>
-                                <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                                    Final Verdict
-                                </h4>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 tracking-tighter">
-                                        {selectedSubmission.score}
-                                    </span>
-                                    <span className="text-gray-400 font-mono">/ {assignment?.maxScore || 100}</span>
+                        <div className="space-y-8 mt-6">
+                            <div className="flex flex-wrap gap-6">
+                                <div className="bg-secondary-fixed border-[4px] border-on-surface p-4 inline-block brutal-shadow">
+                                    <h4 className="font-label-caps text-label-caps uppercase font-bold mb-1">Final Verdict</h4>
+                                    <div className="font-headline-lg font-black text-on-surface">{selectedSubmission.score}<span className="text-headline-md">/{assignment?.maxScore || 100}</span></div>
                                 </div>
-                            </div>
-
-                            <div>
-                                <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
-                                    Execution Controls
-                                </h4>
-                                <div className="flex gap-3">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => handleReEvaluate(selectedSubmission.id)}
-                                        className="text-yellow-600 border-yellow-200 hover:bg-yellow-50 dark:text-yellow-500 dark:border-yellow-900/50 dark:hover:bg-yellow-900/20">
+                                <div className="flex flex-col gap-2 justify-center">
+                                    <button onClick={() => handleReEvaluate(selectedSubmission.id)} className="px-4 py-2 bg-accent-yellow border-[4px] border-on-surface font-label-caps font-bold uppercase brutal-shadow brutal-button text-on-surface hover:bg-yellow-400">
                                         Force Re-evaluation
-                                    </Button>
-                                    <Button
-                                        variant="destructive"
-                                        onClick={() => {
-                                            setConfirmDeleteId(selectedSubmission.id);
-                                            setSelectedSubmission(null);
-                                        }}>
-                                        Delete &amp; Allow Resubmission
-                                    </Button>
+                                    </button>
+                                    <button onClick={() => { setConfirmDeleteId(selectedSubmission.id); setSelectedSubmission(null); }} className="px-4 py-2 bg-error text-on-error border-[4px] border-on-surface font-label-caps font-bold uppercase brutal-shadow brutal-button hover:bg-red-700">
+                                        Delete & Allow Resubmission
+                                    </button>
                                 </div>
                             </div>
 
                             <div>
-                                <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                                    System Analysis
-                                </h4>
-                                <div className="bg-gray-50 dark:bg-[#09090b] p-5 rounded-xl border border-gray-200 dark:border-gray-800 text-sm prose dark:prose-invert max-w-none">
-                                    <ReactMarkdown>
-                                        {selectedSubmission.feedback || 'System analysis unavailable.'}
-                                    </ReactMarkdown>
+                                <h4 className="font-label-caps text-label-caps uppercase font-bold mb-2">AI Feedback</h4>
+                                <div className="bg-surface-variant border-[4px] border-on-surface p-6 prose max-w-none text-on-surface brutal-shadow font-body-md">
+                                    <ReactMarkdown>{selectedSubmission.feedback || 'No feedback available.'}</ReactMarkdown>
                                 </div>
                             </div>
-
-                            <a
-                                href={selectedSubmission.publicUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block w-full py-3 text-center border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm font-medium">
-                                Access Source Payload
+                            
+                            <a href={selectedSubmission.publicUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-4 text-center border-[4px] border-on-surface bg-primary text-on-primary font-label-caps font-bold uppercase brutal-shadow brutal-button hover:bg-primary-container">
+                                View Submitted PDF
                             </a>
                         </div>
                     )}
                 </DialogContent>
             </Dialog>
+
             {/* Confirm Delete Dialog */}
             <Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-w-md bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none">
                     <DialogHeader>
-                        <DialogTitle>Delete Submission</DialogTitle>
-                        <DialogDescription>
+                        <DialogTitle className="font-headline-md font-black uppercase">Delete Submission</DialogTitle>
+                        <DialogDescription className="font-body-md">
                             This will permanently delete the submission and allow the student to resubmit. This cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex gap-3 mt-4">
-                        <Button
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => setConfirmDeleteId(null)}
-                        >
+                    <div className="flex gap-4 mt-6">
+                        <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-3 bg-surface-variant border-[4px] border-on-surface font-label-caps uppercase font-bold brutal-shadow brutal-button hover:bg-surface">
                             Cancel
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            className="flex-1"
-                            onClick={() => confirmDeleteId && handleAllowResubmission(confirmDeleteId)}
-                        >
-                            Delete
-                        </Button>
+                        </button>
+                        <button onClick={() => confirmDeleteId && handleAllowResubmission(confirmDeleteId)} className="flex-1 py-3 bg-error text-on-error border-[4px] border-on-surface font-label-caps uppercase font-bold brutal-shadow brutal-button hover:bg-red-700">
+                            Confirm Delete
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>

@@ -1,7 +1,4 @@
-import { Award, Edit, Plus, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import {
     useCreateRubricMutation,
     useDeleteRubricMutation,
@@ -50,10 +47,10 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         try {
             if (editingId) {
                 await updateRubric({ id: editingId, name, criteria }).unwrap();
-                toast.success('Matrix updated.');
+                toast.success('Rubric updated.');
             } else {
                 await createRubric({ name, criteria }).unwrap();
-                toast.success('Matrix deployed.');
+                toast.success('Rubric created.');
             }
             resetForm();
         } catch (error) {
@@ -82,17 +79,17 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm('Purge this matrix?')) {
+        if (confirm('Delete this rubric?')) {
             try {
                 setDeletingId(id);
                 await deleteRubric(id).unwrap();
                 if (editingId === id) {
                     resetForm();
                 }
-                toast.success('Matrix purged.');
+                toast.success('Rubric deleted.');
             } catch (error) {
-                console.error('Purge failed', error);
-                toast.error('Purge failed.');
+                console.error('Delete failed', error);
+                toast.error('Delete failed.');
             } finally {
                 setDeletingId(null);
             }
@@ -100,54 +97,55 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-[#09090b] rounded-2xl w-full max-w-4xl shadow-xl border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
-                <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
-                    <h2 className="text-2xl font-bold tracking-tight">Evaluation Matrices</h2>
+        <div className="fixed inset-0 bg-on-surface/80 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+            <div className="bg-surface w-full max-w-5xl border-[4px] border-on-surface brutal-shadow flex flex-col max-h-[90vh]">
+                <div className="p-6 border-b-[4px] border-on-surface flex justify-between items-center bg-accent-yellow">
+                    <h2 className="font-headline-lg text-headline-lg uppercase font-black tracking-tighter text-on-surface">Rubric Manager</h2>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
-                        <X className="h-5 w-5" />
+                        className="p-2 border-[4px] border-on-surface bg-surface text-on-surface brutal-shadow hover:bg-error hover:text-on-error transition-colors brutal-button flex items-center justify-center">
+                        <span className="material-symbols-outlined font-bold">close</span>
                     </button>
                 </div>
 
                 <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                    <div className="w-full md:w-1/3 border-r border-gray-200 dark:border-gray-800 p-4 overflow-y-auto bg-gray-50/50 dark:bg-black/20">
-                        <Button
+                    {/* Sidebar */}
+                    <div className="w-full md:w-1/3 border-b-[4px] md:border-b-0 md:border-r-[4px] border-on-surface p-6 overflow-y-auto bg-surface-variant flex flex-col gap-6">
+                        <button
                             onClick={handleNewRubric}
-                            className="w-full mb-4 gap-2 bg-indigo-600 hover:bg-indigo-700">
-                            <Plus className="h-4 w-4" /> Initialize Matrix
-                        </Button>
+                            className="w-full py-4 bg-primary text-on-primary border-[4px] border-on-surface brutal-shadow brutal-button font-label-caps uppercase font-bold flex items-center justify-center gap-2 hover:bg-primary-container">
+                            <span className="material-symbols-outlined">add</span> New Rubric
+                        </button>
 
                         {isLoading ? (
-                            <p className="text-center text-gray-500 font-mono text-sm">Loading...</p>
+                            <p className="text-center font-label-mono uppercase font-bold text-on-surface animate-pulse">Loading...</p>
                         ) : (
-                            <div className="space-y-2">
+                            <div className="flex flex-col gap-4">
                                 {rubricsData?.data.map((rubric) => (
                                     <div
                                         key={rubric.id}
-                                        className={`p-3 rounded-lg border flex justify-between items-center group transition-colors ${
+                                        className={`p-4 border-[4px] border-on-surface flex flex-col gap-4 group transition-colors brutal-shadow ${
                                             editingId === rubric.id
-                                                ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800'
-                                                : 'border-gray-200 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800/50'
+                                                ? 'bg-secondary-fixed'
+                                                : 'bg-surface hover:-translate-y-1'
                                         }`}>
                                         <div
-                                            className="flex-1 cursor-pointer"
+                                            className="cursor-pointer"
                                             onClick={() => handleEdit(rubric)}>
-                                            <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">{rubric.name}</h4>
-                                            <p className="text-xs text-gray-500 font-mono mt-1">
-                                                {rubric.criteria.length} nodes
+                                            <h4 className="font-headline-md text-lg uppercase font-bold text-on-surface">{rubric.name}</h4>
+                                            <p className="font-label-mono text-xs text-on-surface-variant mt-1 uppercase font-bold">
+                                                {rubric.criteria.length} criteria
                                             </p>
                                         </div>
-                                        <div className="flex gap-1">
+                                        <div className="flex gap-2">
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleEdit(rubric);
                                                 }}
                                                 disabled={deletingId === rubric.id}
-                                                className="p-1.5 text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded disabled:opacity-50 transition-colors">
-                                                <Edit className="h-3.5 w-3.5" />
+                                                className="flex-1 py-2 border-[2px] border-on-surface bg-surface text-on-surface font-label-caps text-xs uppercase font-bold hover:bg-accent-yellow transition-colors brutal-button flex items-center justify-center">
+                                                <span className="material-symbols-outlined text-[18px]">edit</span>
                                             </button>
                                             <button
                                                 onClick={(e) => {
@@ -155,11 +153,11 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                                     handleDelete(rubric.id);
                                                 }}
                                                 disabled={deletingId === rubric.id}
-                                                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded disabled:opacity-50 transition-colors">
+                                                className="flex-1 py-2 border-[2px] border-on-surface bg-error text-on-error font-label-caps text-xs uppercase font-bold hover:bg-red-700 transition-colors brutal-button flex items-center justify-center disabled:opacity-50">
                                                 {deletingId === rubric.id ? (
-                                                    <div className="h-3.5 w-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                                                    <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
                                                 ) : (
-                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
                                                 )}
                                             </button>
                                         </div>
@@ -169,120 +167,135 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         )}
                     </div>
 
-                    <div className="flex-1 p-6 overflow-y-auto">
+                    {/* Main Content */}
+                    <div className="flex-1 p-6 md:p-8 overflow-y-auto bg-surface">
                         {isCreatingNew ? (
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-semibold tracking-tight">
-                                        {editingId ? 'Modify Matrix' : 'Configure New Matrix'}
+                            <form onSubmit={handleSubmit} className="flex flex-col h-full">
+                                <div className="mb-8">
+                                    <h3 className="font-headline-md text-2xl uppercase font-black text-on-surface tracking-tighter mb-6 inline-block border-b-[4px] border-primary pb-2">
+                                        {editingId ? 'Edit Rubric' : 'New Rubric'}
                                     </h3>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                                        Identifier
-                                    </label>
-                                    <Input
-                                        type="text"
-                                        required
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        placeholder="Matrix Designation"
-                                        className="bg-gray-50 dark:bg-black/50"
-                                    />
+                                    <div className="space-y-2">
+                                        <label className="block font-label-caps uppercase font-bold text-on-surface">
+                                            Rubric Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            placeholder="e.g. Essay Rubric, Code Review"
+                                            className="w-full h-12 px-4 border-[4px] border-on-surface bg-surface-variant font-body-md focus:outline-none focus:border-primary brutal-shadow transition-colors"
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-800">
-                                        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Evaluation Nodes</h3>
+                                <div className="flex-1 space-y-6">
+                                    <div className="flex justify-between items-end border-b-[4px] border-on-surface pb-4">
+                                        <h3 className="font-headline-md text-xl uppercase font-bold text-on-surface">Criteria</h3>
                                         <button
                                             type="button"
                                             onClick={handleAddCriterion}
-                                            className="text-xs text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 font-medium flex items-center gap-1 transition-colors">
-                                            <Plus className="h-3.5 w-3.5" /> Append Node
+                                            className="px-4 py-2 bg-primary text-on-primary border-[4px] border-on-surface font-label-caps text-xs uppercase font-bold brutal-shadow brutal-button hover:bg-primary-container flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[18px]">add</span> Add Criterion
                                         </button>
                                     </div>
 
-                                    {criteria.map((criterion, index) => (
-                                        <div
-                                            key={index}
-                                            className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-[#09090b] space-y-3 relative group">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemoveCriterion(index)}
-                                                className="absolute -top-2 -right-2 p-1.5 bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                                                <X className="h-3 w-3" />
-                                            </button>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                                <div className="md:col-span-3">
-                                                    <Input
-                                                        type="text"
-                                                        required
-                                                        value={criterion.name}
-                                                        onChange={(e) =>
-                                                            handleCriterionChange(index, 'name', e.target.value)
-                                                        }
-                                                        placeholder="Node Name"
-                                                        className="bg-white dark:bg-black"
-                                                    />
+                                    <div className="space-y-6 pb-6">
+                                        {criteria.map((criterion, index) => (
+                                            <div
+                                                key={index}
+                                                className="p-6 border-[4px] border-on-surface bg-surface brutal-shadow space-y-4 relative group">
+                                                <div className="absolute -top-4 -left-4 bg-on-surface text-surface px-3 py-1 border-[4px] border-surface font-headline-md font-black">
+                                                    {index + 1}
                                                 </div>
-                                                <div>
-                                                    <Input
-                                                        type="number"
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveCriterion(index)}
+                                                    className="absolute -top-4 -right-4 p-2 bg-error text-on-error border-[4px] border-on-surface brutal-shadow brutal-button opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <span className="material-symbols-outlined font-bold">close</span>
+                                                </button>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-4">
+                                                    <div className="md:col-span-3 space-y-2">
+                                                        <label className="block font-label-caps text-xs uppercase font-bold text-on-surface">Criterion Name</label>
+                                                        <input
+                                                            type="text"
+                                                            required
+                                                            value={criterion.name}
+                                                            onChange={(e) =>
+                                                                handleCriterionChange(index, 'name', e.target.value)
+                                                            }
+                                                            placeholder="Criterion Title"
+                                                            className="w-full h-12 px-4 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="block font-label-caps text-xs uppercase font-bold text-on-surface">Points</label>
+                                                        <input
+                                                            type="number"
+                                                            required
+                                                            min="1"
+                                                            value={criterion.points}
+                                                            onChange={(e) =>
+                                                                handleCriterionChange(index, 'points', parseInt(e.target.value))
+                                                            }
+                                                            placeholder="Points"
+                                                            className="w-full h-12 px-4 border-[4px] border-on-surface bg-surface font-label-mono text-center font-bold focus:outline-none focus:border-primary brutal-shadow"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="block font-label-caps text-xs uppercase font-bold text-on-surface">Description</label>
+                                                    <textarea
                                                         required
-                                                        min="1"
-                                                        value={criterion.points}
+                                                        value={criterion.description}
                                                         onChange={(e) =>
-                                                            handleCriterionChange(index, 'points', parseInt(e.target.value))
+                                                            handleCriterionChange(index, 'description', e.target.value)
                                                         }
-                                                        placeholder="Weight"
-                                                        className="bg-white dark:bg-black font-mono text-center"
+                                                        className="w-full p-4 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow resize-y min-h-[100px]"
+                                                        placeholder="Describe what earns full points for this criterion..."
                                                     />
                                                 </div>
                                             </div>
-                                            <textarea
-                                                required
-                                                value={criterion.description}
-                                                onChange={(e) =>
-                                                    handleCriterionChange(index, 'description', e.target.value)
-                                                }
-                                                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
-                                                placeholder="Execution standard..."
-                                                rows={2}
-                                            />
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
 
-                                <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-800">
-                                    <Button
+                                <div className="flex justify-end gap-4 pt-8 border-t-[4px] border-on-surface mt-auto">
+                                    <button
                                         type="button"
-                                        variant="outline"
                                         onClick={resetForm}
-                                        disabled={isSubmitting}>
-                                        Abort
-                                    </Button>
-                                    <Button
+                                        disabled={isSubmitting}
+                                        className="px-8 py-3 bg-surface-variant border-[4px] border-on-surface font-label-caps uppercase font-bold brutal-shadow brutal-button hover:bg-surface disabled:opacity-50">
+                                        Cancel
+                                    </button>
+                                    <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="bg-indigo-600 hover:bg-indigo-700 min-w-[120px]">
+                                        className="px-8 py-3 bg-secondary text-on-secondary border-[4px] border-on-surface font-label-caps uppercase font-bold tracking-widest brutal-shadow brutal-button hover:bg-emerald-500 disabled:opacity-50">
                                         {isSubmitting ? (
-                                            <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            <span className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined animate-spin">refresh</span>
+                                                Saving...
+                                            </span>
                                         ) : editingId ? (
-                                            'Update Matrix'
+                                            'Save Changes'
                                         ) : (
-                                            'Deploy Matrix'
+                                            'Create Rubric'
                                         )}
-                                    </Button>
+                                    </button>
                                 </div>
                             </form>
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-500 dark:text-gray-600">
-                                <Award className="h-16 w-16 mb-4 opacity-20" />
-                                <p className="font-medium text-gray-900 dark:text-gray-300">No active matrix selected.</p>
-                                <p className="text-sm mt-1">
-                                    Initialize a new matrix or select one to modify.
-                                </p>
+                            <div className="h-full flex flex-col items-center justify-center text-on-surface-variant space-y-6">
+                                <div className="p-8 border-[4px] border-on-surface border-dashed">
+                                    <span className="material-symbols-outlined text-7xl opacity-50 block mb-4">analytics</span>
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="font-headline-md text-2xl uppercase font-black text-on-surface mb-2">No Rubric Selected</h3>
+                                    <p className="font-body-md uppercase font-bold">Create a new rubric or select one to edit.</p>
+                                </div>
                             </div>
                         )}
                     </div>
