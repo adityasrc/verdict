@@ -87,6 +87,11 @@ function runPython(
             console.error(`Python error: ${err.toString()}`);
         });
 
+        proc.on("error", (error) => {
+            console.error(`Python process failed to spawn or errored:`, error);
+            reject(error);
+        });
+
         proc.on("close", (code) => {
             console.log(`Python process exited with code: ${code}`);
             if (code === 0) {
@@ -165,6 +170,11 @@ function runGeminiGrader(
             console.error(`Gemini error: ${err.toString()}`);
         });
 
+        proc.on("error", (error) => {
+            console.error(`Gemini process failed to spawn or errored:`, error);
+            reject(error);
+        });
+
         proc.on("close", (code) => {
             console.log(`Gemini process exited with code: ${code}`);
             if (code === 0 && evaluation) {
@@ -182,9 +192,7 @@ function runGeminiGrader(
 const worker = new Worker<SubmissionJobData>(
     "grade_assignment",
     async (job: Job<SubmissionJobData>) => {
-        console.log("Job received:", job.id);
-        console.log("Job data:", job.data);
-
+        console.log(`[Worker] Job received: ${job.id}`);
         const { id, publicUrl, studentId, assignmentId } = job.data;
         console.log(`Processing submission ${id} for student ${studentId}`);
 
@@ -215,7 +223,7 @@ const worker = new Worker<SubmissionJobData>(
         const imagesDir = path.join(tmpDir, "extracted_images", id);
 
         try {
-            console.log(`Downloading PDF from: ${publicUrl}`);
+            console.log(`[Worker] Downloading PDF for submission ${id}`);
 
             redis.publish(
                 `submission:${id}`,
@@ -227,15 +235,17 @@ const worker = new Worker<SubmissionJobData>(
                 }),
             );
 
-            const buffer = await fetch(publicUrl).then((res) => {
+            const fetchOptions = {
+                signal: AbortSignal.timeout(30000) // 30 second timeout
+            };
+            
+            const buffer = await fetch(publicUrl, fetchOptions).then((res) => {
                 if (!res.ok) {
                     throw new Error(`Failed to download PDF: ${res.statusText}`);
                 }
                 return res.arrayBuffer();
             });
-            console.log(`Saving PDF to: ${pdfPath}`);
             fs.writeFileSync(pdfPath, Buffer.from(buffer));
-            console.log(`PDF saved successfully`);
 
             redis.publish(
                 `submission:${id}`,

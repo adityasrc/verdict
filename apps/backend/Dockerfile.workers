@@ -38,7 +38,8 @@ FROM base AS prod
 WORKDIR /app
 
 # Install Python (runtime only, no build deps yet)
-RUN apk add --no-cache python3 py3-pip
+RUN apk add --no-cache python3 py3-pip && \
+    ln -sf /usr/bin/python3 /usr/bin/python
 
 # Copy Node deps and Prisma client from the deps stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -53,11 +54,11 @@ RUN apk add --no-cache --virtual .build-deps build-base python3-dev cargo clang 
     -r workers/python/requirements.txt --break-system-packages && \
     apk del .build-deps
 
-# Copy Python scripts
-COPY workers/python ./workers/python
+# Copy Python scripts into the dist directory where the compiled JS (__dirname) expects them
+COPY workers/python ./dist/workers/python
 
 # Copy the built worker files from the builder stage
 COPY --from=builder /app/dist ./dist
 
-# Run the compiled worker file using standard Node (path fixed for tsup output)
-CMD ["node", "dist/SubmissionWorker.js"]
+# Run the compiled worker file
+CMD ["node", "dist/workers/SubmissionWorker.js"]
