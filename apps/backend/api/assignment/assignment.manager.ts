@@ -1,5 +1,5 @@
 import { prisma } from "../../utils/db.js";
-import type { CreateAssignmentInput } from "../../validators/index.js";
+import type { CreateAssignmentInput } from "../../validators/zod.js";
 
 export class AssignmentManager {
     async createAssignment(

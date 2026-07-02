@@ -3,7 +3,7 @@ import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
 import { catchAsync } from "../utils/catchAsyncWrapper.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
 import { RubricManager } from "./rubric.manager.js";
-import { createRubricSchema, updateRubricSchema } from "../../validators/index.js";
+import { createRubricSchema, updateRubricSchema } from "../../validators/zod.js";
 
 export class RubricController {
     public router = Router();
@@ -42,19 +42,19 @@ export class RubricController {
     private async getRubrics(req: Request, res: Response) {
         const teacherId = req.user!.id;
         const rubrics = await this._rubricManager.getRubricsByTeacher(teacherId);
-        
+
         return res.status(200).json({ success: true, data: rubrics });
     }
 
     private async getRubric(req: Request, res: Response) {
         const id = req.params.id as string;
-        
+
         if (!id) {
             throw new AppError("Rubric ID is required", 400);
         }
 
         const rubric = await this._rubricManager.getRubricById(id);
-        
+
         if (!rubric) {
             throw new AppError("Rubric not found", 404);
         }
@@ -64,7 +64,7 @@ export class RubricController {
 
     private async updateRubric(req: Request, res: Response) {
         const id = req.params.id as string;
-        
+
         if (!id) {
             throw new AppError("Rubric ID is required", 400);
         }
@@ -80,7 +80,7 @@ export class RubricController {
 
     private async deleteRubric(req: Request, res: Response) {
         const id = req.params.id as string;
-        
+
         if (!id) {
             throw new AppError("Rubric ID is required", 400);
         }
