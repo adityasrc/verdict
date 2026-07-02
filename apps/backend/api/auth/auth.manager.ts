@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../utils/db.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
-import type { RegisterInput } from "../../validators/index.js";
+import type { RegisterInput } from "../../validators/zod.js";
 
 export interface TokenPayload {
     userId: string;

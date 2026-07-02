@@ -4,7 +4,7 @@ import { catchAsync } from "../utils/catchAsyncWrapper.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
 import generateNumericOTP from "../utils/generateOTP.js";
 import { AssignmentManager } from "./assignment.manager.js";
-import { createAssignmentSchema } from "../../validators/index.js";
+import { createAssignmentSchema } from "../../validators/zod.js";
 
 export class AssignmentController {
     public router = Router();
@@ -59,7 +59,7 @@ export class AssignmentController {
     private async getTeacherAssignments(req: Request, res: Response) {
         const teacherId = req.user!.id;
         const assignments = await this._assignmentManager.getAssignmentsByTeacher(teacherId);
-        
+
         return res.status(200).json({ success: true, data: assignments });
     }
 

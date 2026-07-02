@@ -11,7 +11,7 @@ import {
     verifyOtpSchema,
     uploadUrlSchema,
     submissionActionSchema
-} from "../../validators/index.js";
+} from "../../validators/zod.js";
 import { Prisma } from "@prisma/client";
 import rateLimit from "express-rate-limit";
 
@@ -30,8 +30,8 @@ export class SubmissionController {
             windowMs: 15 * 60 * 1000, // 15 minutes
             limit: 10, // Limit each IP to 10 requests per `window` (here, per 15 minutes).
             message: "Too many OTP attempts, please try again after 15 minutes",
-            standardHeaders: 'draft-8', 
-            legacyHeaders: false, 
+            standardHeaders: 'draft-8',
+            legacyHeaders: false,
         });
 
         this.router.post("/", requireRole("STUDENT"), catchAsync(this.createSubmission.bind(this)));
@@ -89,7 +89,7 @@ export class SubmissionController {
     private async getMySubmissions(req: Request, res: Response) {
         const studentId = req.user!.id;
         const submissions = await this._submissionManager.getSubmissionsByStudent(studentId);
-        
+
         return res.status(200).json({ success: true, data: submissions });
     }
 

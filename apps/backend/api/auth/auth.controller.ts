@@ -3,7 +3,7 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 import { catchAsync } from "../utils/catchAsyncWrapper.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
 import { AuthManager } from "./auth.manager.js";
-import { registerSchema, loginSchema } from "../../validators/index.js";
+import { registerSchema, loginSchema } from "../../validators/zod.js";
 
 export class AuthController {
     public router = Router();
@@ -42,8 +42,8 @@ export class AuthController {
 
     public async getCurrentUser(req: Request, res: Response) {
         // Assuming req.user is populated by authMiddleware
-        const userId = req.user!.id; 
-        
+        const userId = req.user!.id;
+
         const result = await this._authManager.getCurrentUser(userId);
         return res.status(200).json({ success: true, data: result });
     }
