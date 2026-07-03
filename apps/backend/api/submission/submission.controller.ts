@@ -28,7 +28,7 @@ export class SubmissionController {
 
         const otpLimiter = rateLimit({
             windowMs: 15 * 60 * 1000, // 15 minutes
-            limit: 10, // Limit each IP to 10 requests per `window` (here, per 15 minutes).
+            limit: 10,
             message: "Too many OTP attempts, please try again after 15 minutes",
             standardHeaders: 'draft-8',
             legacyHeaders: false,
@@ -79,6 +79,7 @@ export class SubmissionController {
                     submittedAt: submission.submittedAt,
                 },
             });
+
         } catch (socketError) {
             console.warn("Could not emit socket event:", socketError);
         }
@@ -165,7 +166,6 @@ export class SubmissionController {
         const teacherId = req.user!.id;
         const { submissionId } = parsed.data;
 
-        // Verify the teacher owns the assignment this submission belongs to
         const submission = await prisma.submission.findFirst({
             where: {
                 id: submissionId,
@@ -190,7 +190,6 @@ export class SubmissionController {
         const teacherId = req.user!.id;
         const { submissionId } = parsed.data;
 
-        // Verify the teacher owns the assignment this submission belongs to
         const submission = await prisma.submission.findFirst({
             where: {
                 id: submissionId,

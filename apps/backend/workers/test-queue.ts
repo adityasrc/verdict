@@ -10,8 +10,7 @@ async function testQueue() {
 
     const job = await submissionQueue.add("grade_assignment", {
         id: "test-submission-123",
-        public_url:
-            "https://pub-f102fc41ae574108acfc77e85199838e.r2.dev/2d84ec43-2f75-44ba-826f-5e5712e8b639/82df9200-3b8c-4382-9841-2ccc4d2b53b2",
+        publicUrl: "https://pub-f102fc41ae574108acfc77e85199838e.r2.dev/2d84ec43-2f75-44ba-826f-5e5712e8b639/82df9200-3b8c-4382-9841-2ccc4d2b53b2",
         score: null,
         feedback: null,
         status: "PENDING",
@@ -28,21 +27,20 @@ async function testQueue() {
 
     console.log("\nListening for progress events...\n");
 
-    // FIX: Explicitly typed channel and message 
     pubsub.on("message", (channel: string, message: string) => {
-        // FIX: Cast the parsed JSON object
         const event = JSON.parse(message) as {
             step?: string;
-            percent?: number;
+            status?: string;
             score?: number;
             [key: string]: any;
         };
-        
-        console.log(`[${event.step || "event"}] ${event.percent}%`, event);
 
-        if (event.step === "grading_completed") {
-            console.log("\nGrading completed!");
-            console.log(`Final Score: ${event.score}/100`);
+        console.log(`[${event.step || "event"}]`, event);
+
+        // Listen for both success and failure to exit safely
+        if (event.step === "grading_completed" || event.step === "failed") {
+            console.log("\nProcess finished!");
+            if (event.score !== undefined) console.log(`Final Score: ${event.score}`);
             pubsub.quit();
             redis.quit();
             process.exit(0);

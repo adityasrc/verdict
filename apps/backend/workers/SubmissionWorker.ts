@@ -7,7 +7,7 @@ import { SubmissionManager } from "../api/submission/submission.manager.js";
 import { prisma } from "../utils/db.js";
 import { redis } from "../utils/redis.js";
 
-// __dirname is not available in ESM modules — derive it from import.meta.url
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -15,8 +15,10 @@ const submissionManager = new SubmissionManager();
 
 enum SubmissionStatus {
     PENDING = "PENDING",
-    GRADED = "GRADED",
+    EVALUATING = "EVALUATING",
     REVIEWING = "REVIEWING",
+    GRADED = "GRADED",
+    FAILED = "FAILED",
 }
 
 interface SubmissionJobData {
@@ -46,6 +48,8 @@ interface GeminiEvaluation {
     raw_response?: string;
 }
 
+
+// to trigger pdfParser.py
 function runPython(
     submissionId: string,
     filePath: string,
@@ -58,7 +62,7 @@ function runPython(
 
         const proc = spawn(process.env.PYTHON_BIN || "python3", [script, filePath, submissionId], {
             cwd: path.join(__dirname, "python"),
-        });
+        }); // running python in bg
 
         proc.stdout.on("data", (data) => {
             const output = data.toString();
@@ -106,6 +110,7 @@ function runPython(
     });
 }
 
+// to trigger geminiGrader.py
 function runGeminiGrader(
     extractedData: ParsedPage[],
     assignmentId: string,
@@ -194,25 +199,28 @@ const worker = new Worker<SubmissionJobData>(
     async (job: Job<SubmissionJobData>) => {
         console.log(`[Worker] Job received: ${job.id}`);
         const { id, publicUrl, studentId, assignmentId } = job.data;
-        console.log(`Processing submission ${id} for student ${studentId}`);
 
-        redis.publish(
-            `submission:${id}`,
-            JSON.stringify({
-                step: "submission_started",
-                percent: 5,
-                assignmentId,
-                studentId,
-            }),
-        );
+        // console.log(`Processing submission ${id} for student ${studentId}`);
 
-        // Mark as EVALUATING so the UI doesn't show it stuck as PENDING
+        // redis.publish(
+        //     `submission:${id}`,
+        //     JSON.stringify({
+        //         step: "submission_started",
+        //         percent: 5,
+        //         assignmentId,
+        //         studentId,
+        //     }),
+        // );
+
+
         await prisma.submission.update({
             where: { id },
             data: { status: "EVALUATING" },
         });
 
-        await job.updateProgress(5);
+        redis.publish(`submission:${id}`, JSON.stringify({ step: "evaluating", status: "EVALUATING" }));
+
+        // await job.updateProgress(5);
 
         const tmpDir = path.join(__dirname, "..", "tmp");
         if (!fs.existsSync(tmpDir)) {
@@ -223,22 +231,22 @@ const worker = new Worker<SubmissionJobData>(
         const imagesDir = path.join(tmpDir, "extracted_images", id);
 
         try {
-            console.log(`[Worker] Downloading PDF for submission ${id}`);
+            // console.log(`[Worker] Downloading PDF for submission ${id}`);
 
-            redis.publish(
-                `submission:${id}`,
-                JSON.stringify({
-                    step: "downloading_pdf",
-                    percent: 5,
-                    assignmentId,
-                    studentId,
-                }),
-            );
+            // redis.publish(
+            //     `submission:${id}`,
+            //     JSON.stringify({
+            //         step: "downloading_pdf",
+            //         percent: 5,
+            //         assignmentId,
+            //         studentId,
+            //     }),
+            // );
 
             const fetchOptions = {
                 signal: AbortSignal.timeout(30000) // 30 second timeout
             };
-            
+
             const buffer = await fetch(publicUrl, fetchOptions).then((res) => {
                 if (!res.ok) {
                     throw new Error(`Failed to download PDF: ${res.statusText}`);
@@ -247,27 +255,28 @@ const worker = new Worker<SubmissionJobData>(
             });
             fs.writeFileSync(pdfPath, Buffer.from(buffer));
 
-            redis.publish(
-                `submission:${id}`,
-                JSON.stringify({
-                    step: "pdf_downloaded",
-                    percent: 10,
-                    assignmentId,
-                    studentId,
-                }),
-            );
+            // redis.publish(
+            //     `submission:${id}`,
+            //     JSON.stringify({
+            //         step: "pdf_downloaded",
+            //         percent: 10,
+            //         assignmentId,
+            //         studentId,
+            //     }),
+            // );
 
-            await job.updateProgress(10);
+            // await job.updateProgress(10);
 
-            console.log(`Starting Python PDF parser...`);
+            // console.log(`Starting Python PDF parser...`);
+
             const extractedData = await runPython(id, pdfPath, assignmentId, studentId);
-            console.log(
-                `PDF parsing completed. Extracted ${extractedData.length} pages`,
-            );
+            // console.log(
+            //     `PDF parsing completed. Extracted ${extractedData.length} pages`,
+            // );
 
-            await job.updateProgress(80);
+            // await job.updateProgress(80);
 
-            console.log(`Starting Gemini grading...`);
+            // console.log(`Starting Gemini grading...`);
 
             const assignment = await prisma.assignment.findUnique({
                 where: { id: assignmentId },
@@ -281,7 +290,7 @@ const worker = new Worker<SubmissionJobData>(
             let formattedRubric:
                 | { name: string; points: number; description: string }[]
                 | undefined = undefined;
-            
+
             if (assignment.rubric && Array.isArray(assignment.rubric.criteria)) {
                 formattedRubric = (
                     assignment.rubric.criteria as {
@@ -310,33 +319,13 @@ const worker = new Worker<SubmissionJobData>(
                 studentId,
                 context,
             );
-            console.log(`Gemini grading completed. Score: ${evaluation.score}/${assignment.maxScore}`);
+            // console.log(`Gemini grading completed. Score: ${evaluation.score}/${assignment.maxScore}`);
 
-            await job.updateProgress(95);
+            // await job.updateProgress(95);
 
-            console.log(`Updating submission in database...`);
-            const fullFeedback = `
-**Summary:** ${evaluation.summary}
+            // console.log(`Updating submission in database...`);
 
-**Score:** ${evaluation.score}/${assignment.maxScore}
-
-${
-    evaluation.strengths && evaluation.strengths.length > 0
-        ? `**Strengths:**\n${evaluation.strengths.map((s) => `- ${s}`).join("\n")}\n\n`
-        : ""
-}
-
-${
-    evaluation.weaknesses && evaluation.weaknesses.length > 0
-        ? `**Areas for Improvement:**\n${evaluation.weaknesses
-              .map((w) => `- ${w}`)
-              .join("\n")}\n\n`
-        : ""
-}
-
-**Detailed Feedback:**
-${evaluation.feedback}
-            `.trim();
+            const fullFeedback = `**Summary:** ${evaluation.summary}\n\n**Score:** ${evaluation.score}/${assignment.maxScore}\n\n**Detailed Feedback:**\n${evaluation.feedback}`.trim();
 
             await submissionManager.updateSubmissionGrade(id, {
                 score: evaluation.score,
@@ -344,40 +333,45 @@ ${evaluation.feedback}
                 status: "GRADED",
             });
 
-            console.log(`Submission updated in database`);
+            // console.log(`Submission updated in database`);
+
+            // redis.publish(
+            //     `submission:${id}`,
+            //     JSON.stringify({
+            //         step: "grading_completed",
+            //         percent: 100,
+            //         score: evaluation.score,
+            //         maxScore: assignment.maxScore,
+            //         status: "GRADED",
+            //         assignmentId,
+            //         studentId,
+            //     }),
+            // );
+
+            // await job.updateProgress(100);
 
             redis.publish(
                 `submission:${id}`,
                 JSON.stringify({
                     step: "grading_completed",
-                    percent: 100,
                     score: evaluation.score,
-                    maxScore: assignment.maxScore,
                     status: "GRADED",
-                    assignmentId,
-                    studentId,
-                }),
+                })
             );
 
-            await job.updateProgress(100);
             console.log(`Job ${job.id} completed successfully!`);
-
             return true;
+
         } catch (error: any) {
-            // Update status to FAILED in DB so it doesn't stay stuck as PENDING
+
             await prisma.submission.update({
                 where: { id },
                 data: { status: "FAILED" },
-            }).catch(() => {}); // best-effort — don't throw again if DB is also down
+            }).catch(() => { });
 
             redis.publish(
                 `submission:${id}`,
-                JSON.stringify({
-                    error: error.message || "Unknown error occurred during grading",
-                    step: "failed",
-                    assignmentId,
-                    studentId,
-                }),
+                JSON.stringify({ step: "failed", status: "FAILED", error: error.message })
             );
 
             throw error;
@@ -385,11 +379,11 @@ ${evaluation.feedback}
             try {
                 if (fs.existsSync(pdfPath)) {
                     fs.unlinkSync(pdfPath);
-                    console.log(`Deleted temp PDF: ${pdfPath}`);
+                    // console.log(`Deleted temp PDF: ${pdfPath}`);
                 }
                 if (fs.existsSync(imagesDir)) {
                     fs.rmSync(imagesDir, { recursive: true, force: true });
-                    console.log(`Deleted extracted images: ${imagesDir}`);
+                    // console.log(`Deleted extracted images: ${imagesDir}`);
                 }
             } catch (cleanupErr) {
                 console.error("Cleanup failed:", cleanupErr);
@@ -398,7 +392,7 @@ ${evaluation.feedback}
     },
     {
         connection: redis,
-        concurrency: 1,
+        concurrency: 1, // one ticket at a time
     },
 );
 

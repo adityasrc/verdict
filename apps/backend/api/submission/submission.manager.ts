@@ -8,15 +8,29 @@ import Client from "../../utils/S3client.js";
 export class SubmissionManager {
 
     async createSubmission(data: { studentId: string; assignmentId: string; studentUniqueId?: string }) {
-        const previousAttempts = await prisma.submission.count({
+        let MAX_ATTEMPTS = 3;
+        const fileKey = `${data.assignmentId}/${data.studentId}`;
+
+        const existingSubmission = await prisma.submission.findFirst({
             where: {
                 assignmentId: data.assignmentId,
                 studentId: data.studentId,
             },
         });
 
+        if (existingSubmission) {
+            if (existingSubmission.attemptNumber >= MAX_ATTEMPTS) {
+                throw new AppError(`You have reached the maximum of ${MAX_ATTEMPTS} attempts`, 403);
+            }
 
-        const fileKey = `${data.assignmentId}/${data.studentId}`;
+            return prisma.submission.update({
+                where: { id: existingSubmission.id },
+                data: {
+                    attemptNumber: existingSubmission.attemptNumber + 1,
+                    status: "PENDING",
+                }
+            });
+        }
 
         return prisma.submission.create({
             data: {
@@ -24,7 +38,7 @@ export class SubmissionManager {
                 studentId: data.studentId,
                 studentUniqueId: data.studentUniqueId,
                 fileKey: fileKey,
-                attemptNumber: previousAttempts + 1,
+                attemptNumber: 1,
             },
         });
     }
@@ -87,6 +101,9 @@ export class SubmissionManager {
     }
 
     async presignedUrl(fileName: string, type: string, assignmentId: string, studentId: string) {
+
+        let MAX_ATTEMPTS = 3;
+
         const existingSubmission = await prisma.submission.findFirst({
             where: {
                 assignmentId,
@@ -94,8 +111,8 @@ export class SubmissionManager {
             },
         });
 
-        if (existingSubmission) {
-            throw new AppError("You can only make One Submission", 403);
+        if (existingSubmission && existingSubmission.attemptNumber >= MAX_ATTEMPTS) {
+            throw new AppError(`You have reached the maximum of ${MAX_ATTEMPTS} attempts`, 403);
         }
 
         const bucketName = process.env.BUCKET_NAME;
@@ -113,7 +130,7 @@ export class SubmissionManager {
 
         // Generates the URL using the centralized Client.raw which has forcePathStyle enabled
         const url = await getSignedUrl(Client.raw, command, {
-            expiresIn: 600, // 10 minutes — 60s was too tight with OTP step
+            expiresIn: 600, // 10 minutes
         });
 
         return { url, key };
