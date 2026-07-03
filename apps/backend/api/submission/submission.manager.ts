@@ -6,32 +6,25 @@ import { AppError } from "../../utils/apiResponseHandler.js";
 import Client from "../../utils/S3client.js";
 
 export class SubmissionManager {
+
     async createSubmission(data: { studentId: string; assignmentId: string; studentUniqueId?: string }) {
-        const previousSubmission = await prisma.submission.findFirst({
+        const previousAttempts = await prisma.submission.count({
             where: {
                 assignmentId: data.assignmentId,
                 studentId: data.studentId,
             },
         });
 
-        if (previousSubmission) {
-            throw new AppError("You can only make One Submission", 403);
-        }
 
-        if (!process.env.PUBLIC_ENDPOINT) {
-            throw new AppError("Cannot generate public url, missing PUBLIC_ENDPOINT env variable", 500);
-        }
-
-        const assignmentPublicUrl = `${process.env.PUBLIC_ENDPOINT}/${data.assignmentId}/${data.studentId}`;
         const fileKey = `${data.assignmentId}/${data.studentId}`;
-        
+
         return prisma.submission.create({
             data: {
                 assignmentId: data.assignmentId,
                 studentId: data.studentId,
-                publicUrl: assignmentPublicUrl,
                 studentUniqueId: data.studentUniqueId,
                 fileKey: fileKey,
+                attemptNumber: previousAttempts + 1,
             },
         });
     }
@@ -111,7 +104,7 @@ export class SubmissionManager {
         }
 
         const key = `${assignmentId}/${studentId}`;
-        
+
         const command = new PutObjectCommand({
             Bucket: bucketName,
             Key: key,
