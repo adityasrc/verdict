@@ -9,7 +9,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-const allowedOrigins = process.env.CORS_ORIGIN 
+const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
     : ["http://localhost:5173"];
 
@@ -30,10 +30,8 @@ app.use(cors(corsOption));
 
 app.use("/api", router);
 
-// Global error handler — must be registered after all routes
-// Without this, Express returns an HTML error page instead of JSON
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     handleError(res, err);
-});
+}); // 4 arguments for error handler
 
 export default app;
