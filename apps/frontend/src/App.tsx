@@ -43,6 +43,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 ProtectedRoute.displayName = 'ProtectedRoute';
 
+const TeacherRoute = ({ children }: { children: React.ReactNode }) => {
+  const user = useSelector(selectCurrentUser);
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'TEACHER') return <Navigate to="/dashboard" replace />;
+
+  return <>{children}</>;
+};
+TeacherRoute.displayName = 'TeacherRoute';
+
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const user = useSelector(selectCurrentUser);
   if (user) return <Navigate to="/dashboard" replace />;
@@ -71,22 +81,37 @@ function App() {
     <>
       <Toaster richColors position="bottom-right" />
       <Routes>
+
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
         </Route>
+
+
         <Route element={<Layout />}>
           <Route path="/" element={<Onboarding />} />
         </Route>
+
+
         <Route element={<SidebarLayout />}>
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/assignment/:assignmentId/submissions" element={<ProtectedRoute><AssignmentSubmissions /></ProtectedRoute>} />
-          <Route path="/upload/:assignmentId" element={<ProtectedRoute><AssignmentUpload /></ProtectedRoute>} />
-          <Route path="*" element={<NotFound />} />
+
+          <Route
+            path="/assignment/:assignmentId/submissions"
+            element={<TeacherRoute><AssignmentSubmissions /></TeacherRoute>}
+          />
+
+
+          <Route
+            path="/upload/:assignmentId"
+            element={<ProtectedRoute><AssignmentUpload /></ProtectedRoute>}
+          />
         </Route>
+
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
 }
-
 export default App;
