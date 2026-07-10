@@ -143,8 +143,7 @@ export class AuthManager {
     verifyAccessToken(token: string): TokenPayload | null {
         try {
             return jwt.verify(token, this.JWT_SECRET) as TokenPayload;
-        } catch (err) {
-            console.error("JWT verify error:", err);
+        } catch {
             return null;
         }
     }
