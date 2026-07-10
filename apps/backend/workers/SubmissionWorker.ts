@@ -7,7 +7,6 @@ import { SubmissionManager } from "../api/submission/submission.manager.js";
 import { prisma } from "../utils/db.js";
 import { redis } from "../utils/redis.js";
 
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -48,8 +47,6 @@ interface GeminiEvaluation {
     raw_response?: string;
 }
 
-
-// to trigger pdfParser.py
 function runPython(
     submissionId: string,
     filePath: string,
@@ -62,19 +59,15 @@ function runPython(
 
         const proc = spawn(process.env.PYTHON_BIN || "python3", [script, filePath, submissionId], {
             cwd: path.join(__dirname, "python"),
-        }); // running python in bg
+        });
 
         proc.stdout.on("data", (data) => {
-            const output = data.toString();
-            console.log(`Python output: ${output}`);
-
-            const lines = output.split('\n').filter((line: string) => line.trim());
+            const lines = data.toString().split('\n').filter((line: string) => line.trim());
 
             for (const line of lines) {
                 try {
                     const msg = JSON.parse(line);
                     const enrichedMsg = { ...msg, assignmentId, studentId };
-                    console.log(`Publishing event:`, enrichedMsg);
 
                     if (msg.step === "parsing_completed" && msg.result) {
                         extractedData = msg.result;
@@ -82,7 +75,7 @@ function runPython(
 
                     redis.publish(`submission:${submissionId}`, JSON.stringify(enrichedMsg));
                 } catch {
-                    console.log(`Non-JSON output (ignored): ${line}`);
+                    // non-JSON output from Python (e.g. warnings) — safe to ignore
                 }
             }
         });
@@ -92,25 +85,20 @@ function runPython(
         });
 
         proc.on("error", (error) => {
-            console.error(`Python process failed to spawn or errored:`, error);
+            console.error(`Python process failed to spawn:`, error);
             reject(error);
         });
 
         proc.on("close", (code) => {
-            console.log(`Python process exited with code: ${code}`);
             if (code === 0) {
-                console.log(`Python process completed successfully`);
                 resolve(extractedData);
             } else {
-                const error = new Error(`Python process failed with code ${code}`);
-                console.error(`Error: ${error.message}`);
-                reject(error);
+                reject(new Error(`Python process failed with code ${code}`));
             }
         });
     });
 }
 
-// to trigger geminiGrader.py
 function runGeminiGrader(
     extractedData: ParsedPage[],
     assignmentId: string,
@@ -133,8 +121,6 @@ function runGeminiGrader(
         const backendDir = path.join(__dirname, "..");
         const envPath = path.join(backendDir, ".env");
 
-        console.log(`Using .env from: ${envPath}`);
-
         const proc = spawn(
             process.env.PYTHON_BIN || "python3",
             [script, extractedDataJson, assignmentId, submissionId, contextJson],
@@ -149,16 +135,12 @@ function runGeminiGrader(
         );
 
         proc.stdout.on("data", (data) => {
-            const output = data.toString();
-            console.log(`Gemini output: ${output}`);
-
-            const lines = output.split('\n').filter((line: string) => line.trim());
+            const lines = data.toString().split('\n').filter((line: string) => line.trim());
 
             for (const line of lines) {
                 try {
                     const msg = JSON.parse(line);
                     const enrichedMsg = { ...msg, assignmentId, studentId };
-                    console.log(`Publishing event:`, enrichedMsg);
 
                     if (msg.step === "gemini_completed" && msg.evaluation) {
                         evaluation = msg.evaluation;
@@ -166,7 +148,7 @@ function runGeminiGrader(
 
                     redis.publish(`submission:${submissionId}`, JSON.stringify(enrichedMsg));
                 } catch {
-                    console.log(`Non-JSON output (ignored): ${line}`);
+                    // non-JSON output from Python — safe to ignore
                 }
             }
         });
@@ -176,19 +158,15 @@ function runGeminiGrader(
         });
 
         proc.on("error", (error) => {
-            console.error(`Gemini process failed to spawn or errored:`, error);
+            console.error(`Gemini process failed to spawn:`, error);
             reject(error);
         });
 
         proc.on("close", (code) => {
-            console.log(`Gemini process exited with code: ${code}`);
             if (code === 0 && evaluation) {
-                console.log(`Gemini evaluation completed successfully`);
                 resolve(evaluation);
             } else {
-                const error = new Error(`Gemini process failed with code ${code}`);
-                console.error(`Error: ${error.message}`);
-                reject(error);
+                reject(new Error(`Gemini process failed with code ${code}`));
             }
         });
     });
@@ -200,27 +178,20 @@ const worker = new Worker<SubmissionJobData>(
         console.log(`[Worker] Job received: ${job.id}`);
         const { id, publicUrl, studentId, assignmentId } = job.data;
 
-        // console.log(`Processing submission ${id} for student ${studentId}`);
-
-        // redis.publish(
-        //     `submission:${id}`,
-        //     JSON.stringify({
-        //         step: "submission_started",
-        //         percent: 5,
-        //         assignmentId,
-        //         studentId,
-        //     }),
-        // );
-
-
         await prisma.submission.update({
             where: { id },
             data: { status: "EVALUATING" },
         });
 
-        redis.publish(`submission:${id}`, JSON.stringify({ step: "evaluating", status: "EVALUATING" }));
-
-        // await job.updateProgress(5);
+        redis.publish(
+            `submission:${id}`,
+            JSON.stringify({
+                step: "submission_started",
+                percent: 5,
+                assignmentId,
+                studentId,
+            }),
+        );
 
         const tmpDir = path.join(__dirname, "..", "tmp");
         if (!fs.existsSync(tmpDir)) {
@@ -231,23 +202,19 @@ const worker = new Worker<SubmissionJobData>(
         const imagesDir = path.join(tmpDir, "extracted_images", id);
 
         try {
-            // console.log(`[Worker] Downloading PDF for submission ${id}`);
+            redis.publish(
+                `submission:${id}`,
+                JSON.stringify({
+                    step: "downloading_pdf",
+                    percent: 5,
+                    assignmentId,
+                    studentId,
+                }),
+            );
 
-            // redis.publish(
-            //     `submission:${id}`,
-            //     JSON.stringify({
-            //         step: "downloading_pdf",
-            //         percent: 5,
-            //         assignmentId,
-            //         studentId,
-            //     }),
-            // );
-
-            const fetchOptions = {
-                signal: AbortSignal.timeout(30000) // 30 second timeout
-            };
-
-            const buffer = await fetch(publicUrl, fetchOptions).then((res) => {
+            const buffer = await fetch(publicUrl, {
+                signal: AbortSignal.timeout(30000),
+            }).then((res) => {
                 if (!res.ok) {
                     throw new Error(`Failed to download PDF: ${res.statusText}`);
                 }
@@ -255,28 +222,17 @@ const worker = new Worker<SubmissionJobData>(
             });
             fs.writeFileSync(pdfPath, Buffer.from(buffer));
 
-            // redis.publish(
-            //     `submission:${id}`,
-            //     JSON.stringify({
-            //         step: "pdf_downloaded",
-            //         percent: 10,
-            //         assignmentId,
-            //         studentId,
-            //     }),
-            // );
-
-            // await job.updateProgress(10);
-
-            // console.log(`Starting Python PDF parser...`);
+            redis.publish(
+                `submission:${id}`,
+                JSON.stringify({
+                    step: "pdf_downloaded",
+                    percent: 10,
+                    assignmentId,
+                    studentId,
+                }),
+            );
 
             const extractedData = await runPython(id, pdfPath, assignmentId, studentId);
-            // console.log(
-            //     `PDF parsing completed. Extracted ${extractedData.length} pages`,
-            // );
-
-            // await job.updateProgress(80);
-
-            // console.log(`Starting Gemini grading...`);
 
             const assignment = await prisma.assignment.findUnique({
                 where: { id: assignmentId },
@@ -319,11 +275,6 @@ const worker = new Worker<SubmissionJobData>(
                 studentId,
                 context,
             );
-            // console.log(`Gemini grading completed. Score: ${evaluation.score}/${assignment.maxScore}`);
-
-            // await job.updateProgress(95);
-
-            // console.log(`Updating submission in database...`);
 
             const fullFeedback = `**Summary:** ${evaluation.summary}\n\n**Score:** ${evaluation.score}/${assignment.maxScore}\n\n**Detailed Feedback:**\n${evaluation.feedback}`.trim();
 
@@ -333,37 +284,21 @@ const worker = new Worker<SubmissionJobData>(
                 status: "GRADED",
             });
 
-            // console.log(`Submission updated in database`);
-
-            // redis.publish(
-            //     `submission:${id}`,
-            //     JSON.stringify({
-            //         step: "grading_completed",
-            //         percent: 100,
-            //         score: evaluation.score,
-            //         maxScore: assignment.maxScore,
-            //         status: "GRADED",
-            //         assignmentId,
-            //         studentId,
-            //     }),
-            // );
-
-            // await job.updateProgress(100);
-
             redis.publish(
                 `submission:${id}`,
                 JSON.stringify({
                     step: "grading_completed",
                     score: evaluation.score,
                     status: "GRADED",
-                })
+                    assignmentId,
+                    studentId,
+                }),
             );
 
-            console.log(`Job ${job.id} completed successfully!`);
+            console.log(`[Worker] Job ${job.id} completed.`);
             return true;
 
-        } catch (error: any) {
-
+        } catch (error: unknown) {
             await prisma.submission.update({
                 where: { id },
                 data: { status: "FAILED" },
@@ -371,20 +306,18 @@ const worker = new Worker<SubmissionJobData>(
 
             redis.publish(
                 `submission:${id}`,
-                JSON.stringify({ step: "failed", status: "FAILED", error: error.message })
+                JSON.stringify({
+                    step: "failed",
+                    status: "FAILED",
+                    error: error instanceof Error ? error.message : "Unknown error",
+                }),
             );
 
             throw error;
         } finally {
             try {
-                if (fs.existsSync(pdfPath)) {
-                    fs.unlinkSync(pdfPath);
-                    // console.log(`Deleted temp PDF: ${pdfPath}`);
-                }
-                if (fs.existsSync(imagesDir)) {
-                    fs.rmSync(imagesDir, { recursive: true, force: true });
-                    // console.log(`Deleted extracted images: ${imagesDir}`);
-                }
+                if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
+                if (fs.existsSync(imagesDir)) fs.rmSync(imagesDir, { recursive: true, force: true });
             } catch (cleanupErr) {
                 console.error("Cleanup failed:", cleanupErr);
             }
@@ -392,21 +325,20 @@ const worker = new Worker<SubmissionJobData>(
     },
     {
         connection: redis,
-        concurrency: 1, // one ticket at a time
+        concurrency: 1,
     },
 );
 
-console.log("Worker started and listening for jobs on 'grade_assignment' queue");
-console.log("Redis connection:", redis.options.host, redis.options.port);
+console.log("[Worker] Listening for jobs on 'grade_assignment' queue");
 
 worker.on("completed", (job) => {
-    console.log(`Job ${job.id} completed successfully`);
+    console.log(`[Worker] Job ${job.id} completed`);
 });
 
 worker.on("failed", (job, err) => {
-    console.log(`Job ${job?.id} failed:`, err.message);
+    console.error(`[Worker] Job ${job?.id} failed:`, err.message);
 });
 
 worker.on("error", (err) => {
-    console.error("Worker error:", err);
+    console.error("[Worker] Error:", err);
 });

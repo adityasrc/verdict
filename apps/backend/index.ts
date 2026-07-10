@@ -71,18 +71,13 @@ const exitHandler = async () => {
     }, 5000);
 };
 
-const unexpectedErrorHandler = (error: Error) => {
-    console.error(error);
-    exitHandler();
-};
-
-process.on("uncaughtException", (error) => {
+process.on("uncaughtException", (error: Error) => {
     console.error("Uncaught Exception: ", error);
     exitHandler();
 });
 
 process.on("unhandledRejection", (error) => {
-    console.error("Uhandled Rejection: ", error);
+    console.error("Unhandled Rejection: ", error);
     exitHandler();
 });
 

@@ -8,7 +8,7 @@ import Client from "../../utils/S3client.js";
 export class SubmissionManager {
 
     async createSubmission(data: { studentId: string; assignmentId: string; studentUniqueId?: string }) {
-        let MAX_ATTEMPTS = 3;
+        const MAX_ATTEMPTS = 3;
         const fileKey = `${data.assignmentId}/${data.studentId}`;
 
         const existingSubmission = await prisma.submission.findFirst({
@@ -102,7 +102,7 @@ export class SubmissionManager {
 
     async presignedUrl(fileName: string, type: string, assignmentId: string, studentId: string) {
 
-        let MAX_ATTEMPTS = 3;
+        const MAX_ATTEMPTS = 3;
 
         const existingSubmission = await prisma.submission.findFirst({
             where: {
