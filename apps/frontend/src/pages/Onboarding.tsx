@@ -1,7 +1,5 @@
 import { Link } from "react-router-dom";
 
-// ─── Data ────────────────────────────────────────────────────────────────────
-
 const STEPS = [
   {
     number: "01",
@@ -81,13 +79,10 @@ const TECH_STACK = [
   { label: "PostgreSQL + Prisma", icon: "storage" },
 ];
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 const Onboarding = () => {
   return (
     <div className="bg-surface text-on-surface">
 
-      {/* ── Hero ── */}
       <section className="relative overflow-hidden border-b-[4px] border-on-surface">
         {/* Decorative grid lines */}
         <div className="absolute inset-0 pointer-events-none opacity-5"
@@ -133,7 +128,6 @@ const Onboarding = () => {
         </div>
       </section>
 
-      {/* ── Problem Statement ── */}
       <section className="border-b-[4px] border-on-surface bg-on-surface text-surface px-6 py-20">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div>
@@ -168,7 +162,6 @@ const Onboarding = () => {
         </div>
       </section>
 
-      {/* ── How It Works ── */}
       <section className="border-b-[4px] border-on-surface bg-accent-yellow px-6 py-24 md:py-32">
         <div className="max-w-7xl mx-auto">
           <div className="mb-16">
@@ -206,7 +199,6 @@ const Onboarding = () => {
         </div>
       </section>
 
-      {/* ── Feature Grid ── */}
       <section className="border-b-[4px] border-on-surface px-6 py-24 md:py-32 bg-surface">
         <div className="max-w-7xl mx-auto">
           <div className="mb-16">
@@ -246,7 +238,6 @@ const Onboarding = () => {
         </div>
       </section>
 
-      {/* ── Tech Stack ── */}
       <section className="border-b-[4px] border-on-surface px-6 py-20 bg-surface-variant">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-16">
@@ -270,7 +261,6 @@ const Onboarding = () => {
         </div>
       </section>
 
-      {/* ── CTA Banner ── */}
       <section className="px-6 py-24 bg-primary border-b-[4px] border-on-surface">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
           <div>

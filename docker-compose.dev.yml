@@ -37,35 +37,6 @@ services:
     volumes:
       - minio_data:/data
 
-  api:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile.api
-    container_name: verdict-api
-    restart: unless-stopped
-    ports:
-      - "8600:4000"
-    depends_on:
-      - postgres
-      - redis
-    env_file:
-      - ./apps/backend/.env
-    environment:
-      - NODE_ENV=production
-
-  worker:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile.workers
-    container_name: verdict-worker
-    restart: unless-stopped
-    depends_on:
-      - redis
-    env_file:
-      - ./apps/backend/.env
-    environment:
-      - NODE_ENV=production
-
 volumes:
   postgres_data:
   redis_data:

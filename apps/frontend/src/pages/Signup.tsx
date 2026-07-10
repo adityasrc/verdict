@@ -9,7 +9,7 @@ const Signup: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"STUDENT" | "TEACHER">("TEACHER");
+  const [role, setRole] = useState<"STUDENT" | "TEACHER">("STUDENT");
   const [signup, { isLoading }] = useSignupMutation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ const Signup: React.FC = () => {
       <div className="w-full max-w-md">
         <Link to="/" className="flex items-center justify-center gap-3 mb-8 group">
           <div className="bg-primary border-[2px] border-on-surface brutal-shadow flex items-center justify-center p-2 brutal-button">
-            <span className="material-symbols-outlined text-on-primary" style={{fontVariationSettings: "'FILL' 1"}}>menu_book</span>
+            <span className="material-symbols-outlined text-on-primary" style={{ fontVariationSettings: "'FILL' 1" }}>menu_book</span>
           </div>
           <span className="font-headline-md text-headline-md font-black uppercase tracking-tighter text-on-surface">
             Verdict

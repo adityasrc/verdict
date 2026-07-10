@@ -13,7 +13,7 @@ const SidebarLayout: React.FC = () => {
 
     const handleLogout = () => {
         dispatch(logout());
-        navigate('/');
+        navigate('/login');
     };
 
     // Only include nav links that have real pages
@@ -106,7 +106,7 @@ const SidebarLayout: React.FC = () => {
             )}
 
             {/* Main Content Canvas */}
-            <main className="flex-1 w-full md:ml-64 p-margin-mobile md:p-margin-desktop bg-background min-h-screen">
+            <main className="flex-1 w-full md:ml-64 p-margin-mobile md:p-margin-desktop bg-surface min-h-screen">
                 <Outlet />
             </main>
         </div>

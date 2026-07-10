@@ -1,4 +1,3 @@
-import { AlertTriangle, RefreshCw } from "lucide-react";
 import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
 import { Button } from "../components/ui/button";
@@ -29,32 +28,38 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#030712] p-4 transition-colors duration-300">
-          <div className="bg-white dark:bg-[#09090b] p-8 rounded-2xl border border-red-200 dark:border-red-900/50 shadow-xl max-w-md w-full text-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-red-500" />
-            
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
-            </div>
-            
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
-              Execution Halted
-            </h1>
-            
-            <div className="bg-gray-50 dark:bg-black p-4 rounded-lg border border-gray-200 dark:border-gray-800 mb-8 text-left overflow-x-auto">
-              <p className="text-sm font-mono text-red-600 dark:text-red-400 break-words">
-                {this.state.error?.message || "Critical system failure encountered."}
+        <div className="min-h-screen flex items-center justify-center bg-surface px-4">
+          <div className="w-full max-w-lg">
+            {/* Top accent bar */}
+            <div className="w-full h-2 bg-error mb-0 border-[4px] border-on-surface border-b-0" />
+            <div className="bg-surface border-[4px] border-on-surface border-t-0 brutal-shadow p-8 text-center">
+
+              {/* Giant error number */}
+              <p className="font-black text-[120px] leading-none tracking-tighter text-on-surface opacity-10 select-none">
+                ERR
               </p>
+
+              <h1 className="font-headline-md text-2xl font-black uppercase text-on-surface tracking-tighter -mt-4 mb-6">
+                Execution Halted
+              </h1>
+
+              {/* Error message in terminal style */}
+              <div className="bg-on-surface p-4 mb-8 text-left overflow-x-auto">
+                <p className="font-label-mono text-sm text-error break-words">
+                  &gt; {this.state.error?.message || "Critical system failure encountered."}
+                </p>
+              </div>
+
+              <Button
+                variant="brutal-error"
+                size="lg"
+                className="w-full"
+                onClick={() => window.location.reload()}
+              >
+                <span className="material-symbols-outlined">refresh</span>
+                Reinitialize Session
+              </Button>
             </div>
-            
-            <Button
-              variant="default"
-              className="w-full gap-2"
-              onClick={() => window.location.reload()}
-            >
-              <RefreshCw className="h-4 w-4" />
-              Reinitialize Session
-            </Button>
           </div>
         </div>
       );
