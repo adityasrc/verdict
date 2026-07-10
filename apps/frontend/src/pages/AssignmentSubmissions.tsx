@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useParams } from 'react-router-dom';
+import { Button } from '../components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -15,6 +16,7 @@ import {
     useGetAssignmentSubmissionsQuery,
     useReEvaluateSubmissionMutation,
 } from '../features/assignments/assignmentApi';
+import { parseApiError } from '../lib/errors';
 import type { Submission } from '../types';
 import { toast } from 'sonner';
 
@@ -49,7 +51,7 @@ const AssignmentSubmissions: React.FC = () => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${assignment?.title || 'telemetry'}_export.csv`;
+        link.download = `${assignment?.title || 'export'}_grades.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -60,7 +62,9 @@ const AssignmentSubmissions: React.FC = () => {
         try {
             await reEvaluateSubmission({ submissionId }).unwrap();
             toast.success('Re-evaluation forced.');
-        } catch { toast.error('Failed to trigger re-evaluation.'); }
+        } catch (err) {
+            toast.error(parseApiError(err, 'Failed to trigger re-evaluation.'));
+        }
     };
 
     const handleAllowResubmission = async (submissionId: string) => {
@@ -69,7 +73,9 @@ const AssignmentSubmissions: React.FC = () => {
             toast.success('Submission deleted. Student can now resubmit.');
             setSelectedSubmission(null);
             setConfirmDeleteId(null);
-        } catch { toast.error('Failed to allow resubmission.'); }
+        } catch (err) {
+            toast.error(parseApiError(err, 'Failed to allow resubmission.'));
+        }
     };
 
     const { socket } = useSocket();
@@ -108,47 +114,71 @@ const AssignmentSubmissions: React.FC = () => {
 
     return (
         <div className="w-full">
+
             <header className="mb-12 border-b-[4px] border-on-surface pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
                     <h1 className="font-headline-xl text-headline-lg-mobile md:text-headline-xl font-black text-on-surface uppercase tracking-tighter leading-none mb-2">
                         {assignment?.title || 'Submissions'}
                     </h1>
                     <p className="font-body-lg text-body-lg text-on-surface-variant border-l-4 border-primary pl-4 mt-4 uppercase font-bold">
-                        {submissions.length} submissions received
+                        {submissions.length} submission{submissions.length !== 1 ? 's' : ''} received
                     </p>
                 </div>
                 {submissions.length > 0 && (
-                    <button onClick={handleExportToExcel} className="bg-primary text-on-primary border-[4px] border-on-surface px-6 py-3 font-label-caps text-label-caps uppercase tracking-wide brutal-shadow brutal-button flex items-center gap-2 hover:bg-primary-container">
-                        <span className="material-symbols-outlined">download</span> Export Data
-                    </button>
+                    <Button variant="brutal" onClick={handleExportToExcel}>
+                        <span className="material-symbols-outlined">download</span>
+                        Export CSV
+                    </Button>
                 )}
             </header>
 
             {isLoading ? (
-                <div className="text-center py-12 font-label-mono uppercase font-bold">Loading submissions...</div>
+                <div className="text-center py-12 font-label-mono uppercase font-bold animate-pulse">
+                    Loading submissions...
+                </div>
             ) : (
                 <div className="space-y-6">
                     {submissions.length === 0 ? (
-                        <div className="bg-surface border-[4px] border-on-surface p-12 text-center brutal-shadow font-label-mono uppercase font-bold text-on-surface-variant">
-                            Zero submissions found.
+                        /* ── Bold Empty State ──────────────────────────────── */
+                        <div className="border-[4px] border-on-surface border-dashed p-16 text-center">
+                            <p className="font-black text-[80px] md:text-[120px] leading-none uppercase tracking-tighter text-on-surface opacity-10 select-none">
+                                0
+                            </p>
+                            <p className="font-headline-md text-3xl font-black uppercase tracking-tighter text-on-surface-variant -mt-4">
+                                ZERO SUBMISSIONS
+                            </p>
+                            <p className="font-label-mono uppercase text-on-surface-variant mt-4 font-bold text-sm">
+                                Share the assignment link for students to submit
+                            </p>
                         </div>
                     ) : (
                         submissions.map((submission) => (
-                            <div key={submission.id} className="bg-surface border-[4px] border-on-surface flex flex-col sm:flex-row justify-between items-start sm:items-stretch gap-0 brutal-shadow transition-all hover:translate-y-1">
+                            <div
+                                key={submission.id}
+                                className="bg-surface border-[4px] border-on-surface flex flex-col sm:flex-row justify-between items-start sm:items-stretch brutal-shadow transition-transform duration-75 hover:-translate-y-0.5"
+                            >
+                                {/* Student Info */}
                                 <div className="p-6 flex-1 flex flex-col md:flex-row gap-6 items-start md:items-center">
                                     <div className="w-12 h-12 bg-surface-variant border-[2px] border-on-surface flex items-center justify-center brutal-shadow flex-shrink-0">
                                         <span className="material-symbols-outlined text-on-surface">person</span>
                                     </div>
                                     <div>
-                                        <h3 className="font-headline-md text-headline-md font-bold uppercase">{submission.student?.name || 'Unknown Student'}</h3>
-                                        {submission.studentUniqueId && <span className="font-label-mono text-xs bg-secondary-fixed px-2 py-1 border-[2px] border-on-surface inline-block mt-2 font-bold uppercase">ID: {submission.studentUniqueId}</span>}
+                                        <h3 className="font-headline-md text-headline-md font-bold uppercase">
+                                            {submission.student?.name || 'Unknown Student'}
+                                        </h3>
+                                        {submission.studentUniqueId && (
+                                            <span className="font-label-mono text-xs bg-secondary-fixed px-2 py-1 border-[2px] border-on-surface inline-block mt-2 font-bold uppercase">
+                                                ID: {submission.studentUniqueId}
+                                            </span>
+                                        )}
                                         <p className="font-label-mono text-[12px] text-on-surface-variant mt-2 uppercase">
                                             Submitted: {new Date(submission.submittedAt).toLocaleString()}
                                         </p>
                                     </div>
                                 </div>
-                                
-                                <div className="border-t-[4px] sm:border-t-0 sm:border-l-[4px] border-on-surface p-6 flex flex-col justify-center items-end bg-surface-variant min-w-[250px]">
+
+                                {/* Status + Score */}
+                                <div className="border-t-[4px] sm:border-t-0 sm:border-l-[4px] border-on-surface p-6 flex flex-col justify-center items-end bg-surface-variant min-w-[200px]">
                                     {gradingProgress[submission.id]?.status === 'processing' ? (
                                         <span className="font-label-mono text-primary font-bold uppercase animate-pulse">
                                             [{gradingProgress[submission.id].step || 'Processing'}]
@@ -158,8 +188,8 @@ const AssignmentSubmissions: React.FC = () => {
                                             [Grading Failed]
                                         </span>
                                     ) : (
-                                        <span className={`font-label-mono font-bold uppercase px-3 py-1 border-[2px] border-on-surface brutal-shadow ${submission.status === 'GRADED' ? 'bg-secondary text-on-secondary' : submission.status === 'FAILED' ? 'bg-error text-on-error' : 'bg-surface text-on-surface'}`}>
-                                            {submission.status === 'GRADED' ? 'Evaluated' : submission.status === 'FAILED' ? 'Failed' : 'Pending'}
+                                        <span className={`font-label-mono font-bold uppercase px-3 py-1 border-[2px] border-on-surface brutal-shadow ${submission.status === 'GRADED' ? 'bg-secondary text-on-secondary' : submission.status === 'REVIEWING' ? 'bg-accent-yellow text-on-surface' : 'bg-surface text-on-surface'}`}>
+                                            {submission.status === 'GRADED' ? 'Evaluated' : submission.status === 'REVIEWING' ? 'Reviewing' : 'Pending'}
                                         </span>
                                     )}
                                     {submission.score !== null && (
@@ -168,14 +198,26 @@ const AssignmentSubmissions: React.FC = () => {
                                         </p>
                                     )}
                                 </div>
+
+                                {/* Action Buttons — fixed double-border bug with last:border-b-0 */}
                                 <div className="flex flex-row sm:flex-col border-t-[4px] sm:border-t-0 sm:border-l-[4px] border-on-surface">
-                                    <button onClick={() => setSelectedSubmission(submission)} className="flex-1 px-4 py-4 bg-primary text-on-primary font-label-caps uppercase font-bold hover:bg-primary-container border-r-[4px] sm:border-r-0 sm:border-b-[4px] border-on-surface brutal-button">
+                                    <button
+                                        onClick={() => setSelectedSubmission(submission)}
+                                        className="flex-1 px-5 py-4 bg-primary text-on-primary font-label-caps uppercase font-bold hover:bg-primary-container transition-colors duration-75 border-r-[4px] sm:border-r-0 sm:border-b-[4px] border-on-surface brutal-button"
+                                    >
                                         Inspect
                                     </button>
-                                    <button onClick={() => handleReEvaluate(submission.id)} className="flex-1 px-4 py-4 bg-accent-yellow text-on-surface font-label-caps uppercase font-bold hover:bg-yellow-400 border-r-[4px] sm:border-r-0 sm:border-b-[4px] border-on-surface brutal-button">
+                                    <button
+                                        onClick={() => handleReEvaluate(submission.id)}
+                                        className="flex-1 px-5 py-4 bg-accent-yellow text-on-surface font-label-caps uppercase font-bold hover:opacity-80 transition-colors duration-75 border-r-[4px] sm:border-r-0 sm:border-b-[4px] border-on-surface brutal-button"
+                                    >
                                         Re-eval
                                     </button>
-                                    <button onClick={() => setConfirmDeleteId(submission.id)} className="flex-1 px-4 py-4 bg-error text-on-error font-label-caps uppercase font-bold hover:bg-red-700 brutal-button">
+                                    <button
+                                        onClick={() => setConfirmDeleteId(submission.id)}
+                                        className="flex-1 px-5 py-4 bg-error text-on-error font-label-caps uppercase font-bold hover:bg-red-700 transition-colors duration-75 brutal-button"
+                                        // NOTE: last button — no bottom border to prevent doubling
+                                    >
                                         Delete
                                     </button>
                                 </div>
@@ -185,29 +227,39 @@ const AssignmentSubmissions: React.FC = () => {
                 </div>
             )}
 
-            {/* Inspect Dialog */}
             <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
-                <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none">
+                <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="font-headline-md text-headline-md font-black uppercase border-b-[4px] border-on-surface pb-2">Submission Details</DialogTitle>
+                        <DialogTitle>Submission Details</DialogTitle>
                         <DialogDescription className="font-label-mono text-on-surface-variant uppercase pt-2">
                             Grading results for {selectedSubmission?.student?.name}
                         </DialogDescription>
                     </DialogHeader>
                     {selectedSubmission && (
-                        <div className="space-y-8 mt-6">
-                            <div className="flex flex-wrap gap-6">
-                                <div className="bg-secondary-fixed border-[4px] border-on-surface p-4 inline-block brutal-shadow">
+                        <div className="space-y-8 mt-4">
+                            <div className="flex flex-wrap gap-4">
+                                <div className="bg-secondary-fixed border-[4px] border-on-surface p-4 brutal-shadow">
                                     <h4 className="font-label-caps text-label-caps uppercase font-bold mb-1">Final Verdict</h4>
-                                    <div className="font-headline-lg font-black text-on-surface">{selectedSubmission.score}<span className="text-headline-md">/{assignment?.maxScore || 100}</span></div>
+                                    <div className="font-headline-lg font-black text-on-surface">
+                                        {selectedSubmission.score}
+                                        <span className="text-headline-md">/{assignment?.maxScore || 100}</span>
+                                    </div>
                                 </div>
                                 <div className="flex flex-col gap-2 justify-center">
-                                    <button onClick={() => handleReEvaluate(selectedSubmission.id)} className="px-4 py-2 bg-accent-yellow border-[4px] border-on-surface font-label-caps font-bold uppercase brutal-shadow brutal-button text-on-surface hover:bg-yellow-400">
+                                    <Button
+                                        variant="brutal-yellow"
+                                        size="sm"
+                                        onClick={() => handleReEvaluate(selectedSubmission.id)}
+                                    >
                                         Force Re-evaluation
-                                    </button>
-                                    <button onClick={() => { setConfirmDeleteId(selectedSubmission.id); setSelectedSubmission(null); }} className="px-4 py-2 bg-error text-on-error border-[4px] border-on-surface font-label-caps font-bold uppercase brutal-shadow brutal-button hover:bg-red-700">
-                                        Delete & Allow Resubmission
-                                    </button>
+                                    </Button>
+                                    <Button
+                                        variant="brutal-error"
+                                        size="sm"
+                                        onClick={() => { setConfirmDeleteId(selectedSubmission.id); setSelectedSubmission(null); }}
+                                    >
+                                        Delete &amp; Allow Resubmission
+                                    </Button>
                                 </div>
                             </div>
 
@@ -217,8 +269,13 @@ const AssignmentSubmissions: React.FC = () => {
                                     <ReactMarkdown>{selectedSubmission.feedback || 'No feedback available.'}</ReactMarkdown>
                                 </div>
                             </div>
-                            
-                            <a href={selectedSubmission.publicUrl} target="_blank" rel="noopener noreferrer" className="block w-full py-4 text-center border-[4px] border-on-surface bg-primary text-on-primary font-label-caps font-bold uppercase brutal-shadow brutal-button hover:bg-primary-container">
+
+                            <a
+                                href={selectedSubmission.publicUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-full py-4 text-center border-[4px] border-on-surface bg-primary text-on-primary font-label-caps font-bold uppercase brutal-shadow brutal-button hover:bg-primary-container transition-colors duration-75"
+                            >
                                 View Submitted PDF
                             </a>
                         </div>
@@ -226,22 +283,29 @@ const AssignmentSubmissions: React.FC = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Confirm Delete Dialog */}
             <Dialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
-                <DialogContent className="max-w-md bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none">
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="font-headline-md font-black uppercase">Delete Submission</DialogTitle>
-                        <DialogDescription className="font-body-md">
+                        <DialogTitle>Delete Submission</DialogTitle>
+                        <DialogDescription>
                             This will permanently delete the submission and allow the student to resubmit. This cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex gap-4 mt-6">
-                        <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-3 bg-surface-variant border-[4px] border-on-surface font-label-caps uppercase font-bold brutal-shadow brutal-button hover:bg-surface">
+                    <div className="flex gap-4 mt-2">
+                        <Button
+                            variant="brutal-ghost"
+                            className="flex-1"
+                            onClick={() => setConfirmDeleteId(null)}
+                        >
                             Cancel
-                        </button>
-                        <button onClick={() => confirmDeleteId && handleAllowResubmission(confirmDeleteId)} className="flex-1 py-3 bg-error text-on-error border-[4px] border-on-surface font-label-caps uppercase font-bold brutal-shadow brutal-button hover:bg-red-700">
+                        </Button>
+                        <Button
+                            variant="brutal-error"
+                            className="flex-1"
+                            onClick={() => confirmDeleteId && handleAllowResubmission(confirmDeleteId)}
+                        >
                             Confirm Delete
-                        </button>
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>

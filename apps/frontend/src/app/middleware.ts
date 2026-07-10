@@ -1,7 +1,6 @@
 import { isRejectedWithValue, type Middleware } from '@reduxjs/toolkit';
 import { logout } from '../features/auth/authSlice';
 
-
 export const unauthenticatedMiddleware: Middleware =
     ({ dispatch }) =>
     (next) =>

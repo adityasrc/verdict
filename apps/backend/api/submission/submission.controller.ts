@@ -61,7 +61,8 @@ export class SubmissionController {
             studentUniqueId,
         });
 
-        await submissionQueue.add("grade_assignment", submission, {
+        const publicUrl = `${process.env.PUBLIC_ENDPOINT}/${submission.fileKey}`;
+        await submissionQueue.add("grade_assignment", { ...submission, publicUrl }, {
             attempts: 3,
             backoff: { type: "exponential", delay: 5000 },
             removeOnComplete: true,
@@ -210,7 +211,8 @@ export class SubmissionController {
             },
         });
 
-        await submissionQueue.add("grade_assignment", updatedSubmission, {
+        const publicUrl = `${process.env.PUBLIC_ENDPOINT}/${updatedSubmission.fileKey}`;
+        await submissionQueue.add("grade_assignment", { ...updatedSubmission, publicUrl }, {
             attempts: 3,
             backoff: { type: "exponential", delay: 5000 },
             removeOnComplete: true,

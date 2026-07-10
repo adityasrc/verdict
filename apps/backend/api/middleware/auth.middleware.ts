@@ -4,7 +4,7 @@ import { AppError } from "../../utils/apiResponseHandler.js";
 
 const authManagerInstance = new AuthManager();
 
-// TypeScript pattern for extending Express Request type globally
+
 declare global {
     namespace Express {
         interface Request {
