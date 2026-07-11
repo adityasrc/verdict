@@ -78,28 +78,28 @@ const Onboarding = () => {
         <div className="absolute inset-0 pointer-events-none opacity-5"
           style={{ backgroundImage: "linear-gradient(#191c1e 1px, transparent 1px), linear-gradient(90deg, #191c1e 1px, transparent 1px)", backgroundSize: "40px 40px" }}
         />
-        
+
         <div className="relative z-10 max-w-7xl mx-auto px-6 pt-24 pb-20 md:pt-32 md:pb-24">
           <div className="flex flex-col lg:flex-row gap-16 items-center">
-            
+
             {/* Left Column: Copy & CTA */}
             <div className="flex-1">
               <div className="inline-flex items-center gap-2 bg-primary text-on-primary border-[4px] border-on-surface px-4 py-1 brutal-shadow mb-8">
                 <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
                 <span className="font-label-caps text-label-caps uppercase">AI-Powered Grading Pipeline</span>
               </div>
-              
+
               <h1 className="text-5xl sm:text-7xl lg:text-[90px] font-black tracking-tighter leading-none mb-6 uppercase text-on-surface">
                 Grade faster.<br />
                 <span className="text-primary">Grade smarter.</span>
               </h1>
-              
+
               <p className="text-lg md:text-xl text-on-surface-variant max-w-xl mb-12 leading-relaxed font-medium">
-                Verdict automates the first pass of assignment grading using Gemini AI. 
-                You define the rubric. The system handles PDF extraction, evaluation, and scoring. 
+                Verdict automates the first pass of assignment grading using Gemini AI.
+                You define the rubric. The system handles PDF extraction, evaluation, and scoring.
                 You review and finalize.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row items-start gap-4 mb-16">
                 <Link
                   to="/signup"
@@ -188,10 +188,10 @@ const Onboarding = () => {
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-16 items-start">
           <div className="lg:w-1/2">
             <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-8 text-primary">
-              The<br/>Bottleneck
+              The<br />Bottleneck
             </h2>
             <p className="text-surface-variant text-xl md:text-2xl leading-relaxed font-medium">
-              Teachers spend hours writing the same feedback for the same mistakes. 
+              Teachers spend hours writing the same feedback for the same mistakes.
               Verdict eliminates this repetitive first pass, allowing educators to focus on what actually requires human judgment.
             </p>
           </div>
@@ -233,7 +233,7 @@ const Onboarding = () => {
               A frictionless pipeline from rubric creation to final grades.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0 border-[4px] border-on-surface brutal-shadow">
             {STEPS.map((step, index) => (
               <div
@@ -268,7 +268,7 @@ const Onboarding = () => {
               A robust, event-driven pipeline designed for concurrent grading.
             </p>
           </div>
-          
+
           <div className="flex flex-col lg:flex-row items-stretch border-[4px] border-on-surface brutal-shadow bg-surface">
             <div className="flex-1 p-8 border-b-[4px] lg:border-b-0 lg:border-r-[4px] border-on-surface">
               <div className="flex items-center gap-4 mb-6">
@@ -281,7 +281,7 @@ const Onboarding = () => {
                 Submissions are queued via BullMQ and Redis. Background workers process jobs asynchronously to prevent API blocking during heavy loads.
               </p>
             </div>
-            
+
             <div className="flex-1 p-8 border-b-[4px] lg:border-b-0 lg:border-r-[4px] border-on-surface">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-primary border-[4px] border-on-surface flex items-center justify-center text-on-primary">
@@ -309,7 +309,6 @@ const Onboarding = () => {
         </div>
       </section>
 
-      {/* ── CAPABILITIES ── */}
       <section className="border-b-[4px] border-on-surface px-6 py-24 md:py-32 bg-surface">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-16">
@@ -338,7 +337,7 @@ const Onboarding = () => {
       <section className="px-6 py-32 md:py-48 bg-primary border-b-[4px] border-on-surface text-center">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-6xl sm:text-8xl md:text-[120px] font-black uppercase tracking-tighter text-on-primary leading-none mb-12">
-            Ready for<br/>The Verdict?
+            Ready for<br />The Verdict?
           </h2>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
             <Link
