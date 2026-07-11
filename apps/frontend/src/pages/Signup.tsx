@@ -40,8 +40,9 @@ const Signup: React.FC = () => {
     <div className="min-h-screen bg-surface flex flex-col md:flex-row font-sans selection:bg-primary selection:text-on-primary">
       
       {/* ── Branding Pane ── */}
-      <div className="w-full md:w-[40%] lg:w-[35%] bg-accent-yellow border-b-[2px] md:border-b-0 md:border-r-[2px] border-on-surface p-8 md:p-12 flex flex-col items-start pt-12 md:pt-24">
-        <Link to="/" className="flex items-center gap-3 w-fit mb-16 md:mb-24">
+      <div className="w-full md:w-[40%] lg:w-[35%] bg-accent-yellow border-b-[2px] md:border-b-0 md:border-r-[2px] border-on-surface p-8 md:p-12 flex flex-col relative md:min-h-screen">
+        {/* Top: Logo */}
+        <Link to="/" className="flex items-center gap-3 w-fit">
           <div className="bg-primary border-[2px] border-on-surface brutal-shadow flex items-center justify-center p-1.5 brutal-button">
             <span className="material-symbols-outlined text-on-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
               menu_book
@@ -52,12 +53,20 @@ const Signup: React.FC = () => {
           </span>
         </Link>
 
-        <div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter text-on-surface leading-none mb-6">
+        {/* Middle: Poster Typography */}
+        <div className="flex-1 flex flex-col justify-center mt-12 mb-4 md:mt-0 md:mb-0 md:pb-32">
+          <h1 className="text-4xl md:text-5xl lg:text-[72px] font-black uppercase tracking-tighter text-on-surface leading-none mb-6">
             Start<br/>grading<br/>smarter.
           </h1>
-          <p className="text-on-surface-variant text-lg md:text-xl font-medium max-w-sm hidden md:block">
+          <p className="text-on-surface-variant text-lg font-medium max-w-[280px] hidden md:block leading-relaxed">
             Create your free Verdict account and automate your first evaluation pipeline.
+          </p>
+        </div>
+
+        {/* Bottom: Anchor */}
+        <div className="hidden md:block absolute bottom-12 left-12 pr-12">
+          <p className="font-label-mono text-[11px] font-bold uppercase tracking-widest text-on-surface opacity-60">
+            Built for educators.
           </p>
         </div>
       </div>
@@ -73,7 +82,7 @@ const Signup: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* Role Selection (Brutalist Radio) */}
-            <div className="space-y-2">
+            <div className="space-y-2 pb-8 border-b-[2px] border-surface-variant">
               <Label>I am a...</Label>
               <div className="flex gap-4">
                 <button

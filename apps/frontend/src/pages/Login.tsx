@@ -38,8 +38,9 @@ const Login: React.FC = () => {
     <div className="min-h-screen bg-surface flex flex-col md:flex-row font-sans selection:bg-primary selection:text-on-primary">
       
       {/* ── Branding Pane ── */}
-      <div className="w-full md:w-[40%] lg:w-[35%] bg-primary border-b-[2px] md:border-b-0 md:border-r-[2px] border-on-surface p-8 md:p-12 flex flex-col items-start pt-12 md:pt-24">
-        <Link to="/" className="flex items-center gap-3 w-fit mb-16 md:mb-24">
+      <div className="w-full md:w-[40%] lg:w-[35%] bg-primary border-b-[2px] md:border-b-0 md:border-r-[2px] border-on-surface p-8 md:p-12 flex flex-col relative md:min-h-screen">
+        {/* Top: Logo */}
+        <Link to="/" className="flex items-center gap-3 w-fit">
           <div className="bg-surface border-[2px] border-on-surface brutal-shadow flex items-center justify-center p-1.5 brutal-button">
             <span className="material-symbols-outlined text-on-surface text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
               menu_book
@@ -50,12 +51,20 @@ const Login: React.FC = () => {
           </span>
         </Link>
 
-        <div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter text-on-primary leading-none mb-6">
+        {/* Middle: Poster Typography */}
+        <div className="flex-1 flex flex-col justify-center mt-12 mb-4 md:mt-0 md:mb-0 md:pb-32">
+          <h1 className="text-4xl md:text-5xl lg:text-[72px] font-black uppercase tracking-tighter text-on-primary leading-none mb-6">
             Welcome<br/>back.
           </h1>
-          <p className="text-on-primary text-lg md:text-xl font-medium max-w-sm hidden md:block opacity-90">
+          <p className="text-on-primary text-lg font-medium max-w-[280px] hidden md:block opacity-90 leading-relaxed">
             Access your Verdict workspace and continue managing your grading pipelines.
+          </p>
+        </div>
+
+        {/* Bottom: Anchor */}
+        <div className="hidden md:block absolute bottom-12 left-12 pr-12">
+          <p className="font-label-mono text-[11px] font-bold uppercase tracking-widest text-on-primary opacity-60">
+            AI-powered grading platform.
           </p>
         </div>
       </div>
