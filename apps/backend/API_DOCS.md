@@ -1,323 +1,80 @@
-Rumi here. Gusse me gaali dena banta hai tera, meri hi galti hai. Dimag se nikal gaya tha.
+# Verdict Backend API
 
-Maine sab jagah se LPU hata kar exact **Verdict** naam update kar diya hai, title se lekar database URL tak. Ye le final aur 100% accurate API docs, ek baari me copy kar le:
-
-```markdown
-# Verdict Backend API Documentation
+The API base URL is `http://localhost:4000/api` in local development. Protected routes require `Authorization: Bearer <accessToken>`.
 
 ## Setup
 
-1. Install dependencies:
+From the repository root, install dependencies and configure `.env` from `.env.example`. The backend requires `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, and the storage and Gemini values used by the grading worker.
 
 ```bash
 pnpm install
-```
-
-2. Set up your `.env` file:
-
-```env
-DATABASE_URL="postgresql://user:password@localhost:5432/verdict?schema=public"
-HTTP_PORT=8600
-JWT_SECRET="your-super-secret-jwt-key"
-JWT_REFRESH_SECRET="your-super-secret-refresh-key"
-JWT_EXPIRES_IN="15m"
-JWT_REFRESH_EXPIRES_IN="7d"
-```
-
-3. Generate Prisma Client:
-
-```bash
-pnpm dlx prisma generate
-```
-
-4. Start the server:
-
-```bash
+pnpm --filter verdict-backend exec prisma generate
+pnpm --filter verdict-backend exec prisma db push
 pnpm dev
 ```
 
-## API Endpoints
+## Authentication
 
-Base URL: `http://localhost:8600/api`
+| Method | Path | Authentication | Body |
+| --- | --- | --- | --- |
+| POST | `/auth/register` | None | `email`, `password`, `name`, optional `role` (`STUDENT` or `TEACHER`) |
+| POST | `/auth/login` | None | `email`, `password` |
+| POST | `/auth/refresh` | None | `refreshToken` |
+| GET | `/auth/me` | Any signed-in user | None |
 
-### Authentication Endpoints
+## Assignments
 
-#### 1. Register a new user
+| Method | Path | Role | Purpose |
+| --- | --- | --- | --- |
+| POST | `/assignments` | Teacher | Create an assignment. Body: `title`, optional `description`, `maxScore`, `dueDate`, `rubricId`, and `requireUniqueId`. |
+| GET | `/assignments/teacher/my-assignments` | Teacher | List the signed-in teacher's assignments. |
+| GET | `/assignments/student/all` | Signed-in user | List published assignments. |
+| GET | `/assignments/:id` | Signed-in user | Get an assignment. The session PIN is never returned. |
 
-```http
-POST /api/auth/register
-Content-Type: application/json
+## Rubrics
 
-{
-  "email": "teacher@example.com",
-  "password": "securepassword123",
-  "name": "John Doe",
-  "role": "TEACHER" // Optional: STUDENT, TEACHER, ADMIN (default: TEACHER)
-}
-```
+All rubric routes require the teacher role and operate only on rubrics owned by the signed-in teacher.
 
-**Response:**
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/rubrics` | Create a rubric with `name` and `criteria`. |
+| GET | `/rubrics` | List the signed-in teacher's rubrics. |
+| GET | `/rubrics/:id` | Get a rubric. |
+| PUT | `/rubrics/:id` | Update `name` and/or `criteria`. |
+| DELETE | `/rubrics/:id` | Delete a rubric. |
 
-```json
-{
-    "success": true,
-    "message": "User registered successfully",
-    "data": {
-        "user": {
-            "id": "550e8400-e29b-41d4-a716-446655440000",
-            "email": "teacher@example.com",
-            "name": "John Doe",
-            "role": "TEACHER",
-            "createdAt": "2026-05-22T10:00:00.000Z"
-        },
-        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-        "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    }
-}
-```
+Each rubric criterion contains `name`, `description`, and `points`.
 
-#### 2. Login
+## Submissions
 
-```http
-POST /api/auth/login
-Content-Type: application/json
+Student submission routes require the student role.
 
-{
-  "email": "teacher@example.com",
-  "password": "securepassword123"
-}
-```
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/submissions/verifyAssignmentOtp` | Check an assignment PIN. Body: `assignmentId`, `otp`. |
+| GET | `/submissions/uploadUrl` | Get a short-lived upload URL. Query: `fileName`, `type`, `assignmentId`, `otp`. |
+| POST | `/submissions` | Register a submission and queue grading. Body: `assignmentId`, `otp`, optional `studentUniqueId`. The ID is required when the assignment requires it. |
+| GET | `/submissions/my-submissions` | List the signed-in student's submissions. |
+| GET | `/submissions/assignment/:assignmentId` | Teacher-only list of submissions for an assignment they own. |
+| GET | `/submissions/recent` | Recent submissions available to the signed-in user. |
+| POST | `/submissions/reEvaluate` | Teacher-only. Body: `submissionId`. |
+| POST | `/submissions/allowResubmission` | Teacher-only. Body: `submissionId`. |
 
-**Response:**
+Submission PIN checks are rate limited. Upload URLs expire after 10 minutes.
 
-```json
-{
-    "success": true,
-    "message": "Login successful",
-    "data": {
-        "user": {
-            "id": "550e8400-e29b-41d4-a716-446655440000",
-            "email": "teacher@example.com",
-            "name": "John Doe",
-            "role": "TEACHER",
-            "createdAt": "2026-05-22T10:00:00.000Z",
-            "updatedAt": "2026-05-22T10:00:00.000Z"
-        },
-        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-        "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    }
-}
-```
+## Health check
 
-#### 3. Get Current User (Protected)
+`GET /health` returns the API status and a timestamp.
 
-```http
-GET /api/auth/me
-Authorization: Bearer <accessToken>
-```
+## Responses
 
-**Response:**
+Successful responses use the following envelope:
 
 ```json
 {
-    "success": true,
-    "data": {
-        "user": {
-            "id": "550e8400-e29b-41d4-a716-446655440000",
-            "email": "teacher@example.com",
-            "name": "John Doe",
-            "role": "TEACHER",
-            "createdAt": "2026-05-22T10:00:00.000Z",
-            "updatedAt": "2026-05-22T10:00:00.000Z"
-        }
-    }
+  "success": true,
+  "data": {}
 }
 ```
 
-#### 4. Refresh Token
-
-```http
-POST /api/auth/refresh
-Content-Type: application/json
-
-{
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-**Response:**
-
-```json
-{
-    "success": true,
-    "message": "Token refreshed successfully",
-    "data": {
-        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-        "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    }
-}
-```
-
-### Error Responses
-
-All error responses follow this format:
-
-```json
-{
-    "success": false,
-    "message": "Error description"
-}
-```
-
-Common HTTP status codes:
-
-* `200` : Success
-* `201` : Created
-* `400` : Bad Request (validation error)
-* `401` : Unauthorized (invalid credentials or token)
-* `403` : Forbidden (insufficient permissions)
-* `404` : Not Found
-* `500` : Internal Server Error
-
-## Prisma Schema (PostgreSQL)
-
-The application uses PostgreSQL with the following models:
-
-### User
-
-* `id`: String (UUID)
-* `email`: String (unique)
-* `password`: String (hashed)
-* `name`: String
-* `role`: Role (STUDENT, TEACHER, ADMIN)
-* `createdAt`: DateTime
-* `updatedAt`: DateTime
-
-### Assignment
-
-* `id`: String (UUID)
-* `title`: String
-* `description`: String (optional)
-* `maxScore`: Int (default: 100)
-* `dueDate`: DateTime (optional)
-* `teacherId`: String (UUID)
-* `createdAt`: DateTime
-* `updatedAt`: DateTime
-
-### Submission
-
-* `id`: String (UUID)
-* `content`: String
-* `score`: Int (optional)
-* `feedback`: String (optional)
-* `status`: SubmissionStatus (PENDING, GRADED, REVIEWING)
-* `submittedAt`: DateTime
-* `gradedAt`: DateTime (optional)
-* `studentId`: String (UUID)
-* `assignmentId`: String (UUID)
-
-## Authentication Middleware
-
-To protect routes, use the `authMiddleware`:
-
-```typescript
-import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
-
-// Protect a route
-router.get("/protected", authMiddleware, async (req, res) => {
-    // Strongly typed req.user object
-    const userId = req.user!.id;
-    const userEmail = req.user!.email;
-    const userRole = req.user!.role;
-    
-    // Your code here
-});
-
-// Require specific role
-router.post("/admin-only", authMiddleware, requireRole("ADMIN"), async (req, res) => {
-    // Only admins can access this
-});
-
-// Multiple roles
-router.post(
-    "/teacher-or-admin",
-    authMiddleware,
-    requireRole("TEACHER", "ADMIN"),
-    async (req, res) => {
-        // Teachers and Admins can access this
-    },
-);
-```
-
-## JWT Token Structure
-
-Access tokens contain:
-
-```json
-{
-    "userId": "550e8400-e29b-41d4-a716-446655440000",
-    "email": "teacher@example.com",
-    "role": "TEACHER",
-    "iat": 1702123456,
-    "exp": 1702124356
-}
-```
-
-## Security Best Practices
-
-1. **Never commit `.env` file** : Add it to `.gitignore`
-2. **Change JWT secrets in production** : Use strong, random strings
-3. **Use HTTPS in production** : Never send tokens over HTTP
-4. **Store tokens securely** : Use httpOnly cookies or secure storage
-5. **Implement rate limiting** : Prevent brute force attacks
-6. **Validate all inputs** : Add proper validation middleware (Zod)
-7. **Use short-lived access tokens** : Default is 15 minutes
-8. **Rotate refresh tokens** : Implement token rotation for better security
-
-## Testing with cURL
-
-### Register:
-
-```bash
-curl -X POST http://localhost:8600/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "teacher@example.com",
-    "password": "password123",
-    "name": "John Doe"
-  }'
-```
-
-### Login:
-
-```bash
-curl -X POST http://localhost:8600/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "teacher@example.com",
-    "password": "password123"
-  }'
-```
-
-### Get Current User:
-
-```bash
-curl -X GET http://localhost:8600/api/auth/me \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-## Development
-
-Run in development mode with auto-reload:
-
-```bash
-pnpm dev
-```
-
-Build for production:
-
-```bash
-pnpm build
-```
-
-```
+Validation and application errors use `success: false` with a message and, where applicable, error details.

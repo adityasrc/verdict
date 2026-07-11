@@ -44,7 +44,7 @@ services:
     container_name: verdict-api
     restart: unless-stopped
     ports:
-      - "8600:4000"
+      - "4000:4000"
     depends_on:
       - postgres
       - redis

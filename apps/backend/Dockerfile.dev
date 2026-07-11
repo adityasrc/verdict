@@ -21,7 +21,7 @@ RUN pnpm exec prisma generate
 COPY . .
 
 # Expose our agreed backend port
-EXPOSE 8600
+EXPOSE 4000
 
 # Start the development server
 CMD ["pnpm", "dev"]

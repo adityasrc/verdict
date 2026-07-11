@@ -235,7 +235,7 @@ const Onboarding = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[4px] bg-on-surface border-[4px] border-on-surface brutal-shadow">
-            {STEPS.map((step, index) => (
+            {STEPS.map((step) => (
               <div
                 key={step.number}
                 className="p-8 bg-surface hover:bg-surface-variant transition-colors duration-200 group relative"

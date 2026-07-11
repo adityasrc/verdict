@@ -1,104 +1,199 @@
-# Verdict - AI-Powered Automated Grading System
+# Verdict
 
-Verdict is a full-stack platform built for educators to automate the grading process of assignments using Large Language Models (Gemini). It extracts text from PDF submissions and grades them against teacher-defined rubrics with high accuracy, saving hours of manual evaluation.
+> AI-powered assignment grading platform built for educators.
 
-## 🚀 Features
+Verdict automates the assignment evaluation workflow by combining asynchronous background processing, AI-assisted rubric evaluation, PDF parsing, and real-time progress updates.
 
-*   **Role-based Access:** Dedicated workflows for Teachers (creating assignments, reviewing grades) and Students (submitting assignments).
-*   **AI-Powered Grading:** Uses Gemini AI to evaluate student submissions against detailed rubrics.
-*   **PDF Parsing Engine:** Custom Python microservice to accurately extract text and layout from student PDFs.
-*   **Asynchronous Processing:** Robust background job queue using BullMQ and Redis to handle heavy PDF parsing and AI grading without blocking the main API.
-*   **Real-time Telemetry:** Live websocket updates using Socket.io to stream the grading pipeline progress directly to the frontend interface.
-*   **Secure Storage:** Cloudflare R2 / AWS S3 integration for securely storing and accessing student submissions.
+Teachers create assignments and grading rubrics. Students submit PDF assignments. Verdict processes every submission through a distributed grading pipeline and delivers structured feedback while keeping users informed through live status updates.
 
-## 🛠️ Technology Stack
+---
 
-**Frontend:**
-*   React 18 + Vite
-*   TypeScript
-*   Tailwind CSS + Shadcn UI
-*   Redux Toolkit (RTK Query)
-*   React Router
-*   Socket.io Client
+## Features
 
-**Backend:**
-*   Node.js + Express
-*   TypeScript
-*   PostgreSQL (Neon)
-*   Prisma ORM
-*   Redis + BullMQ (Task Queue)
-*   Socket.io
-*   Python (PDF Extraction + Gemini AI Interface)
-*   AWS SDK (S3 / R2)
+- AI-assisted rubric-based grading
+- PDF submission and parsing
+- Background job processing with BullMQ
+- Real-time grading progress via WebSockets
+- Secure JWT authentication
+- Teacher and Student workflows
+- Assignment and submission management
+- Responsive brutalist-inspired interface
 
-## ⚙️ Local Development Setup
+---
+
+## Tech Stack
+
+### Frontend
+
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- Redux Toolkit
+- React Router
+- Socket.IO Client
+
+### Backend
+
+- Node.js
+- Express
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- Redis
+- BullMQ
+- Socket.IO
+
+### AI Pipeline
+
+- Python
+- Gemini API
+- PDF Processing
+
+---
+
+## Architecture
+
+```text
+Student Upload
+       │
+       ▼
+Express API
+       │
+       ▼
+PostgreSQL ─────────────── Prisma
+       │
+       ▼
+Redis Queue (BullMQ)
+       │
+       ▼
+Background Workers
+       │
+       ├── PDF Parsing
+       ├── AI Evaluation
+       └── Rubric Scoring
+       │
+       ▼
+Database Update
+       │
+       ▼
+Socket.IO Events
+       │
+       ▼
+Teacher & Student Dashboard
+```
+
+---
+
+## Repository Structure
+
+```text
+apps/
+├── frontend      React application
+└── backend       Express API, workers, Prisma schema and WebSocket server
+```
+
+---
+
+## Running Locally
 
 ### Prerequisites
-*   Node.js (v20+)
-*   Python (v3.9+)
-*   pnpm (v9)
-*   PostgreSQL Database (or Neon DB URL)
-*   Redis Instance (e.g. Upstash)
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/adityasrc/verdict.git
-cd verdict
-```
+- Node.js 20+
+- pnpm 9+
+- Python 3.9+
+- PostgreSQL
+- Redis
 
-### 2. Install Dependencies
-This project uses a monorepo setup via `pnpm` workspaces.
+### Installation
+
 ```bash
 pnpm install
-```
 
-### 3. Environment Variables
-Copy the `.env.example` file to `.env` in the root directory and fill in your credentials.
-```bash
 cp .env.example .env
+# Windows PowerShell
+# Copy-Item .env.example .env
+
+pnpm --filter verdict-backend exec prisma generate
+
+pnpm --filter verdict-backend exec prisma db push
+
+pnpm dev
 ```
 
-Key variables required:
-*   `DATABASE_URL`: PostgreSQL connection string
-*   `REDIS_URL`: Redis connection string
-*   `GEMINI_API_KEY`: Your Google Gemini API Key
-*   `BUCKET_NAME`, `ACCESSKEYID`, `SECRETACCESSKEY`, `R2_ENDPOINT`: Your S3/R2 storage details
-*   `JWT_SECRET`: Secure string for JWT signing
-*   `PYTHON_BIN`: Set to `python3` (Mac/Linux) or `python` (Windows)
+---
 
-### 4. Database Setup
-```bash
-cd apps/backend
-npx prisma generate
-npx prisma db push
+## Environment Variables
+
+Configure the following before running the application.
+
+```env
+DATABASE_URL=
+REDIS_URL=
+
+JWT_SECRET=
+
+GEMINI_API_KEY=
+
+BUCKET_NAME=
+ACCESSKEYID=
+SECRETACCESSKEY=
+R2_ENDPOINT=
+
+PYTHON_BIN=
 ```
 
-### 5. Running the Application
-You can run the entire stack concurrently from the root directory:
+On Windows:
 
-```bash
-# Start Frontend, Backend API, and the Background Worker
-pnpm run dev
+```text
+PYTHON_BIN=python
 ```
 
-The services will be available at:
-*   **Frontend:** http://localhost:5173
-*   **Backend API:** http://localhost:8600
+On macOS/Linux:
 
-## 📂 Project Architecture
-
-```
-verdict/
-├── apps/
-│   ├── frontend/         # React SPA
-│   └── backend/          # Express API + Worker
-│       ├── api/          # Express Controllers & Routes
-│       ├── workers/      # BullMQ Worker processing submissions
-│       ├── ws/           # Socket.io Server for real-time updates
-│       └── prisma/       # Database Schema
-├── packages/             # Shared libraries (if any)
-└── pnpm-workspace.yaml
+```text
+PYTHON_BIN=python3
 ```
 
-## 📄 License
-This project is licensed under the MIT License.
+---
+
+## Local URLs
+
+Frontend
+
+```
+http://localhost:5173
+```
+
+Backend API
+
+```
+http://localhost:4000/api
+```
+
+---
+
+## API Documentation
+
+Backend API documentation is available at:
+
+```
+apps/backend/API_DOCS.md
+```
+
+---
+
+## Roadmap
+
+- Assignment creation
+- AI-powered grading pipeline
+- Rubric evaluation
+- Background workers
+- Real-time grading updates
+- Submission analytics
+- Teacher dashboard
+- Student dashboard
+
+---
+
+Built for educators.

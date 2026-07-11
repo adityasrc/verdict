@@ -16,7 +16,7 @@ Socket.IO binds directly to the main Express HTTP server (`index.ts`). It handle
 import { io } from "socket.io-client";
 
 // The backend runs on port 8600 by default
-const socket = io(import.meta.env.VITE_BACKEND_URL || "http://localhost:8600", {
+const socket = io(import.meta.env.VITE_BACKEND_URL || "http://localhost:4000", {
     withCredentials: true,
     autoConnect: true,
 });
