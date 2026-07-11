@@ -1,10 +1,21 @@
 import { prisma } from "../../utils/db.js";
+import { AppError } from "../../utils/apiResponseHandler.js";
 import type { CreateAssignmentInput } from "../../validators/zod.js";
 
 export class AssignmentManager {
     async createAssignment(
         data: CreateAssignmentInput & { teacherId: string; otp: string }
     ) {
+        if (data.rubricId) {
+            const rubric = await prisma.rubric.findFirst({
+                where: { id: data.rubricId, teacherId: data.teacherId },
+            });
+
+            if (!rubric) {
+                throw new AppError("Rubric not found", 404);
+            }
+        }
+
         return prisma.assignment.create({
             data: {
                 ...data,

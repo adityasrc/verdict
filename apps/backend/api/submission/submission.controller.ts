@@ -36,7 +36,7 @@ export class SubmissionController {
 
         this.router.post("/", requireRole("STUDENT"), catchAsync(this.createSubmission.bind(this)));
         this.router.post("/verifyAssignmentOtp", requireRole("STUDENT"), otpLimiter, catchAsync(this.verifyAssignmentOtp.bind(this)));
-        this.router.get("/uploadUrl", requireRole("STUDENT"), catchAsync(this.getUploadUrl.bind(this)));
+        this.router.get("/uploadUrl", requireRole("STUDENT"), otpLimiter, catchAsync(this.getUploadUrl.bind(this)));
         this.router.get("/my-submissions", requireRole("STUDENT"), catchAsync(this.getMySubmissions.bind(this)));
 
         this.router.get("/assignment/:assignmentId", requireRole("TEACHER"), catchAsync(this.getAssignmentSubmissions.bind(this)));
@@ -53,7 +53,16 @@ export class SubmissionController {
         }
 
         const studentId = req.user!.id;
-        const { assignmentId, studentUniqueId } = parsed.data;
+        const { assignmentId, otp, studentUniqueId } = parsed.data;
+        const assignment = await this._submissionManager.verifyAssignmentOtp(assignmentId, otp);
+
+        if (!assignment) {
+            throw new AppError("Invalid assignment PIN", 403);
+        }
+
+        if (assignment.requireUniqueId && !studentUniqueId?.trim()) {
+            throw new AppError("University ID is required for this assignment", 400);
+        }
 
         const submission = await this._submissionManager.createSubmission({
             studentId,
@@ -119,7 +128,12 @@ export class SubmissionController {
         }
 
         const studentId = req.user!.id;
-        const { fileName, type, assignmentId } = parsed.data;
+        const { fileName, type, assignmentId, otp } = parsed.data;
+        const assignment = await this._submissionManager.verifyAssignmentOtp(assignmentId, otp);
+
+        if (!assignment) {
+            throw new AppError("Invalid assignment PIN", 403);
+        }
 
         const { url, key } = await this._submissionManager.presignedUrl(
             fileName,

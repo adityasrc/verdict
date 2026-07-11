@@ -63,10 +63,12 @@ export const assignmentApi = createApi({
                 fileName,
                 type,
                 assignmentId,
+                otp,
             }: {
                 fileName: string;
                 type: string;
                 assignmentId: string;
+                otp: string;
             }) => ({
                 url: '/submissions/uploadUrl',
                 method: 'GET',
@@ -74,6 +76,7 @@ export const assignmentApi = createApi({
                     fileName,
                     type,
                     assignmentId,
+                    otp,
                 },
             }),
         }),

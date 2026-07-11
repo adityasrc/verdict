@@ -53,7 +53,7 @@ export class RubricController {
             throw new AppError("Rubric ID is required", 400);
         }
 
-        const rubric = await this._rubricManager.getRubricById(id);
+        const rubric = await this._rubricManager.getRubricById(id, req.user!.id);
 
         if (!rubric) {
             throw new AppError("Rubric not found", 404);
@@ -74,7 +74,7 @@ export class RubricController {
             throw new AppError("Validation failed", 400, parsed.error.format());
         }
 
-        const rubric = await this._rubricManager.updateRubric(id, parsed.data);
+        const rubric = await this._rubricManager.updateRubric(id, req.user!.id, parsed.data);
         return res.status(200).json({ success: true, data: rubric });
     }
 
@@ -85,7 +85,7 @@ export class RubricController {
             throw new AppError("Rubric ID is required", 400);
         }
 
-        await this._rubricManager.deleteRubric(id);
+        await this._rubricManager.deleteRubric(id, req.user!.id);
         return res.status(200).json({ success: true, data: null });
     }
 }

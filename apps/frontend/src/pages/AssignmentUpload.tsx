@@ -116,7 +116,7 @@ const AssignmentUpload: React.FC = () => {
 
         try {
             await verifyOtp({ assignmentId: assignmentId!, otp }).unwrap();
-            const urlResult = await getUploadUrl({ fileName: file.name, type: file.type, assignmentId: assignmentId! }).unwrap() as any;
+            const urlResult = await getUploadUrl({ fileName: file.name, type: file.type, assignmentId: assignmentId!, otp }).unwrap() as any;
             const uploadData = urlResult.data ?? urlResult;
             await performUpload(uploadData);
         } catch (err) {

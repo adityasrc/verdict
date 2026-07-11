@@ -33,6 +33,7 @@ export const updateRubricSchema = createRubricSchema.partial();
 
 export const createSubmissionSchema = z.object({
     assignmentId: z.string().min(1, "Assignment ID is required"),
+    otp: z.string().min(1, "OTP is required"),
     studentUniqueId: z.string().optional(),
 });
 
@@ -45,6 +46,7 @@ export const uploadUrlSchema = z.object({
     fileName: z.string().min(1, "File name is required"),
     type: z.string().min(1, "File type is required"),
     assignmentId: z.string().min(1, "Assignment ID is required"),
+    otp: z.string().min(1, "OTP is required"),
 });
 
 export const submissionActionSchema = z.object({

@@ -1,4 +1,5 @@
 import type { Socket } from "socket.io";
+import { prisma } from "../utils/db.js";
 
 // This type is set on the socket after JWT auth in socket.ts
 interface AuthenticatedSocket extends Socket {
@@ -29,13 +30,38 @@ export const notificationHandlers = (socket: AuthenticatedSocket) => {
 
 // Real-time submission and grading progress
 export const submissionHandlers = (socket: AuthenticatedSocket) => {
-    socket.on("watch-submission", (submissionId: string) => {
+    socket.on("watch-submission", async (submissionId: string) => {
+        const submission = await prisma.submission.findUnique({
+            where: { id: submissionId },
+            select: { studentId: true, assignment: { select: { teacherId: true } } },
+        });
+
+        const canWatch = submission && (
+            (socket.role === "STUDENT" && submission.studentId === socket.userId) ||
+            (socket.role === "TEACHER" && submission.assignment.teacherId === socket.userId)
+        );
+
+        if (!canWatch) {
+            socket.emit("error", { message: "Access denied" });
+            return;
+        }
+
         socket.join(submissionId);
         console.log(`Socket ${socket.id} watching submission: ${submissionId}`);
     });
 
     // Teacher Dashboard: watch all submissions for a given assignment
-    socket.on("watch-assignment", (assignmentId: string) => {
+    socket.on("watch-assignment", async (assignmentId: string) => {
+        const assignment = await prisma.assignment.findFirst({
+            where: { id: assignmentId, teacherId: socket.userId },
+            select: { id: true },
+        });
+
+        if (socket.role !== "TEACHER" || !assignment) {
+            socket.emit("error", { message: "Access denied" });
+            return;
+        }
+
         socket.join(`assignment:${assignmentId}`);
         console.log(`Socket ${socket.id} watching assignment: ${assignmentId}`);
     });
