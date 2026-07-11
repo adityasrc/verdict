@@ -54,11 +54,11 @@ const Signup: React.FC = () => {
           </span>
         </Link>
 
-        <div className="bg-surface border-[4px] border-on-surface p-8 brutal-shadow relative">
+        <div className="bg-surface border-[4px] border-on-surface p-6 brutal-shadow relative">
           <div className="absolute -top-4 -left-4 bg-accent-yellow text-on-surface px-4 py-1 border-[4px] border-on-surface font-label-caps font-bold uppercase tracking-widest brutal-shadow z-10">
             Join Platform
           </div>
-          <div className="text-center mb-8 mt-4">
+          <div className="text-center mb-6 mt-2">
             <h1 className="font-headline-md text-2xl font-black uppercase text-on-surface tracking-tighter">
               Create Account
             </h1>
@@ -67,7 +67,7 @@ const Signup: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
@@ -128,7 +128,7 @@ const Signup: React.FC = () => {
             </Button>
           </form>
 
-          <p className="text-center font-body-md font-bold text-on-surface-variant mt-8">
+          <p className="text-center font-body-md font-bold text-on-surface-variant mt-6">
             Already have an account?{" "}
             <Link to="/login" className="text-primary hover:underline uppercase font-bold">
               Sign in
