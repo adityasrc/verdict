@@ -40,8 +40,8 @@ const Signup: React.FC = () => {
     <div className="min-h-screen bg-surface flex flex-col md:flex-row font-sans selection:bg-primary selection:text-on-primary">
       
       {/* ── Branding Pane ── */}
-      <div className="w-full md:w-[40%] lg:w-[35%] bg-accent-yellow border-b-[4px] md:border-b-0 md:border-r-[4px] border-on-surface p-8 md:p-12 flex flex-col justify-between">
-        <Link to="/" className="flex items-center gap-3 w-fit">
+      <div className="w-full md:w-[40%] lg:w-[35%] bg-accent-yellow border-b-[2px] md:border-b-0 md:border-r-[2px] border-on-surface p-8 md:p-12 flex flex-col items-start pt-12 md:pt-24">
+        <Link to="/" className="flex items-center gap-3 w-fit mb-16 md:mb-24">
           <div className="bg-primary border-[2px] border-on-surface brutal-shadow flex items-center justify-center p-1.5 brutal-button">
             <span className="material-symbols-outlined text-on-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
               menu_book
@@ -52,7 +52,7 @@ const Signup: React.FC = () => {
           </span>
         </Link>
 
-        <div className="mt-12 md:mt-0 md:mb-12">
+        <div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter text-on-surface leading-none mb-6">
             Start<br/>grading<br/>smarter.
           </h1>
@@ -64,7 +64,7 @@ const Signup: React.FC = () => {
 
       {/* ── Form Pane ── */}
       <div className="flex-1 flex items-center justify-center p-6 md:p-12 overflow-y-auto">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-[420px]">
           {/* Mobile support text */}
           <p className="text-on-surface-variant text-lg font-medium mb-8 md:hidden">
             Create your free Verdict account and automate your first evaluation pipeline.
@@ -79,10 +79,10 @@ const Signup: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setRole("TEACHER")}
-                  className={`flex-1 py-4 border-[4px] border-on-surface font-label-caps uppercase font-bold transition-colors brutal-button ${
+                  className={`flex-1 py-3 border-[4px] font-label-caps uppercase font-bold transition-all brutal-button ${
                     role === "TEACHER" 
-                      ? "bg-primary text-on-primary brutal-shadow" 
-                      : "bg-surface text-on-surface-variant hover:bg-surface-variant"
+                      ? "border-on-surface bg-on-surface text-surface brutal-shadow" 
+                      : "border-surface-variant bg-transparent text-on-surface-variant hover:border-on-surface hover:text-on-surface"
                   }`}
                 >
                   Teacher
@@ -90,10 +90,10 @@ const Signup: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setRole("STUDENT")}
-                  className={`flex-1 py-4 border-[4px] border-on-surface font-label-caps uppercase font-bold transition-colors brutal-button ${
+                  className={`flex-1 py-3 border-[4px] font-label-caps uppercase font-bold transition-all brutal-button ${
                     role === "STUDENT" 
-                      ? "bg-primary text-on-primary brutal-shadow" 
-                      : "bg-surface text-on-surface-variant hover:bg-surface-variant"
+                      ? "border-on-surface bg-on-surface text-surface brutal-shadow" 
+                      : "border-surface-variant bg-transparent text-on-surface-variant hover:border-on-surface hover:text-on-surface"
                   }`}
                 >
                   Student
@@ -170,11 +170,11 @@ const Signup: React.FC = () => {
             </Button>
           </form>
 
-          <div className="mt-10 pt-8 border-t-[4px] border-surface-variant flex flex-col items-center">
+          <div className="mt-10 pt-8 border-t-[2px] border-surface-variant flex flex-col items-center">
             <p className="font-body-md font-bold text-on-surface-variant uppercase text-sm">
               Already have an account?
             </p>
-            <Link to="/login" className="mt-3 inline-flex items-center justify-center bg-surface border-[4px] border-on-surface px-8 py-3 font-label-caps text-sm uppercase font-black brutal-shadow brutal-button hover:bg-surface-variant w-full text-center">
+            <Link to="/login" className="mt-3 inline-flex items-center justify-center bg-transparent text-on-surface hover:bg-surface-variant px-6 py-3 font-label-caps text-sm uppercase font-bold transition-colors">
               Sign In
             </Link>
           </div>

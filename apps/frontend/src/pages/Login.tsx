@@ -38,8 +38,8 @@ const Login: React.FC = () => {
     <div className="min-h-screen bg-surface flex flex-col md:flex-row font-sans selection:bg-primary selection:text-on-primary">
       
       {/* ── Branding Pane ── */}
-      <div className="w-full md:w-[40%] lg:w-[35%] bg-primary border-b-[4px] md:border-b-0 md:border-r-[4px] border-on-surface p-8 md:p-12 flex flex-col justify-between">
-        <Link to="/" className="flex items-center gap-3 w-fit">
+      <div className="w-full md:w-[40%] lg:w-[35%] bg-primary border-b-[2px] md:border-b-0 md:border-r-[2px] border-on-surface p-8 md:p-12 flex flex-col items-start pt-12 md:pt-24">
+        <Link to="/" className="flex items-center gap-3 w-fit mb-16 md:mb-24">
           <div className="bg-surface border-[2px] border-on-surface brutal-shadow flex items-center justify-center p-1.5 brutal-button">
             <span className="material-symbols-outlined text-on-surface text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
               menu_book
@@ -50,7 +50,7 @@ const Login: React.FC = () => {
           </span>
         </Link>
 
-        <div className="mt-12 md:mt-0 md:mb-12">
+        <div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter text-on-primary leading-none mb-6">
             Welcome<br/>back.
           </h1>
@@ -61,8 +61,8 @@ const Login: React.FC = () => {
       </div>
 
       {/* ── Form Pane ── */}
-      <div className="flex-1 flex items-center justify-center p-6 md:p-12">
-        <div className="w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center p-6 md:p-12 overflow-y-auto">
+        <div className="w-full max-w-[420px]">
           {/* Mobile support text */}
           <p className="text-on-surface-variant text-lg font-medium mb-8 md:hidden">
             Access your Verdict workspace and continue managing your grading pipelines.
@@ -125,11 +125,11 @@ const Login: React.FC = () => {
             </Button>
           </form>
 
-          <div className="mt-10 pt-8 border-t-[4px] border-surface-variant flex flex-col items-center">
+          <div className="mt-10 pt-8 border-t-[2px] border-surface-variant flex flex-col items-center">
             <p className="font-body-md font-bold text-on-surface-variant uppercase text-sm">
               Don't have an account?
             </p>
-            <Link to="/signup" className="mt-3 inline-flex items-center justify-center bg-surface border-[4px] border-on-surface px-8 py-3 font-label-caps text-sm uppercase font-black brutal-shadow brutal-button hover:bg-surface-variant w-full text-center">
+            <Link to="/signup" className="mt-3 inline-flex items-center justify-center bg-transparent text-on-surface hover:bg-surface-variant px-6 py-3 font-label-caps text-sm uppercase font-bold transition-colors">
               Create Account
             </Link>
           </div>
