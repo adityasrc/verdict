@@ -3,8 +3,8 @@
 // before building. Dev defaults to localhost so contributors don't need a .env.
 
 const isDevelopment = import.meta.env.DEV;
-const DEV_API_URL = 'http://localhost:8600/api';
-const DEV_WS_URL = 'http://localhost:8600';
+const DEV_API_URL = 'http://localhost:4000/api';
+const DEV_WS_URL = 'http://localhost:4000';
 
 export function getApiUrl(): string {
     const fromEnv = import.meta.env.VITE_API_URL;

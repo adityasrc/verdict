@@ -146,8 +146,9 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                                 : 'bg-surface hover:-translate-y-0.5'
                                         }`}
                                     >
-                                        <div
-                                            className="cursor-pointer"
+                                        <button
+                                            type="button"
+                                            className="text-left"
                                             onClick={() => handleEdit(rubric)}
                                         >
                                             <h4 className="font-headline-md text-lg uppercase font-bold text-on-surface">
@@ -156,7 +157,7 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                             <p className="font-label-mono text-xs text-on-surface-variant mt-1 uppercase font-bold">
                                                 {rubric.criteria.length} criteria
                                             </p>
-                                        </div>
+                                        </button>
                                         <div className="flex gap-2">
                                             <Button
                                                 variant="brutal-ghost"
@@ -239,7 +240,7 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleRemoveCriterion(index)}
-                                                    className="absolute -top-4 -right-4 p-2 bg-error text-on-error border-[4px] border-on-surface brutal-shadow brutal-button opacity-0 group-hover:opacity-100 transition-opacity duration-75"
+                                                    className="absolute -top-4 -right-4 p-2 bg-error text-on-error border-[4px] border-on-surface brutal-shadow brutal-button"
                                                     aria-label="Remove criterion"
                                                 >
                                                     <span className="material-symbols-outlined">close</span>
