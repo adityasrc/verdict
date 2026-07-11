@@ -4,19 +4,14 @@ import { useAppSelector } from '../app/store';
 import RubricManager from './RubricManager';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { useSocket } from '../context/SocketContext';
 import {
-    useCreateAssignmentMutation,
     useGetRecentSubmissionsQuery,
     useGetTeacherAssignmentsQuery,
 } from '../features/assignments/assignmentApi';
 import { selectCurrentUser } from '../features/auth/authSlice';
-import { useGetRubricsQuery } from '../features/rubrics/rubricApi';
-import { parseApiError } from '../lib/errors';
 import { toast } from 'sonner';
+import { CreateAssignmentModal } from './modals/CreateAssignmentModal';
 
 interface StatCardProps {
     label: string;
@@ -49,15 +44,6 @@ export const TeacherDashboard: React.FC = () => {
 
     const { data: assignmentsData, isLoading: isAssignmentsLoading, refetch: refetchAssignments } = useGetTeacherAssignmentsQuery();
     const { data: submissionsData, refetch: refetchSubmissions } = useGetRecentSubmissionsQuery();
-    const { data: rubricsData } = useGetRubricsQuery();
-    const [createAssignment, { isLoading: isCreating }] = useCreateAssignmentMutation();
-
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [dueDate, setDueDate] = useState('');
-    const [maxScore, setMaxScore] = useState('100');
-    const [selectedRubricId, setSelectedRubricId] = useState<string>('');
-    const [requireUniqueId, setRequireUniqueId] = useState(false);
 
     const activeAssignments = useMemo(() => assignmentsData?.data || [], [assignmentsData?.data]);
     const recentSubmissions = submissionsData?.data || [];
@@ -102,18 +88,6 @@ export const TeacherDashboard: React.FC = () => {
         return () => activeAssignments.forEach((a) => socket.emit('unwatch-assignment', a.id));
     }, [socket, activeAssignments]);
 
-    const handleCreateAssignment = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            await createAssignment({ title, description, dueDate, maxScore: parseInt(maxScore), rubricId: selectedRubricId || undefined, requireUniqueId }).unwrap();
-            setIsCreateModalOpen(false);
-            setTitle(''); setDescription(''); setDueDate(''); setSelectedRubricId(''); setRequireUniqueId(false);
-            toast.success('Assignment created successfully!');
-        } catch (error) {
-            toast.error(parseApiError(error, 'Failed to create assignment'));
-        }
-    };
-
     const handleShareLink = async (assignmentId: string) => {
         const link = `${window.location.origin}/upload/${assignmentId}`;
         try { await navigator.clipboard.writeText(link); toast.success('Link copied'); }
@@ -131,89 +105,11 @@ export const TeacherDashboard: React.FC = () => {
         <div className="w-full">
             {isRubricManagerOpen && <RubricManager onClose={() => setIsRubricManagerOpen(false)} />}
 
-            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>New Assignment</DialogTitle>
-                        <DialogDescription>Fill in the details to create a new graded assignment.</DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleCreateAssignment} className="space-y-4 mt-2">
-                        <div className="space-y-2">
-                            <Label>Title</Label>
-                            <Input
-                                type="text"
-                                required
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="Assignment Title"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Instructions</Label>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                className="w-full px-4 py-3 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow transition-colors duration-75 resize-none"
-                                rows={3}
-                                placeholder="Instructions..."
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Due Date</Label>
-                                <Input
-                                    type="date"
-                                    required
-                                    value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Max Score</Label>
-                                <Input
-                                    type="number"
-                                    required
-                                    value={maxScore}
-                                    onChange={(e) => setMaxScore(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <Label>Rubric</Label>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsRubricManagerOpen(true)}
-                                    className="text-xs text-primary font-bold hover:underline font-label-caps uppercase"
-                                >
-                                    + Create Rubric
-                                </button>
-                            </div>
-                            <select
-                                value={selectedRubricId}
-                                onChange={(e) => setSelectedRubricId(e.target.value)}
-                                className="flex h-12 w-full px-4 border-[4px] border-on-surface bg-surface text-on-surface font-body-md focus:outline-none focus:border-primary brutal-shadow transition-colors duration-75 appearance-none"
-                            >
-                                <option value="">No Rubric</option>
-                                {rubricsData?.data.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-3 pt-2">
-                            <input
-                                type="checkbox"
-                                id="requireUniqueId"
-                                checked={requireUniqueId}
-                                onChange={(e) => setRequireUniqueId(e.target.checked)}
-                                className="w-5 h-5 border-[2px] border-on-surface accent-primary"
-                            />
-                            <Label htmlFor="requireUniqueId" className="cursor-pointer">Require Student ID</Label>
-                        </div>
-                        <Button type="submit" variant="brutal" size="lg" disabled={isCreating} className="w-full mt-4">
-                            {isCreating ? 'Creating...' : 'Create Assignment'}
-                        </Button>
-                    </form>
-                </DialogContent>
-            </Dialog>
+            <CreateAssignmentModal 
+                isOpen={isCreateModalOpen} 
+                onClose={() => setIsCreateModalOpen(false)} 
+                onOpenRubricManager={() => setIsRubricManagerOpen(true)}
+            />
 
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                 <div>
@@ -234,7 +130,7 @@ export const TeacherDashboard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                <StatCard label="Active Assmts" value={activeAssignments.length} icon="assignment" />
+                <StatCard label="Assessments" value={activeAssignments.length} icon="assignment" />
                 <StatCard
                     label="Pending Grades"
                     value={pendingCount}
@@ -251,7 +147,7 @@ export const TeacherDashboard: React.FC = () => {
                     label="Avg. Score"
                     value={`${avgScore}%`}
                     icon="analytics"
-                    className="bg-accent-blue text-on-surface"
+                    className="bg-accent-yellow text-on-surface"
                 />
             </div>
 
@@ -336,8 +232,8 @@ export const TeacherDashboard: React.FC = () => {
                             Live Output
                         </h3>
                     </div>
-                    <div className="terminal-window flex-1 bg-[#0d1117] border-[4px] border-on-surface p-4 font-label-mono text-[#c9d1d9] overflow-y-auto h-[600px] flex flex-col gap-2 brutal-shadow text-xs">
-                        <div className="text-[#6e7681] mb-4 border-b-[1px] border-[#30363d] pb-2">
+                    <div className="terminal-window flex-1 bg-on-surface border-[4px] border-on-surface p-4 font-label-mono text-secondary overflow-y-auto h-[600px] flex flex-col gap-2 brutal-shadow text-xs">
+                        <div className="text-surface/60 mb-4 border-b-[4px] border-surface/20 pb-2">
                             Listening for grading activity...
                         </div>
                         {recentSubmissions.slice(0, 10).map((sub) => {
@@ -347,18 +243,18 @@ export const TeacherDashboard: React.FC = () => {
                             const isDone = sub.status === 'GRADED' || progress?.status === 'completed';
                             return (
                                 <div key={sub.id} className="flex gap-4 mb-2">
-                                    <span className="text-[#6e7681] w-12 flex-shrink-0">
+                                    <span className="text-surface/60 w-12 flex-shrink-0">
                                         {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
-                                    <span className={isError ? 'text-[#ff7b72] font-bold' : isDone ? 'text-[#7ee787]' : 'text-[#79c0ff]'}>
+                                    <span className={isError ? 'text-error font-bold' : isDone ? 'text-secondary' : 'text-accent-yellow'}>
                                         [{sub.assignment?.title.substring(0, 8)}] {sub.student?.email?.split('@')[0] || 'Unknown'} — {statusText.toUpperCase()}
                                     </span>
                                 </div>
                             );
                         })}
                         <div className="flex gap-2 mt-auto pt-4">
-                            <span className="text-[#7ee787] animate-pulse">_</span>
-                            <span className="text-[#6e7681]">Awaiting next task...</span>
+                            <span className="text-secondary animate-pulse">_</span>
+                            <span className="text-surface/60">Awaiting next task...</span>
                         </div>
                     </div>
                 </div>

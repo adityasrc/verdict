@@ -55,9 +55,9 @@ const Navbar = () => {
           : "bg-surface border-b-[4px] border-surface"
       }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-20">
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
         <Link to={logoHref} className="flex items-center gap-3 group">
-          <div className="bg-primary border-[2px] border-on-surface brutal-shadow flex items-center justify-center p-2 brutal-button">
+          <div className="bg-primary border-[2px] border-on-surface brutal-shadow flex items-center justify-center p-1.5 brutal-button">
             <span className="material-symbols-outlined text-on-primary" style={{fontVariationSettings: "'FILL' 1"}}>menu_book</span>
           </div>
           <span className="font-headline-md text-headline-md font-black uppercase tracking-tighter text-on-surface">
@@ -84,10 +84,10 @@ const Navbar = () => {
             </div>
           ) : (
             <div className="flex items-center gap-4 pl-4 border-l-[4px] border-on-surface h-10">
-              <Link to="/login" className="font-label-caps text-label-caps uppercase text-on-surface hover:text-primary font-bold transition-colors">
+              <Link to="/login" className="font-label-caps text-label-caps uppercase text-on-surface hover:bg-surface-variant px-4 py-2 border-[2px] border-transparent font-bold transition-colors">
                 Log In
               </Link>
-              <Link to="/signup" className="bg-primary text-on-primary px-6 py-2 border-[4px] border-on-surface brutal-shadow brutal-button font-label-caps text-label-caps uppercase font-bold">
+              <Link to="/signup" className="bg-primary text-on-primary px-5 py-2 border-[4px] border-on-surface brutal-shadow brutal-button font-label-caps text-label-caps uppercase font-bold hover:opacity-90">
                 Get Started
               </Link>
             </div>

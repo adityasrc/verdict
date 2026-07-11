@@ -1,4 +1,5 @@
 import { prisma } from "../../utils/db.js";
+import { AppError } from "../../utils/apiResponseHandler.js";
 
 export class RubricManager {
     async createRubric(data: {
@@ -18,28 +19,39 @@ export class RubricManager {
         });
     }
 
-    async getRubricById(id: string) {
-        return prisma.rubric.findUnique({
-            where: { id },
+    async getRubricById(id: string, teacherId: string) {
+        return prisma.rubric.findFirst({
+            where: { id, teacherId },
         });
     }
 
     async updateRubric(
         id: string,
+        teacherId: string,
         data: {
             name?: string;
             criteria?: { name: string; points: number; description: string }[];
         },
     ) {
-        return prisma.rubric.update({
-            where: { id },
+        const result = await prisma.rubric.updateMany({
+            where: { id, teacherId },
             data,
         });
+
+        if (!result.count) {
+            throw new AppError("Rubric not found", 404);
+        }
+
+        return prisma.rubric.findUniqueOrThrow({ where: { id } });
     }
 
-    async deleteRubric(id: string) {
-        return prisma.rubric.delete({
-            where: { id },
+    async deleteRubric(id: string, teacherId: string) {
+        const result = await prisma.rubric.deleteMany({
+            where: { id, teacherId },
         });
+
+        if (!result.count) {
+            throw new AppError("Rubric not found", 404);
+        }
     }
 }

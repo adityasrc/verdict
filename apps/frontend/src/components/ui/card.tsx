@@ -39,7 +39,7 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "font-label-mono text-label-mono uppercase font-bold text-on-surface-variant",
+      "font-label-mono text-label-mono uppercase font-bold opacity-80",
       className
     )}
     {...props}
@@ -53,7 +53,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("text-sm text-on-surface-variant font-body-md mt-1", className)}
+    className={cn("text-sm font-body-md mt-1 opacity-70", className)}
     {...props}
   />
 ))
