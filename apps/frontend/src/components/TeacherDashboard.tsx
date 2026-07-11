@@ -130,7 +130,7 @@ export const TeacherDashboard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                <StatCard label="Active Assmts" value={activeAssignments.length} icon="assignment" />
+                <StatCard label="Assessments" value={activeAssignments.length} icon="assignment" />
                 <StatCard
                     label="Pending Grades"
                     value={pendingCount}
@@ -147,7 +147,7 @@ export const TeacherDashboard: React.FC = () => {
                     label="Avg. Score"
                     value={`${avgScore}%`}
                     icon="analytics"
-                    className="bg-accent-blue text-on-surface"
+                    className="bg-accent-yellow text-on-surface"
                 />
             </div>
 

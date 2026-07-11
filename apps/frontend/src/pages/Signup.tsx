@@ -3,6 +3,16 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../app/store";
 import { useSignupMutation } from "../features/auth/authApi";
 import { setCredentials } from "../features/auth/authSlice";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 import { toast } from "sonner";
 
 const Signup: React.FC = () => {
@@ -34,7 +44,7 @@ const Signup: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-sm">
         <Link to="/" className="flex items-center justify-center gap-3 mb-8 group">
           <div className="bg-primary border-[2px] border-on-surface brutal-shadow flex items-center justify-center p-2 brutal-button">
             <span className="material-symbols-outlined text-on-primary" style={{ fontVariationSettings: "'FILL' 1" }}>menu_book</span>
@@ -59,82 +69,68 @@ const Signup: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label htmlFor="name" className="block font-label-caps uppercase font-bold text-on-surface">
-                Full Name
-              </label>
-              <input
+              <Label htmlFor="name">Full Name</Label>
+              <Input
                 id="name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Jane Doe"
-                className="w-full h-12 px-4 border-[4px] border-on-surface bg-surface text-on-surface font-body-md placeholder:text-on-surface-variant focus:outline-none focus:border-primary brutal-shadow transition-colors"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="email" className="block font-label-caps uppercase font-bold text-on-surface">
-                Email
-              </label>
-              <input
+              <Label htmlFor="email">Email</Label>
+              <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full h-12 px-4 border-[4px] border-on-surface bg-surface text-on-surface font-body-md placeholder:text-on-surface-variant focus:outline-none focus:border-primary brutal-shadow transition-colors"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password" className="block font-label-caps uppercase font-bold text-on-surface">
-                Password
-              </label>
-              <input
+              <Label htmlFor="password">Password</Label>
+              <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full h-12 px-4 border-[4px] border-on-surface bg-surface text-on-surface font-body-md placeholder:text-on-surface-variant focus:outline-none focus:border-primary brutal-shadow transition-colors"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="role" className="block font-label-caps uppercase font-bold text-on-surface">
-                Role
-              </label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) =>
-                  setRole(e.target.value as "STUDENT" | "TEACHER")
-                }
-                className="w-full h-12 px-4 border-[4px] border-on-surface bg-surface text-on-surface font-body-md focus:outline-none focus:border-primary brutal-shadow transition-colors appearance-none"
-              >
-                <option value="STUDENT">Student</option>
-                <option value="TEACHER">Teacher</option>
-              </select>
+              <Label htmlFor="role">Role</Label>
+              <Select value={role} onValueChange={(v) => setRole(v as "STUDENT" | "TEACHER")}>
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="STUDENT">Student</SelectItem>
+                  <SelectItem value="TEACHER">Teacher</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <button
+            <Button
               type="submit"
+              variant="brutal"
+              size="lg"
               disabled={isLoading}
-              className="w-full h-12 mt-4 bg-primary text-on-primary border-[4px] border-on-surface font-label-caps uppercase font-bold tracking-widest brutal-shadow brutal-button hover:bg-primary-container transition-colors disabled:opacity-50"
+              className="w-full mt-4"
             >
               {isLoading ? "Creating..." : "Sign Up"}
-            </button>
+            </Button>
           </form>
 
           <p className="text-center font-body-md font-bold text-on-surface-variant mt-8">
             Already have an account?{" "}
-            <Link
-              to="/login"
-              className="text-primary hover:underline uppercase"
-            >
+            <Link to="/login" className="text-primary hover:underline uppercase font-bold">
               Sign in
             </Link>
           </p>
