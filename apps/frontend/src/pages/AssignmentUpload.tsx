@@ -320,18 +320,18 @@ const AssignmentUpload: React.FC = () => {
                         </div>
 
                         {/* Log output */}
-                        <div className="terminal-window flex-1 bg-[#0d1117] p-5 font-label-mono text-[#c9d1d9] overflow-y-auto flex flex-col gap-1.5 text-sm">
+                        <div className="terminal-window flex-1 bg-on-surface p-5 font-label-mono text-secondary overflow-y-auto flex flex-col gap-1.5 text-sm">
                             {progressLogs.map((log, i) => (
                                 <div
                                     key={i}
                                     className={
                                         log.startsWith('[ERROR]') || log.includes('FAIL')
-                                            ? 'text-[#ff7b72] font-bold'
+                                            ? 'text-error font-bold'
                                             : log.startsWith('[SUCCESS]') || log.startsWith('[OK]')
-                                            ? 'text-[#7ee787]'
+                                            ? 'text-secondary'
                                             : log.startsWith('[SYS]')
-                                            ? 'text-[#79c0ff]'
-                                            : 'text-[#c9d1d9]'
+                                            ? 'text-accent-yellow'
+                                            : 'text-surface/60'
                                     }
                                 >
                                     {log}
@@ -342,20 +342,20 @@ const AssignmentUpload: React.FC = () => {
                             <div className="mt-auto pt-6 flex items-center gap-2">
                                 {gradingStatus === 'processing' && (
                                     <>
-                                        <span className="text-[#7ee787] animate-pulse font-bold">_</span>
-                                        <span className="text-[#6e7681]">Processing...</span>
+                                        <span className="text-secondary animate-pulse font-bold">_</span>
+                                        <span className="text-surface/60">Processing...</span>
                                     </>
                                 )}
                                 {gradingStatus === 'completed' && (
-                                    <span className="text-[#7ee787] font-bold">✓ Grading complete.</span>
+                                    <span className="text-secondary font-bold">✓ Grading complete.</span>
                                 )}
                                 {gradingStatus === 'failed' && (
-                                    <span className="text-[#ff7b72] font-bold">✗ Grading failed. Contact your teacher.</span>
+                                    <span className="text-error font-bold">✗ Grading failed. Contact your teacher.</span>
                                 )}
                                 {gradingStatus === 'idle' && (
                                     <>
-                                        <span className="text-[#6e7681] animate-pulse">_</span>
-                                        <span className="text-[#6e7681]">Awaiting pipeline trigger...</span>
+                                        <span className="text-surface/60 animate-pulse">_</span>
+                                        <span className="text-surface/60">Awaiting pipeline trigger...</span>
                                     </>
                                 )}
                             </div>

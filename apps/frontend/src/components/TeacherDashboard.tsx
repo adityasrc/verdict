@@ -232,8 +232,8 @@ export const TeacherDashboard: React.FC = () => {
                             Live Output
                         </h3>
                     </div>
-                    <div className="terminal-window flex-1 bg-[#0d1117] border-[4px] border-on-surface p-4 font-label-mono text-[#c9d1d9] overflow-y-auto h-[600px] flex flex-col gap-2 brutal-shadow text-xs">
-                        <div className="text-[#6e7681] mb-4 border-b-[1px] border-[#30363d] pb-2">
+                    <div className="terminal-window flex-1 bg-on-surface border-[4px] border-on-surface p-4 font-label-mono text-secondary overflow-y-auto h-[600px] flex flex-col gap-2 brutal-shadow text-xs">
+                        <div className="text-surface/60 mb-4 border-b-[4px] border-surface/20 pb-2">
                             Listening for grading activity...
                         </div>
                         {recentSubmissions.slice(0, 10).map((sub) => {
@@ -243,18 +243,18 @@ export const TeacherDashboard: React.FC = () => {
                             const isDone = sub.status === 'GRADED' || progress?.status === 'completed';
                             return (
                                 <div key={sub.id} className="flex gap-4 mb-2">
-                                    <span className="text-[#6e7681] w-12 flex-shrink-0">
+                                    <span className="text-surface/60 w-12 flex-shrink-0">
                                         {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
-                                    <span className={isError ? 'text-[#ff7b72] font-bold' : isDone ? 'text-[#7ee787]' : 'text-[#79c0ff]'}>
+                                    <span className={isError ? 'text-error font-bold' : isDone ? 'text-secondary' : 'text-accent-yellow'}>
                                         [{sub.assignment?.title.substring(0, 8)}] {sub.student?.email?.split('@')[0] || 'Unknown'} — {statusText.toUpperCase()}
                                     </span>
                                 </div>
                             );
                         })}
                         <div className="flex gap-2 mt-auto pt-4">
-                            <span className="text-[#7ee787] animate-pulse">_</span>
-                            <span className="text-[#6e7681]">Awaiting next task...</span>
+                            <span className="text-secondary animate-pulse">_</span>
+                            <span className="text-surface/60">Awaiting next task...</span>
                         </div>
                     </div>
                 </div>
