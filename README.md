@@ -1,45 +1,199 @@
 # Verdict
 
-Verdict is an automated grading platform for teachers and students. Teachers create assignments and rubrics; students submit PDF work for asynchronous AI-assisted evaluation.
+> AI-powered assignment grading platform built for educators.
 
-## Stack
+Verdict automates the assignment evaluation workflow by combining asynchronous background processing, AI-assisted rubric evaluation, PDF parsing, and real-time progress updates.
 
-- Frontend: React 19, Vite, TypeScript, Tailwind CSS, Redux Toolkit, Socket.IO Client
-- Backend: Node.js, Express, TypeScript, Prisma, PostgreSQL, Redis, BullMQ, Socket.IO
-- Grading: Python PDF parsing and Gemini integration
+Teachers create assignments and grading rubrics. Students submit PDF assignments. Verdict processes every submission through a distributed grading pipeline and delivers structured feedback while keeping users informed through live status updates.
 
-## Local development
+---
 
-Prerequisites: Node.js 20+, Python 3.9+, pnpm 9+, PostgreSQL, and Redis.
+## Features
+
+- AI-assisted rubric-based grading
+- PDF submission and parsing
+- Background job processing with BullMQ
+- Real-time grading progress via WebSockets
+- Secure JWT authentication
+- Teacher and Student workflows
+- Assignment and submission management
+- Responsive brutalist-inspired interface
+
+---
+
+## Tech Stack
+
+### Frontend
+
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- Redux Toolkit
+- React Router
+- Socket.IO Client
+
+### Backend
+
+- Node.js
+- Express
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- Redis
+- BullMQ
+- Socket.IO
+
+### AI Pipeline
+
+- Python
+- Gemini API
+- PDF Processing
+
+---
+
+## Architecture
+
+```text
+Student Upload
+       │
+       ▼
+Express API
+       │
+       ▼
+PostgreSQL ─────────────── Prisma
+       │
+       ▼
+Redis Queue (BullMQ)
+       │
+       ▼
+Background Workers
+       │
+       ├── PDF Parsing
+       ├── AI Evaluation
+       └── Rubric Scoring
+       │
+       ▼
+Database Update
+       │
+       ▼
+Socket.IO Events
+       │
+       ▼
+Teacher & Student Dashboard
+```
+
+---
+
+## Repository Structure
+
+```text
+apps/
+├── frontend      React application
+└── backend       Express API, workers, Prisma schema and WebSocket server
+```
+
+---
+
+## Running Locally
+
+### Prerequisites
+
+- Node.js 20+
+- pnpm 9+
+- Python 3.9+
+- PostgreSQL
+- Redis
+
+### Installation
 
 ```bash
 pnpm install
-Copy-Item .env.example .env
+
+cp .env.example .env
+# Windows PowerShell
+# Copy-Item .env.example .env
+
 pnpm --filter verdict-backend exec prisma generate
+
 pnpm --filter verdict-backend exec prisma db push
+
 pnpm dev
 ```
 
-The frontend runs at `http://localhost:5173` and the backend API runs at `http://localhost:4000/api` by default.
+---
 
-Set the required values in `.env` before starting the application:
+## Environment Variables
 
-- `DATABASE_URL`: PostgreSQL connection string
-- `REDIS_URL`: Redis connection string
-- `JWT_SECRET`: JWT signing secret
-- `GEMINI_API_KEY`: Gemini API key
-- `BUCKET_NAME`, `ACCESSKEYID`, `SECRETACCESSKEY`, and `R2_ENDPOINT`: S3-compatible storage configuration
-- `PYTHON_BIN`: `python3` on macOS/Linux or `python` on Windows
+Configure the following before running the application.
 
-See [the backend API documentation](apps/backend/API_DOCS.md) for endpoint details.
+```env
+DATABASE_URL=
+REDIS_URL=
 
-## Repository layout
+JWT_SECRET=
 
-```text
-apps/frontend  React single-page application
-apps/backend   Express API, workers, WebSocket server, and Prisma schema
+GEMINI_API_KEY=
+
+BUCKET_NAME=
+ACCESSKEYID=
+SECRETACCESSKEY=
+R2_ENDPOINT=
+
+PYTHON_BIN=
 ```
 
-## License
+On Windows:
 
-MIT
+```text
+PYTHON_BIN=python
+```
+
+On macOS/Linux:
+
+```text
+PYTHON_BIN=python3
+```
+
+---
+
+## Local URLs
+
+Frontend
+
+```
+http://localhost:5173
+```
+
+Backend API
+
+```
+http://localhost:4000/api
+```
+
+---
+
+## API Documentation
+
+Backend API documentation is available at:
+
+```
+apps/backend/API_DOCS.md
+```
+
+---
+
+## Roadmap
+
+- Assignment creation
+- AI-powered grading pipeline
+- Rubric evaluation
+- Background workers
+- Real-time grading updates
+- Submission analytics
+- Teacher dashboard
+- Student dashboard
+
+---
+
+Built for educators.
