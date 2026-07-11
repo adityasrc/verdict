@@ -311,7 +311,7 @@ const Onboarding = () => {
 
       <section className="border-b-[4px] border-on-surface px-6 py-12 md:py-16 bg-surface">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-16">
+          <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-10">
             <div>
               <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-on-surface">
                 Features
@@ -334,21 +334,22 @@ const Onboarding = () => {
       </section>
 
       {/* ── MASSIVE CTA ── */}
-      <section className="px-6 py-16 md:py-24 bg-primary border-b-[4px] border-on-surface text-center">
+      <section className="px-6 py-12 md:py-20 bg-primary border-b-[4px] border-on-surface text-center">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-6xl sm:text-7xl md:text-[80px] font-black uppercase tracking-tighter text-on-primary leading-none mb-8">
+          <h2 className="text-6xl sm:text-7xl md:text-[80px] font-black uppercase tracking-tighter text-on-primary leading-none mb-6">
             Ready for<br />The Verdict?
           </h2>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
             <Link
               to="/signup"
-              className="inline-flex items-center justify-center bg-surface text-on-surface border-[4px] border-on-surface px-12 py-6 font-label-caps text-lg uppercase font-black brutal-shadow brutal-button hover:bg-surface-variant"
+              className="inline-flex items-center justify-center bg-surface text-on-surface border-[4px] border-on-surface px-8 py-4 font-label-caps uppercase font-bold brutal-shadow brutal-button hover:bg-surface-variant"
             >
               Create Free Account
             </Link>
             <Link
               to="/login"
-              className="inline-flex items-center justify-center bg-transparent text-on-primary border-[4px] border-on-primary px-12 py-6 font-label-caps text-lg uppercase font-black hover:bg-primary-container brutal-button"
+              className="inline-flex items-center justify-center bg-transparent text-on-primary border-[4px] border-on-primary px-8 py-4 font-label-caps uppercase font-bold brutal-button hover:bg-primary-container"
+              style={{ boxShadow: '4px 4px 0px 0px var(--on-primary)' }}
             >
               Sign In
             </Link>
