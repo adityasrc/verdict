@@ -184,7 +184,7 @@ const Onboarding = () => {
       </section>
 
       {/* ── THE PROBLEM ── */}
-      <section className="border-b-[4px] border-on-surface bg-on-surface text-surface px-6 py-24 md:py-32">
+      <section className="border-b-[4px] border-on-surface bg-on-surface text-surface px-6 py-12 md:py-16">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-16 items-start">
           <div className="lg:w-1/2">
             <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none mb-8 text-primary">
@@ -223,7 +223,7 @@ const Onboarding = () => {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section className="border-b-[4px] border-on-surface bg-surface px-6 py-24 md:py-32">
+      <section className="border-b-[4px] border-on-surface bg-surface px-6 py-12 md:py-16">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-on-surface mb-6">
@@ -258,7 +258,7 @@ const Onboarding = () => {
       </section>
 
       {/* ── ENGINEERING / UNDER THE HOOD ── */}
-      <section className="border-b-[4px] border-on-surface px-6 py-24 md:py-32 bg-accent-yellow">
+      <section className="border-b-[4px] border-on-surface px-6 py-12 md:py-16 bg-accent-yellow">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-on-surface mb-6">
@@ -309,7 +309,7 @@ const Onboarding = () => {
         </div>
       </section>
 
-      <section className="border-b-[4px] border-on-surface px-6 py-24 md:py-32 bg-surface">
+      <section className="border-b-[4px] border-on-surface px-6 py-12 md:py-16 bg-surface">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-16">
             <div>
@@ -334,9 +334,9 @@ const Onboarding = () => {
       </section>
 
       {/* ── MASSIVE CTA ── */}
-      <section className="px-6 py-32 md:py-48 bg-primary border-b-[4px] border-on-surface text-center">
+      <section className="px-6 py-16 md:py-24 bg-primary border-b-[4px] border-on-surface text-center">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-6xl sm:text-8xl md:text-[120px] font-black uppercase tracking-tighter text-on-primary leading-none mb-12">
+          <h2 className="text-6xl sm:text-7xl md:text-[80px] font-black uppercase tracking-tighter text-on-primary leading-none mb-8">
             Ready for<br />The Verdict?
           </h2>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
