@@ -234,12 +234,11 @@ const Onboarding = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0 border-[4px] border-on-surface brutal-shadow">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[4px] bg-on-surface border-[4px] border-on-surface brutal-shadow">
             {STEPS.map((step, index) => (
               <div
                 key={step.number}
-                className={`p-8 bg-surface hover:bg-surface-variant transition-colors duration-200 group relative
-                  ${index < STEPS.length - 1 ? "border-b-[4px] lg:border-b-0 lg:border-r-[4px] border-on-surface" : ""}`}
+                className="p-8 bg-surface hover:bg-surface-variant transition-colors duration-200 group relative"
               >
                 <span className="font-black text-6xl text-on-surface opacity-5 absolute top-4 right-4 leading-none select-none">
                   {step.number}
@@ -269,8 +268,8 @@ const Onboarding = () => {
             </p>
           </div>
 
-          <div className="flex flex-col lg:flex-row items-stretch border-[4px] border-on-surface brutal-shadow bg-surface">
-            <div className="flex-1 p-8 border-b-[4px] lg:border-b-0 lg:border-r-[4px] border-on-surface">
+          <div className="flex flex-col lg:flex-row items-stretch gap-[4px] bg-on-surface border-[4px] border-on-surface brutal-shadow">
+            <div className="flex-1 p-8 bg-surface">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-primary border-[4px] border-on-surface flex items-center justify-center text-on-primary">
                   <span className="material-symbols-outlined">queue</span>
@@ -282,7 +281,7 @@ const Onboarding = () => {
               </p>
             </div>
 
-            <div className="flex-1 p-8 border-b-[4px] lg:border-b-0 lg:border-r-[4px] border-on-surface">
+            <div className="flex-1 p-8 bg-surface">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-primary border-[4px] border-on-surface flex items-center justify-center text-on-primary">
                   <span className="material-symbols-outlined">description</span>
@@ -294,7 +293,7 @@ const Onboarding = () => {
               </p>
             </div>
 
-            <div className="flex-1 p-8">
+            <div className="flex-1 p-8 bg-surface">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-primary border-[4px] border-on-surface flex items-center justify-center text-on-primary">
                   <span className="material-symbols-outlined">sync</span>
