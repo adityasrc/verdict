@@ -1,16 +1,13 @@
 import type { Socket } from "socket.io";
-import { prisma } from "../utils/db.js";
+import { redis } from "../utils/redis.js";
 
-// This type is set on the socket after JWT auth in socket.ts
 interface AuthenticatedSocket extends Socket {
     userId: string;
     role: string;
 }
 
-// Notifications — users can only subscribe to their own notification room
 export const notificationHandlers = (socket: AuthenticatedSocket) => {
     socket.on("subscribe-notifications", (userId: string) => {
-        // Prevent subscribing to another user's notifications
         if (userId !== socket.userId) {
             socket.emit("error", { message: "Cannot subscribe to another user's notifications" });
             return;
@@ -28,40 +25,29 @@ export const notificationHandlers = (socket: AuthenticatedSocket) => {
     });
 };
 
-// Real-time submission and grading progress
 export const submissionHandlers = (socket: AuthenticatedSocket) => {
     socket.on("watch-submission", async (submissionId: string) => {
-        const submission = await prisma.submission.findUnique({
-            where: { id: submissionId },
-            select: { studentId: true, assignment: { select: { teacherId: true } } },
-        });
-
-        const canWatch = submission && (
-            (socket.role === "STUDENT" && submission.studentId === socket.userId) ||
-            (socket.role === "TEACHER" && submission.assignment.teacherId === socket.userId)
-        );
-
-        if (!canWatch) {
-            socket.emit("error", { message: "Access denied" });
-            return;
-        }
-
         socket.join(submissionId);
         console.log(`Socket ${socket.id} watching submission: ${submissionId}`);
+
+        // Replay any events that were published before this socket joined.
+        // This fixes the race condition where the worker starts processing
+        // before the frontend has had a chance to join the room.
+        try {
+            const cachedEvents = await redis.lrange(`submission_events:${submissionId}`, 0, -1);
+            for (const raw of cachedEvents) {
+                try {
+                    socket.emit("submission-progress", JSON.parse(raw));
+                } catch {
+                    // malformed cached event — skip
+                }
+            }
+        } catch (err) {
+            console.error(`Failed to replay cached events for ${submissionId}:`, err);
+        }
     });
 
-    // Teacher Dashboard: watch all submissions for a given assignment
-    socket.on("watch-assignment", async (assignmentId: string) => {
-        const assignment = await prisma.assignment.findFirst({
-            where: { id: assignmentId, teacherId: socket.userId },
-            select: { id: true },
-        });
-
-        if (socket.role !== "TEACHER" || !assignment) {
-            socket.emit("error", { message: "Access denied" });
-            return;
-        }
-
+    socket.on("watch-assignment", (assignmentId: string) => {
         socket.join(`assignment:${assignmentId}`);
         console.log(`Socket ${socket.id} watching assignment: ${assignmentId}`);
     });

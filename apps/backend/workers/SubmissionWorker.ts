@@ -12,6 +12,19 @@ const __dirname = path.dirname(__filename);
 
 const submissionManager = new SubmissionManager();
 
+/**
+ * Publish a grading progress event to Redis pub/sub AND cache it
+ * in a list so late-joining sockets can replay missed events.
+ */
+async function publishEvent(submissionId: string, event: object): Promise<void> {
+    const payload = JSON.stringify(event);
+    const cacheKey = `submission_events:${submissionId}`;
+    await Promise.all([
+        redis.publish(`submission:${submissionId}`, payload),
+        redis.rpush(cacheKey, payload).then(() => redis.expire(cacheKey, 7200)), // 2-hour TTL
+    ]);
+}
+
 enum SubmissionStatus {
     PENDING = "PENDING",
     EVALUATING = "EVALUATING",
@@ -73,7 +86,7 @@ function runPython(
                         extractedData = msg.result;
                     }
 
-                    redis.publish(`submission:${submissionId}`, JSON.stringify(enrichedMsg));
+                    publishEvent(submissionId, enrichedMsg);
                 } catch {
                     // non-JSON output from Python (e.g. warnings) — safe to ignore
                 }
@@ -146,7 +159,7 @@ function runGeminiGrader(
                         evaluation = msg.evaluation;
                     }
 
-                    redis.publish(`submission:${submissionId}`, JSON.stringify(enrichedMsg));
+                    publishEvent(submissionId, enrichedMsg);
                 } catch {
                     // non-JSON output from Python — safe to ignore
                 }
@@ -183,15 +196,12 @@ const worker = new Worker<SubmissionJobData>(
             data: { status: "EVALUATING" },
         });
 
-        redis.publish(
-            `submission:${id}`,
-            JSON.stringify({
-                step: "submission_started",
-                percent: 5,
-                assignmentId,
-                studentId,
-            }),
-        );
+        await publishEvent(id, {
+            step: "submission_started",
+            percent: 5,
+            assignmentId,
+            studentId,
+        });
 
         const tmpDir = path.join(__dirname, "..", "tmp");
         if (!fs.existsSync(tmpDir)) {
@@ -202,15 +212,12 @@ const worker = new Worker<SubmissionJobData>(
         const imagesDir = path.join(tmpDir, "extracted_images", id);
 
         try {
-            redis.publish(
-                `submission:${id}`,
-                JSON.stringify({
-                    step: "downloading_pdf",
-                    percent: 5,
-                    assignmentId,
-                    studentId,
-                }),
-            );
+            await publishEvent(id, {
+                step: "downloading_pdf",
+                percent: 5,
+                assignmentId,
+                studentId,
+            });
 
             const buffer = await fetch(publicUrl, {
                 signal: AbortSignal.timeout(30000),
@@ -222,15 +229,12 @@ const worker = new Worker<SubmissionJobData>(
             });
             fs.writeFileSync(pdfPath, Buffer.from(buffer));
 
-            redis.publish(
-                `submission:${id}`,
-                JSON.stringify({
-                    step: "pdf_downloaded",
-                    percent: 10,
-                    assignmentId,
-                    studentId,
-                }),
-            );
+            await publishEvent(id, {
+                step: "pdf_downloaded",
+                percent: 10,
+                assignmentId,
+                studentId,
+            });
 
             const extractedData = await runPython(id, pdfPath, assignmentId, studentId);
 
@@ -284,17 +288,14 @@ const worker = new Worker<SubmissionJobData>(
                 status: "GRADED",
             });
 
-            redis.publish(
-                `submission:${id}`,
-                JSON.stringify({
-                    step: "grading_completed",
-                    score: evaluation.score,
-                    maxScore: assignment.maxScore,
-                    status: "GRADED",
-                    assignmentId,
-                    studentId,
-                }),
-            );
+            await publishEvent(id, {
+                step: "grading_completed",
+                score: evaluation.score,
+                maxScore: assignment.maxScore,
+                status: "GRADED",
+                assignmentId,
+                studentId,
+            });
 
             console.log(`[Worker] Job ${job.id} completed.`);
             return true;
@@ -305,14 +306,11 @@ const worker = new Worker<SubmissionJobData>(
                 data: { status: "FAILED" },
             }).catch(() => { });
 
-            redis.publish(
-                `submission:${id}`,
-                JSON.stringify({
-                    step: "failed",
-                    status: "FAILED",
-                    error: error instanceof Error ? error.message : "Unknown error",
-                }),
-            );
+            await publishEvent(id, {
+                step: "failed",
+                status: "FAILED",
+                error: error instanceof Error ? error.message : "Unknown error",
+            });
 
             throw error;
         } finally {
