@@ -25,7 +25,13 @@ export const createAssignmentSchema = z.object({
 
 export const createRubricSchema = z.object({
     name: z.string().min(2, "Rubric name must be at least 2 characters"),
-    criteria: z.any(),
+    criteria: z.array(
+        z.object({
+            name: z.string().min(1, "Criteria name is required"),
+            points: z.number().int().positive(),
+            description: z.string().min(1, "Description is required"),
+        })
+    ).min(1, "At least one criterion is required"),
 });
 
 export const updateRubricSchema = createRubricSchema.partial();
@@ -33,7 +39,6 @@ export const updateRubricSchema = createRubricSchema.partial();
 
 export const createSubmissionSchema = z.object({
     assignmentId: z.string().min(1, "Assignment ID is required"),
-    otp: z.string().min(1, "OTP is required"),
     studentUniqueId: z.string().optional(),
 });
 
@@ -46,7 +51,6 @@ export const uploadUrlSchema = z.object({
     fileName: z.string().min(1, "File name is required"),
     type: z.string().min(1, "File type is required"),
     assignmentId: z.string().min(1, "Assignment ID is required"),
-    otp: z.string().min(1, "OTP is required"),
 });
 
 export const submissionActionSchema = z.object({

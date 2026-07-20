@@ -1,10 +1,7 @@
-// Vite bakes VITE_* env vars at build time.
-// Set VITE_API_URL and VITE_WS_URL in .env (or pass as Docker build args)
-// before building. Dev defaults to localhost so contributors don't need a .env.
 
 const isDevelopment = import.meta.env.DEV;
-const DEV_API_URL = 'http://localhost:4000/api';
-const DEV_WS_URL = 'http://localhost:4000';
+const DEV_API_URL = 'http://localhost:8600/api';
+const DEV_WS_URL = 'http://localhost:8600';
 
 export function getApiUrl(): string {
     const fromEnv = import.meta.env.VITE_API_URL;

@@ -58,34 +58,26 @@ export const assignmentApi = createApi({
             query: (assignmentId) => `/submissions/assignment/${assignmentId}`,
             providesTags: ['Submission'],
         }),
-        getUploadUrl: builder.query({
-            query: ({
-                fileName,
-                type,
-                assignmentId,
-                otp,
-            }: {
-                fileName: string;
-                type: string;
-                assignmentId: string;
-                otp: string;
-            }) => ({
+        getUploadUrl: builder.query<
+            { success: boolean; data: { url: string; key: string } }, 
+            { fileName: string; type: string; assignmentId: string; otp: string }
+        >({
+            query: ({ fileName, type, assignmentId, otp }) => ({
                 url: '/submissions/uploadUrl',
                 method: 'GET',
-                params: {
-                    fileName,
-                    type,
-                    assignmentId,
-                    otp,
-                },
+                params: { fileName, type, assignmentId, otp },
             }),
         }),
-        submitAssignment: builder.mutation<{ success: boolean; data: Submission }, { assignmentId: string; otp: string; studentUniqueId?: string }>({
+        submitAssignment: builder.mutation<
+            { success: boolean; data: Submission }, 
+            { assignmentId: string; otp: string; studentUniqueId?: string }
+        >({
             query: (body) => ({
                 url: '/submissions/',
                 method: 'POST',
                 body: body,
             }),
+            invalidatesTags: ['Submission'],
         }),
         verifyOtp: builder.mutation<{ success: boolean }, { assignmentId: string; otp: string }>({
             query: (body) => ({

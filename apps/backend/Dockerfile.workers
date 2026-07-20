@@ -7,14 +7,12 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 # -----------------------------
-# Dependencies
+# Dependencies (All deps for build)
 # -----------------------------
 FROM base AS deps
-
 COPY package.json pnpm-lock.yaml* ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
-
 RUN pnpm install
 
 # Dummy URL to allow Prisma to generate the client without connecting to a real DB
@@ -24,11 +22,11 @@ RUN pnpm exec prisma generate
 # -----------------------------
 # Build worker
 # -----------------------------
-FROM deps AS builder
-
+FROM base AS builder
+# Copy deps to avoid reinstalling during build
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Compile TypeScript to JavaScript (Assumes a 'build' script exists in package.json)
+# Compile TypeScript to JavaScript
 RUN pnpm run build
 
 # -----------------------------
@@ -37,28 +35,34 @@ RUN pnpm run build
 FROM base AS prod
 WORKDIR /app
 
-# Install Python (runtime only, no build deps yet)
+# 1. Install Python (runtime only)
 RUN apk add --no-cache python3 py3-pip && \
     ln -sf /usr/bin/python3 /usr/bin/python
 
-# Copy Node deps and Prisma client from the deps stage
-COPY --from=deps /app/node_modules ./node_modules
+# 2. Copy package files and install ONLY production Node deps
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install --prod
+
+# 3. Prisma setup for Production
 COPY --from=deps /app/prisma ./prisma
+COPY --from=deps /app/prisma.config.ts ./
+ENV DATABASE_URL="postgresql://dummy:5432/dummy"
+RUN pnpm exec prisma generate
 
-# Copy Python requirements first
+# 4. Copy Python requirements and build heavy AI packages
 COPY workers/python/requirements.txt ./workers/python/
-
-# Install Python deps with build tools, then remove build tools to save space
 RUN apk add --no-cache --virtual .build-deps build-base python3-dev cargo clang clang-dev clang-libs llvm && \
     pip3 install --no-cache-dir --default-timeout=100 --retries=5 \
     -r workers/python/requirements.txt --break-system-packages && \
     apk del .build-deps
 
-# Copy Python scripts into the dist directory where the compiled JS (__dirname) expects them
+# 5. Copy built worker files and Python scripts (maintaining __dirname logic)
+COPY --from=builder /app/dist ./dist
 COPY workers/python ./dist/workers/python
 
-# Copy the built worker files from the builder stage
-COPY --from=builder /app/dist ./dist
+# 6. Security: Give node user ownership and switch to it
+RUN chown -R node:node /app
+USER node
 
-# Run the compiled worker file
+# Start the worker
 CMD ["node", "dist/workers/SubmissionWorker.js"]

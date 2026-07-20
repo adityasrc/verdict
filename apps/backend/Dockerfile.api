@@ -7,16 +7,14 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 # -----------------------------
-# Dependencies Stage
+# Dependencies Stage (All deps for build)
 # -----------------------------
 FROM base AS deps
-
-# Copy package files and Prisma schema
 COPY package.json pnpm-lock.yaml* ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
 
-# Install dependencies using pnpm
+# Install ALL dependencies (including devDependencies like TypeScript)
 RUN pnpm install
 
 # Generate Prisma client
@@ -24,12 +22,10 @@ ENV DATABASE_URL="postgresql://dummy:5432/dummy"
 RUN pnpm exec prisma generate
 
 # -----------------------------
-# Build Stage (Build TypeScript)
+# Build Stage (Compile TypeScript)
 # -----------------------------
 FROM deps AS builder
-
 COPY . .
-
 # Build API and WebSocket into dist/
 RUN pnpm build
 
@@ -39,15 +35,26 @@ RUN pnpm build
 FROM base AS prod
 WORKDIR /app
 
-# Copy production node_modules (including generated Prisma client)
-COPY --from=deps /app/node_modules ./node_modules
+# 1. Copy package files
+COPY package.json pnpm-lock.yaml* ./
 
-# Copy dist build output
-COPY --from=builder /app/dist ./dist
+# 2. Install ONLY production dependencies (keeps image small)
+RUN pnpm install --prod
 
-# Copy prisma folder + config for DB schema + migration support
+# 3. Copy Prisma files and generate client for the prod environment
 COPY --from=deps /app/prisma ./prisma
 COPY --from=deps /app/prisma.config.ts ./
+ENV DATABASE_URL="postgresql://dummy:5432/dummy"
+RUN pnpm exec prisma generate
 
-# Default CMD (overridden in docker-compose)
+# 4. Copy only the compiled output from the builder stage
+COPY --from=builder /app/dist ./dist
+
+# 5. Give ownership of the /app directory to the 'node' user
+RUN chown -R node:node /app
+
+# 6. Switch to non-root user for security
+USER node
+
+# Start the server
 CMD ["node", "dist/index.js"]
