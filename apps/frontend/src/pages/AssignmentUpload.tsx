@@ -32,6 +32,9 @@ const AssignmentUpload: React.FC = () => {
     const [progressLogs, setProgressLogs] = useState<string[]>(['> Grading engine ready.']);
     const [gradingStatus, setGradingStatus] = useState<GradingStatus>('idle');
 
+    // Track the submission being watched so we can re-join after socket reconnects
+    const [watchingSubmissionId, setWatchingSubmissionId] = useState<string | null>(null);
+
     // API hooks
     const [getUploadUrl] = useLazyGetUploadUrlQuery();
     const [verifyOtp, { isLoading: isVerifyingOtp }] = useVerifyOtpMutation();
@@ -73,6 +76,21 @@ const AssignmentUpload: React.FC = () => {
         socket.on('submission-progress', handleProgress);
         return () => { socket.off('submission-progress', handleProgress); };
     }, [socket]);
+
+    // Auto-rejoin the submission room if the socket changes (new token → new socket instance)
+    // or reconnects. Without this, a token refresh mid-grading kills all event delivery.
+    useEffect(() => {
+        if (!socket || !watchingSubmissionId) return;
+
+        const rejoin = () => socket.emit('watch-submission', watchingSubmissionId);
+
+        // If already connected (common after token refresh), rejoin immediately
+        if (socket.connected) rejoin();
+
+        // Also handle future reconnects on this socket instance
+        socket.on('connect', rejoin);
+        return () => { socket.off('connect', rejoin); };
+    }, [socket, watchingSubmissionId]);
 
     const applyFile = useCallback((f: File) => {
         if (f.type !== 'application/pdf') {
@@ -147,6 +165,7 @@ const AssignmentUpload: React.FC = () => {
 
             const submissionId = res.data?.id;
             if (socket && submissionId) {
+                setWatchingSubmissionId(submissionId);
                 setGradingStatus('processing');
                 setProgressLogs(prev => [...prev, '[OK] Submission registered.', '[SYS] Starting grading pipeline...']);
                 socket.emit('watch-submission', submissionId);
