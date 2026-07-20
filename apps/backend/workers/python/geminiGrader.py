@@ -109,6 +109,9 @@ Respond with ONLY a valid JSON object in this exact shape:
                 except Exception as img_err:
                     publish({"warning": f"Could not load image {image_path}: {str(img_err)}"})
 
+    publish({"step": "gemini_started"})
+    publish({"step": "gemini_processing"})
+
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=contents,

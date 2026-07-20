@@ -26,6 +26,8 @@ if total_pages == 0:
     publish({ "error": "PDF is empty" })
     sys.exit(1)
 
+publish({ "step": "parsing_started", "total_pages": total_pages })
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
 backend_dir = os.path.dirname(os.path.dirname(script_dir))
 tmp_dir = os.path.join(backend_dir, "tmp")
@@ -68,6 +70,8 @@ for page_num in range(total_pages):
             "text": text,
             "images": page_images
         })
+
+        publish({ "step": "page_parsed", "page": page_num + 1, "total_pages": total_pages })
         
     except Exception as page_err:
         publish({"warning": f"Failed to parse page {page_num + 1}: {str(page_err)}"})

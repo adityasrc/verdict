@@ -289,6 +289,7 @@ const worker = new Worker<SubmissionJobData>(
                 JSON.stringify({
                     step: "grading_completed",
                     score: evaluation.score,
+                    maxScore: assignment.maxScore,
                     status: "GRADED",
                     assignmentId,
                     studentId,
