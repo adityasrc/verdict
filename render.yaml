@@ -1,0 +1,78 @@
+services:
+  # ─────────────────────────────────────────
+  # API + WebSocket server (web service)
+  # ─────────────────────────────────────────
+  - type: web
+    name: verdict-api
+    runtime: docker
+    dockerfilePath: apps/backend/Dockerfile.api
+    dockerContext: apps/backend
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HTTP_PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false
+      - key: POOL_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: R2_ENDPOINT
+        sync: false
+      - key: BUCKET_NAME
+        sync: false
+      - key: ACCESSKEYID
+        sync: false
+      - key: SECRETACCESSKEY
+        sync: false
+      - key: PUBLIC_ENDPOINT
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+
+  # ─────────────────────────────────────────
+  # Grading worker (background worker)
+  # Consumes BullMQ jobs from Redis,
+  # runs Python PDF parser + Gemini grader
+  # ─────────────────────────────────────────
+  - type: worker
+    name: verdict-worker
+    runtime: docker
+    dockerfilePath: apps/backend/Dockerfile.workers
+    dockerContext: apps/backend
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: POOL_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: BUCKET_NAME
+        sync: false
+      - key: ACCESSKEYID
+        sync: false
+      - key: SECRETACCESSKEY
+        sync: false
+      - key: PUBLIC_ENDPOINT
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PYTHON_BIN
+        value: python3
