@@ -1,15 +1,29 @@
+# Node & Build
 node_modules
 npm-debug.log
 dist
 build
+generated
+
+# Env & Secrets (CRITICAL)
+.env
+.env.*
+
+# Git & Docker files
 .git
 .gitignore
-README.md
-.env
-.env.local
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Python (For AI Worker)
+__pycache__/
+*.py[cod]
+venv/
+
+# IDE & OS Junk
 .vscode
 .idea
 .DS_Store
-uploads
-generated
 *.md
+uploads

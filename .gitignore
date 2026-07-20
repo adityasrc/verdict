@@ -35,8 +35,9 @@ yarn-error.log*
 
 # TypeScript
 *.tsbuildinfo
-__pycache__/
-*.py[cod]
 next-env.d.ts
 values-*
 *.tgz
+
+.vscode
+.claude

@@ -78,12 +78,14 @@ export interface CreateAssignmentRequest {
     requireUniqueId?: boolean;
 }
 
+export type SubmissionStatus = 'PENDING' | 'REVIEWING' | 'GRADED' | 'FAILED';
+
 export interface Submission {
     id: string;
     content: string;
     score?: number;
     feedback?: string;
-    status: 'PENDING' | 'GRADED' | 'REVIEWING';
+    status: SubmissionStatus; 
     submittedAt: string;
     gradedAt?: string;
     studentId: string;

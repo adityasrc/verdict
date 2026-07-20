@@ -13,21 +13,19 @@ const SidebarLayout: React.FC = () => {
 
     const handleLogout = () => {
         dispatch(logout());
-        navigate('/login');
+        navigate('/');
     };
 
-    // Only include nav links that have real pages
     const navLinks = [
         { path: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
     ];
 
     const getLinkClass = (path: string) => {
         const isActive = location.pathname === path;
-        return `flex items-center gap-4 px-4 py-3 font-label-caps text-label-caps uppercase transition-colors brutal-button ${
-            isActive
+        return `flex items-center gap-4 px-4 py-3 font-label-caps text-label-caps uppercase transition-colors brutal-button ${isActive
                 ? 'bg-secondary text-on-secondary border-[2px] border-on-surface brutal-shadow'
                 : 'text-on-surface-variant hover:bg-surface-variant border-[2px] border-transparent hover:border-on-surface'
-        }`;
+            }`;
     };
 
     return (
@@ -106,7 +104,7 @@ const SidebarLayout: React.FC = () => {
             )}
 
             {/* Main Content Canvas */}
-            <main className="flex-1 w-full md:ml-64 p-margin-mobile md:p-margin-desktop bg-surface min-h-screen">
+            <main className="flex-1 w-full md:ml-64 p-margin-mobile md:p-margin-desktop bg-background min-h-screen">
                 <Outlet />
             </main>
         </div>
