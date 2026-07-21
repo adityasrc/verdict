@@ -1,17 +1,18 @@
 import "dotenv/config";
 import http from "http";
 import app from "./api/app.js";
-import { initializeSocketIO } from "./ws/socket.js";
+import { initSocket } from "./ws/socket.js";
 import { redis } from "./utils/redis.js";
 import S3Client from "./utils/S3client.js";
 import { prisma } from "./utils/db.js";
+import "./workers/SubmissionWorker.js";
 const ServerConfig = {
     httpPort: process.env.HTTP_PORT || 4000
 };
 
 const httpServer = http.createServer(app); // raw http server for express
 
-initializeSocketIO(httpServer);
+initSocket(httpServer);
 
 const startServer = async () => {
 
@@ -20,7 +21,7 @@ const startServer = async () => {
         console.log("Redis connected successfully");
     } catch (error) {
         console.error("Redis connection failed. Crashing application");
-        process.exit(1); // exit with an error
+        process.exit(1); // kill server
     }
 
 
@@ -38,7 +39,7 @@ const startServer = async () => {
         }
     }
 
-    httpServer.listen(Number(ServerConfig.httpPort), "0.0.0.0", () => {
+    httpServer.listen(Number(ServerConfig.httpPort), "0.0.0.0", () => { // accept req from any ip address
         console.log(`Server is running on port ${ServerConfig.httpPort}`);
     });
 };
@@ -71,6 +72,8 @@ const exitHandler = async () => {
     }, 5000);
 };
 
+// Event Listeners
+
 process.on("uncaughtException", (error: Error) => {
     console.error("Uncaught Exception: ", error);
     exitHandler();
@@ -81,5 +84,5 @@ process.on("unhandledRejection", (error) => {
     exitHandler();
 });
 
-process.on("SIGTERM", exitHandler);
-process.on("SIGINT", exitHandler);
+process.on("SIGTERM", exitHandler); // signal terminate (system)
+process.on("SIGINT", exitHandler); // signal interrupt (user)

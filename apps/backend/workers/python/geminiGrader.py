@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 import PIL.Image
 
-MODEL_NAME = "gemini-2.5-pro"
+MODEL_NAME = "gemini-2.5-flash"
 
 def publish(event):
     print(json.dumps(event), flush=True)
@@ -152,10 +152,24 @@ Respond with ONLY a valid JSON object in this exact shape:
         })
 
 except Exception as e:
-    import traceback
+    error_str = str(e)
+    clean_msg = "An unexpected error occurred during AI evaluation."
+
+    # Catch specific API errors and map them to clean strings
+    if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+        clean_msg = "API Quota Exceeded. Please wait a moment and try again."
+    elif "404" in error_str or "NOT_FOUND" in error_str:
+        clean_msg = f"Model configuration error. '{MODEL_NAME}' is unavailable."
+    elif "403" in error_str or "PERMISSION_DENIED" in error_str:
+        clean_msg = "API Key is invalid or lacks required permissions."
+    elif "400" in error_str or "INVALID_ARGUMENT" in error_str:
+        clean_msg = "Bad Request. The PDF content might be too large or unsupported."
+    else:
+        # If it is an unknown error, take only the first line before any JSON dump starts
+        clean_msg = error_str.split("{")[0].strip()[:150]
+
     publish({
-        "error": f"Evaluation failed: {str(e)}",
         "step": "gemini_failed",
-        "traceback": traceback.format_exc(),
+        "error": clean_msg
     })
     sys.exit(1)

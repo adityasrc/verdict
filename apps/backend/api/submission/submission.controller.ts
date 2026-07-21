@@ -53,7 +53,8 @@ export class SubmissionController {
         }
 
         const studentId = req.user!.id;
-        const { assignmentId, otp, studentUniqueId } = parsed.data;
+        const { assignmentId, otp, studentUniqueId, fileKey } = parsed.data;
+
         const assignment = await this._submissionManager.verifyAssignmentOtp(assignmentId, otp);
 
         if (!assignment) {
@@ -68,6 +69,7 @@ export class SubmissionController {
             studentId,
             assignmentId,
             studentUniqueId,
+            fileKey,
         });
 
         const publicUrl = `${process.env.PUBLIC_ENDPOINT}/${submission.fileKey}`;
@@ -108,7 +110,6 @@ export class SubmissionController {
         const assignmentId = req.params.assignmentId as string;
         const teacherId = req.user!.id;
 
-        // Verify the teacher owns this assignment before showing submissions
         const assignment = await prisma.assignment.findFirst({
             where: { id: assignmentId, teacherId },
         });
@@ -232,6 +233,22 @@ export class SubmissionController {
             removeOnComplete: true,
             removeOnFail: false,
         });
+
+        try {
+            const io = getIO();
+
+            io.to(`assignment:${updatedSubmission.assignmentId}`).emit("submission-progress", {
+                submissionId: updatedSubmission.id,
+                status: "PENDING",
+            });
+
+            io.to(`user:${updatedSubmission.studentId}`).emit("notification", {
+                type: "REEVALUATION_STARTED",
+                message: "Your submission is being re-evaluated",
+            });
+        } catch (socketError) {
+            console.warn("Could not emit socket event:", socketError);
+        }
 
         return res.status(200).json({ success: true, data: null });
     }

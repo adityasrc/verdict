@@ -85,7 +85,7 @@ export interface Submission {
     content: string;
     score?: number;
     feedback?: string;
-    status: SubmissionStatus; 
+    status: SubmissionStatus;
     submittedAt: string;
     gradedAt?: string;
     studentId: string;
@@ -107,4 +107,11 @@ export interface Submission {
 export interface CreateSubmissionRequest {
     content?: string;
     assignmentId: string;
+}
+
+export interface SubmitAssignmentRequest {
+    assignmentId: string;
+    otp: string;
+    studentUniqueId?: string;
+    fileKey: string;
 }

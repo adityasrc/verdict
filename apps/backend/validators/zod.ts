@@ -1,60 +1,60 @@
 import { z } from "zod";
 
-
 export const registerSchema = z.object({
-    email: z.string().email("Invalid email format"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    name: z.string().min(2, "Name is required"),
+    email: z.string().email(),
+    password: z.string().min(6),
+    name: z.string().min(2),
     role: z.enum(["STUDENT", "TEACHER"]).default("STUDENT"),
 });
 
 export const loginSchema = z.object({
-    email: z.string().email("Invalid email format"),
-    password: z.string().min(1, "Password is required"),
+    email: z.string().email(),
+    password: z.string().min(1),
 });
 
-
 export const createAssignmentSchema = z.object({
-    title: z.string().min(3, "Title is required"),
+    title: z.string().min(3),
     description: z.string().optional(),
     maxScore: z.number().int().positive().default(100),
     requireUniqueId: z.boolean().default(false),
     dueDate: z.coerce.date().optional(),
-    rubricId: z.string().uuid("Invalid Rubric ID format").optional(),
+    rubricId: z.string().uuid().optional(),
 });
 
 export const createRubricSchema = z.object({
-    name: z.string().min(2, "Rubric name must be at least 2 characters"),
+    name: z.string().min(2),
     criteria: z.array(
         z.object({
-            name: z.string().min(1, "Criteria name is required"),
+            name: z.string().min(1),
             points: z.number().int().positive(),
-            description: z.string().min(1, "Description is required"),
+            description: z.string().min(1),
         })
-    ).min(1, "At least one criterion is required"),
+    ).min(1),
 });
 
 export const updateRubricSchema = createRubricSchema.partial();
 
-
 export const createSubmissionSchema = z.object({
-    assignmentId: z.string().min(1, "Assignment ID is required"),
+    assignmentId: z.string().min(1),
     studentUniqueId: z.string().optional(),
+    otp: z.string().min(1),
+    fileKey: z.string(),
 });
 
 export const verifyOtpSchema = z.object({
-    assignmentId: z.string().min(1, "Assignment ID is required"),
-    otp: z.string().min(1, "OTP is required"),
+    assignmentId: z.string().min(1),
+    otp: z.string().min(1),
 });
 
 export const uploadUrlSchema = z.object({
-    fileName: z.string().min(1, "File name is required"),
-    type: z.string().min(1, "File type is required"),
-    assignmentId: z.string().min(1, "Assignment ID is required"),
+    fileName: z.string().min(1),
+    type: z.string().min(1),
+    assignmentId: z.string().min(1),
+    otp: z.string().min(1),
 });
 
 export const submissionActionSchema = z.object({
-    submissionId: z.string().min(1, "Submission ID is required"),
+    submissionId: z.string().min(1),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

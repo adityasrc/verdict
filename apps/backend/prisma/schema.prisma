@@ -95,6 +95,7 @@ model Submission {
   @@index([studentId])
   @@index([assignmentId])
   @@map("submissions")
+  @@unique([studentId, assignmentId, attemptNumber])
 }
 
 enum SubmissionStatus {

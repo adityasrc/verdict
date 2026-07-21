@@ -1,21 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import { AuthManager } from "../auth/auth.manager.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
+import type Role from "../types/roles.js";
 
 const authManagerInstance = new AuthManager();
-
-
-declare global {
-    namespace Express {
-        interface Request {
-            user?: {
-                id: string;
-                email: string;
-                role: string;
-            };
-        }
-    }
-}
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -35,7 +23,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
         req.user = {
             id: decoded.userId,
             email: decoded.email,
-            role: decoded.role,
+            role: decoded.role as Role,
         };
 
         next();

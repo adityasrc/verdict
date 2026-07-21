@@ -28,15 +28,17 @@ if total_pages == 0:
 
 publish({ "step": "parsing_started", "total_pages": total_pages })
 
+# file system prep
 script_dir = os.path.dirname(os.path.abspath(__file__))
 backend_dir = os.path.dirname(os.path.dirname(script_dir))
 tmp_dir = os.path.join(backend_dir, "tmp")
 output_dir = os.path.join(tmp_dir, "extracted_images", submission_id)
 os.makedirs(output_dir, exist_ok=True)
 
+
 extracted_data = []
 
-for page_num in range(total_pages):
+for page_num in range(total_pages):   # extraction loop
     try:
         page = doc[page_num]
         text = page.get_text()
@@ -71,10 +73,16 @@ for page_num in range(total_pages):
             "images": page_images
         })
 
-        publish({ "step": "page_parsed", "page": page_num + 1, "total_pages": total_pages })
+        current_page = page_num + 1
+        if current_page % 5 == 0 or current_page == total_pages:
+            publish({ 
+                "step": "page_parsed", 
+                "page": current_page, 
+                "total_pages": total_pages 
+            })
         
     except Exception as page_err:
-        publish({"warning": f"Failed to parse page {page_num + 1}: {str(page_err)}"})
+        publish({"warning": f"Page {page_num + 1} skipped due to corruption. Error: {str(page_err)}"})
 
 doc.close()
 

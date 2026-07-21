@@ -31,15 +31,14 @@ export const submissionHandlers = (socket: AuthenticatedSocket) => {
         console.log(`Socket ${socket.id} watching submission: ${submissionId}`);
 
         // Replay any events that were published before this socket joined.
-        // This fixes the race condition where the worker starts processing
-        // before the frontend has had a chance to join the room.
+
         try {
             const cachedEvents = await redis.lrange(`submission_events:${submissionId}`, 0, -1);
             for (const raw of cachedEvents) {
                 try {
                     socket.emit("submission-progress", JSON.parse(raw));
                 } catch {
-                    // malformed cached event — skip
+
                 }
             }
         } catch (err) {

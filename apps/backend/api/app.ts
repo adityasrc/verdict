@@ -6,24 +6,13 @@ import router from "./router.js";
 
 const app = express();
 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // for strings or arrays
+app.use(express.json()); // for json objects
 
-const allowedOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-    : ["http://localhost:5173"];
 
 const corsOption: CorsOptions = {
-    origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173", // only accept requests from this origin
+    credentials: true, // allow cookies to be sent
 };
 
 app.use(cors(corsOption));
