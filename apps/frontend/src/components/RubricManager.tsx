@@ -114,7 +114,7 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     </Button>
                 </div>
 
-                <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                <div className="flex-1 overflow-y-auto md:overflow-hidden flex flex-col md:flex-row">
 
                     <div className="w-full md:w-1/3 border-b-[4px] md:border-b-0 md:border-r-[4px] border-on-surface p-6 overflow-y-auto bg-surface-variant flex flex-col gap-4">
                         <Button variant="brutal" onClick={handleNewRubric} className="w-full">
@@ -192,7 +192,7 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
                     <div className="flex-1 p-6 md:p-8 overflow-y-auto bg-surface">
                         {isCreatingNew ? (
-                            <form onSubmit={handleSubmit} className="flex flex-col h-full">
+                            <form onSubmit={handleSubmit} className="flex flex-col min-h-full">
                                 <div className="mb-8">
                                     <h3 className="font-headline-md text-2xl uppercase font-black text-on-surface tracking-tighter mb-6 inline-block border-b-[4px] border-primary pb-2">
                                         {editingId ? 'Edit Rubric' : 'New Rubric'}

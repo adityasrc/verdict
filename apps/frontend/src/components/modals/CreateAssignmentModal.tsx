@@ -63,7 +63,7 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-md bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none z-[40]">
+      <DialogContent className="max-w-md bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none">
         <DialogHeader>
           <DialogTitle className="font-headline-md font-black uppercase">New Assessment</DialogTitle>
           <DialogDescription className="font-body-md text-on-surface-variant">Fill details below.</DialogDescription>

@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 import PIL.Image
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3.6-flash"
 
 def publish(event):
     print(json.dumps(event), flush=True)
@@ -13,6 +13,7 @@ def publish(event):
 if len(sys.argv) < 4:
     publish({"error": "Missing args. Usage: python geminiGrader.py <extracted_data_json> <assignment_id> <submission_id> [context_json]"})
     sys.exit(1)
+    
 
 extracted_data_json = sys.argv[1]
 assignment_id = sys.argv[2]
