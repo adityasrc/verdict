@@ -32,6 +32,7 @@ export class AssignmentController {
         this.router.get(
             "/student/all",
             authMiddleware,
+            requireRole("STUDENT"),
             catchAsync(this.getStudentAssignments.bind(this))
         );
 

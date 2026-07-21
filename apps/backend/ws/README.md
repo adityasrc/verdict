@@ -1,10 +1,11 @@
+```markdown
 # Verdict WebSocket Pipeline
 
-This module powers real-time updates for the Verdict evaluation engine. It handles assignment tracking, live AI grading progress, and system notifications using Redis Pub/Sub for scalability.
+This module handles real-time communication for the Verdict backend. It streams live grading progress and system notifications to the frontend so users do not have to refresh the page.
 
 ## 1. Connecting the Frontend
 
-Socket.IO runs directly alongside your main Express server. Here is the standard way to connect your Vite frontend:
+Use `socket.io-client` in your React app to connect to the server. Make sure your frontend URL is allowed in the `CORS_ORIGIN` environment variable.
 
 ```typescript
 import { io } from "socket.io-client";
@@ -16,26 +17,24 @@ const socket = io(import.meta.env.VITE_BACKEND_URL || "http://localhost:8600", {
 
 ```
 
-**Note:** Ensure your frontend URL is whitelisted in your backend environment variables under `CORS_ORIGIN`.
+## 2. Client Events (Frontend to Backend)
 
-## 2. Client Events
+Your frontend must emit these events to join specific data streams.
 
-Your frontend can emit these specific events to join or leave real-time rooms.
+**Personal Notifications**
 
-### Notifications
+* `subscribe-notifications`: Pass a user ID to start receiving dashboard alerts.
+* `unsubscribe-notifications`: Pass a user ID to stop listening.
 
-* **`subscribe-notifications`**: Pass a user ID to connect them to their personal alert channel.
-* **`unsubscribe-notifications`**: Pass a user ID to disconnect them.
+**Live Grading Rooms**
 
-### Live Grading Rooms
+* `watch-submission`: Pass a submission ID to watch a specific file get graded. The client will start receiving `submission-progress` events.
+* `watch-assignment`: Pass an assignment ID (for instructors) to monitor all student activity for that assignment.
+* `unwatch-assignment`: Leave the assignment room.
 
-* **`watch-submission`**: Pass a submission ID to join the room. The client will now receive `submission-progress` events.
-* **`watch-assignment`**: Pass an assignment ID to let teachers monitor all incoming student activity. The client will receive `assignment-grading-progress` events.
-* **`unwatch-assignment`**: Leave the assignment monitoring room.
+## 3. Server Utilities (Backend to Frontend)
 
-## 3. Server Utilities
-
-You can trigger WebSocket events from anywhere in your backend (like your REST controllers or background workers) using the exported utilities in `src/ws/utils.js`.
+You do not need to write raw Socket.IO code in your Express routes. Import these helpers from `src/ws/utils.js` to push updates from anywhere in your backend.
 
 ```typescript
 import {
@@ -44,29 +43,29 @@ import {
     broadcastSystemAlert
 } from "../ws/utils.js";
 
-// Send a direct alert to a specific user
+// Update a specific user's dashboard
 sendNotificationToUser("user_id_123", {
     type: "EVALUATION_COMPLETE",
     message: "Your assignment has been graded.",
 });
 
-// Stream live AI progress to a specific submission room
+// Stream grading progress to anyone watching this submission
 emitToRoom("submission_id_456", "submission-progress", {
     status: "analyzing_syntax",
     progress: 45,
 });
 
-// Send a global message to every connected client
+// Blast a message to every connected user
 broadcastSystemAlert("system-alert", {
     message: "Maintenance scheduled in 10 minutes",
 });
 
 ```
 
-## 4. Architecture Rules
+## 4. System Rules
 
-* **Redis Pub/Sub**: The server uses a dedicated Redis subscriber to listen for cross-server grading updates. Never use this specific subscriber instance for standard Redis caching operations.
-* **Focused Scope**: This pipeline is strictly optimized for evaluation streaming. Features like chat and typing indicators are intentionally omitted to keep resource usage lean.
-* **Graceful Shutdown**: The socket server shuts down cleanly alongside the HTTP server via your centralized exit handler.
+* **Dedicated Redis Listener:** The WebSocket server uses a cloned Redis connection strictly for listening to background worker updates. Do not use this specific connection for standard database queries.
+* **Strictly for Grading:** This pipeline is built entirely to solve the "dashboard blindness" problem during heavy background evaluations. It is not designed for chat features.
+* **Graceful Exit:** The socket connections are tied to your main HTTP server and will close cleanly during a server restart.
 
 ```

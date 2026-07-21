@@ -12,6 +12,7 @@ import {
 } from '../features/assignments/assignmentApi';
 import { parseApiError } from '../lib/errors';
 
+
 type GradingStatus = 'idle' | 'processing' | 'completed' | 'failed';
 
 const AssignmentUpload: React.FC = () => {
@@ -53,14 +54,14 @@ const AssignmentUpload: React.FC = () => {
             }
 
             const stepMessages: Record<string, string> = {
-                submission_started:  '[SYS] Pipeline initiated...',
-                downloading_pdf:     '[INFO] Downloading submission...',
-                pdf_downloaded:      '[OK] Download complete.',
-                parsing_started:     '[INFO] Parsing PDF structure...',
-                parsing_completed:   '[OK] Parsing complete.',
-                gemini_started:      '[SYS] Verdict AI engine started.',
-                gemini_processing:   '[INFO] Evaluating against rubric...',
-                gemini_completed:    '[OK] Evaluation complete.',
+                submission_started: '[SYS] Pipeline initiated...',
+                downloading_pdf: '[INFO] Downloading submission...',
+                pdf_downloaded: '[OK] Download complete.',
+                parsing_started: '[INFO] Parsing PDF structure...',
+                parsing_completed: '[OK] Parsing complete.',
+                gemini_started: '[SYS] Verdict AI engine started.',
+                gemini_processing: '[INFO] Evaluating against rubric...',
+                gemini_completed: '[OK] Evaluation complete.',
             };
 
             if (event.step === 'page_parsed') {
@@ -113,8 +114,8 @@ const AssignmentUpload: React.FC = () => {
 
     const handleDragEnter = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
     const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
-    const handleDragOver  = (e: React.DragEvent) => { e.preventDefault(); };
-    const handleDrop      = (e: React.DragEvent) => {
+    const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
+    const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
         if (e.dataTransfer.files?.[0]) applyFile(e.dataTransfer.files[0]);
@@ -125,8 +126,8 @@ const AssignmentUpload: React.FC = () => {
     };
 
     const runPipeline = async () => {
-        if (!file)                    { setErrorMessage('Please select a PDF file.'); return; }
-        if (otp.length !== 4)         { setErrorMessage('Enter the 4-digit session PIN.'); return; }
+        if (!file) { setErrorMessage('Please select a PDF file.'); return; }
+        if (otp.length !== 4) { setErrorMessage('Enter the 4-digit session PIN.'); return; }
         if (assignmentData?.data?.requireUniqueId && !studentUniqueId.trim()) {
             setErrorMessage('University ID is required for this assignment.'); return;
         }
@@ -148,7 +149,7 @@ const AssignmentUpload: React.FC = () => {
             // Upload the file directly to S3 via pre-signed URL
             const ok = await new Promise<boolean>((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
-                xhr.addEventListener('load',  () => resolve(xhr.status >= 200 && xhr.status < 300));
+                xhr.addEventListener('load', () => resolve(xhr.status >= 200 && xhr.status < 300));
                 xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
                 xhr.open('PUT', uploadData.url);
                 xhr.setRequestHeader('Content-Type', file!.type);
@@ -161,6 +162,7 @@ const AssignmentUpload: React.FC = () => {
                 assignmentId: assignmentId!,
                 otp,
                 studentUniqueId: studentUniqueId.trim() || undefined,
+                fileKey: uploadData.key,
             }).unwrap();
 
             const submissionId = res.data?.id;
@@ -347,10 +349,10 @@ const AssignmentUpload: React.FC = () => {
                                         log.startsWith('[ERROR]') || log.includes('FAIL')
                                             ? 'text-error font-bold'
                                             : log.startsWith('[SUCCESS]') || log.startsWith('[OK]')
-                                            ? 'text-secondary'
-                                            : log.startsWith('[SYS]')
-                                            ? 'text-accent-yellow'
-                                            : 'text-surface/60'
+                                                ? 'text-secondary'
+                                                : log.startsWith('[SYS]')
+                                                    ? 'text-accent-yellow'
+                                                    : 'text-surface/60'
                                     }
                                 >
                                     {log}

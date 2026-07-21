@@ -59,7 +59,7 @@ export const assignmentApi = createApi({
             providesTags: ['Submission'],
         }),
         getUploadUrl: builder.query<
-            { success: boolean; data: { url: string; key: string } }, 
+            { success: boolean; data: { url: string; key: string } },
             { fileName: string; type: string; assignmentId: string; otp: string }
         >({
             query: ({ fileName, type, assignmentId, otp }) => ({
@@ -69,8 +69,8 @@ export const assignmentApi = createApi({
             }),
         }),
         submitAssignment: builder.mutation<
-            { success: boolean; data: Submission }, 
-            { assignmentId: string; otp: string; studentUniqueId?: string }
+            { success: boolean; data: Submission },
+            { assignmentId: string; otp: string; studentUniqueId?: string; fileKey: string }
         >({
             query: (body) => ({
                 url: '/submissions/',

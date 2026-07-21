@@ -7,9 +7,13 @@ import Client from "../../utils/S3client.js";
 
 export class SubmissionManager {
 
-    async createSubmission(data: { studentId: string; assignmentId: string; studentUniqueId?: string }) {
+    async createSubmission(data: {
+        studentId: string;
+        assignmentId: string;
+        fileKey: string;
+        studentUniqueId?: string
+    }) {
         const MAX_ATTEMPTS = 3;
-        const fileKey = `${data.assignmentId}/${data.studentId}`;
 
         const existingSubmission = await prisma.submission.findFirst({
             where: {
@@ -28,6 +32,7 @@ export class SubmissionManager {
                 data: {
                     attemptNumber: existingSubmission.attemptNumber + 1,
                     status: "PENDING",
+                    fileKey: data.fileKey,
                 }
             });
         }
@@ -37,7 +42,7 @@ export class SubmissionManager {
                 assignmentId: data.assignmentId,
                 studentId: data.studentId,
                 studentUniqueId: data.studentUniqueId,
-                fileKey: fileKey,
+                fileKey: data.fileKey,
                 attemptNumber: 1,
             },
         });
@@ -101,17 +106,16 @@ export class SubmissionManager {
     }
 
     async presignedUrl(fileName: string, type: string, assignmentId: string, studentId: string) {
-
         const MAX_ATTEMPTS = 3;
 
-        const existingSubmission = await prisma.submission.findFirst({
+        const totalAttempts = await prisma.submission.count({
             where: {
                 assignmentId,
                 studentId,
             },
         });
 
-        if (existingSubmission && existingSubmission.attemptNumber >= MAX_ATTEMPTS) {
+        if (totalAttempts >= MAX_ATTEMPTS) {
             throw new AppError(`You have reached the maximum of ${MAX_ATTEMPTS} attempts`, 403);
         }
 
@@ -120,7 +124,9 @@ export class SubmissionManager {
             throw new AppError("Storage configuration missing. Check BUCKET_NAME in .env", 500);
         }
 
-        const key = `${assignmentId}/${studentId}`;
+
+        const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const key = `${assignmentId}/${studentId}/attempt_${totalAttempts + 1}_${Date.now()}_${safeFileName}`;
 
         const command = new PutObjectCommand({
             Bucket: bucketName,
@@ -128,9 +134,8 @@ export class SubmissionManager {
             ContentType: type,
         });
 
-        // Generates the URL using the centralized Client.raw which has forcePathStyle enabled
         const url = await getSignedUrl(Client.raw, command, {
-            expiresIn: 600, // 10 minutes
+            expiresIn: 600,
         });
 
         return { url, key };

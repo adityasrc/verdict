@@ -17,7 +17,7 @@ export class AuthManager {
     private JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
 
     constructor() {
-        // Fail loud on startup if secrets are missing — never use insecure fallbacks
+        // Fail loud on startup if secrets are missing - never use insecure fallbacks
         if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
             throw new Error("JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables");
         }
@@ -126,6 +126,11 @@ export class AuthManager {
         } catch (_error) {
             throw new AppError("Invalid or expired refresh token", 401);
         }
+    }
+
+
+    async logout(userId: string) {
+        return true;
     }
 
     private generateTokens(payload: TokenPayload) {

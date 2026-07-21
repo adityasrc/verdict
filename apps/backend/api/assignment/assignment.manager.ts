@@ -40,7 +40,6 @@ export class AssignmentManager {
         return prisma.assignment.findUnique({
             where: { id },
             omit: {
-                // Never send the OTP to the client; it's only used server-side during verification
                 otp: true,
             },
             include: {
@@ -58,6 +57,9 @@ export class AssignmentManager {
     async getAllAssignments() {
         return prisma.assignment.findMany({
             where: { status: "PUBLISHED" },
+            omit: {
+                otp: true,
+            },
             orderBy: { createdAt: "desc" },
             include: {
                 rubric: true,

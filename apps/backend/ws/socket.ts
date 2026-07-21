@@ -15,7 +15,7 @@ interface AuthenticatedSocket extends Socket {
 
 let io: Server;
 
-export const initializeSocketIO = (httpServer: HTTPServer) => {
+export const initSocket = (httpServer: HTTPServer) => {
     io = new Server(httpServer, {
         cors: {
             origin: process.env.CORS_ORIGIN || "*",
@@ -24,10 +24,10 @@ export const initializeSocketIO = (httpServer: HTTPServer) => {
         },
     });
 
-    
-    const sub = redis.duplicate();
 
-    sub.psubscribe("submission:*")
+    const sub = redis.duplicate(); // second dedicated connection for listening
+
+    sub.psubscribe("submission:*") // pattern subscribe for all submissions
         .then((count) => {
             console.log(
                 `Subscribed to ${count} channels. Listening for updates on submission:*`,
@@ -37,20 +37,20 @@ export const initializeSocketIO = (httpServer: HTTPServer) => {
             console.error("Failed to subscribe: %s", err.message);
         });
 
-    
+
     sub.on("pmessage", (_pattern: string, channel: string, message: string) => {
         const submissionId = channel.split(":")[1];
         if (submissionId) {
             try {
                 const event = JSON.parse(message);
-                
-               
+
                 const eventWithId = { ...event, submissionId };
-                
-                
+
                 io.to(submissionId).emit("submission-progress", eventWithId);
 
-                
+                if (event.userId) {
+                    io.to(event.userId).emit("dashboard-update", eventWithId);
+                }
                 if (event.assignmentId) {
                     io.to(`assignment:${event.assignmentId}`).emit(
                         "assignment-grading-progress",
@@ -63,7 +63,7 @@ export const initializeSocketIO = (httpServer: HTTPServer) => {
         }
     });
 
-   
+
     io.use((socket, next) => {
         const token = socket.handshake.auth?.token as string | undefined;
 
@@ -90,6 +90,7 @@ export const initializeSocketIO = (httpServer: HTTPServer) => {
         const authedSocket = socket as AuthenticatedSocket;
         console.log(`Client connected: ${authedSocket.id} (user: ${authedSocket.userId})`);
 
+
         submissionHandlers(authedSocket);
         notificationHandlers(authedSocket);
 
@@ -104,9 +105,9 @@ export const initializeSocketIO = (httpServer: HTTPServer) => {
 
 export const getIO = () => {
     if (!io) {
-        throw new Error("Socket.IO not initialized. Call initializeSocketIO first.");
+        throw new Error("Socket.IO not initialized. Call initSocket first.");
     }
     return io;
 };
 
-export default { initializeSocketIO, getIO };
+export default { initSocket, getIO };
