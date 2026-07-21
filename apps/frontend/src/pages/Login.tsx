@@ -79,43 +79,39 @@ const Login: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                required
-                className="h-14 font-label-mono"
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="flex flex-col">
+            <Label htmlFor="email" className="mb-2">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              required
+              className="h-14 font-label-mono mb-6"
+            />
 
-            <div className="space-y-2 relative">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="h-14 pr-12 font-label-mono"
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface hover:text-primary transition-colors flex items-center justify-center p-1"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {showPassword ? "visibility_off" : "visibility"}
-                  </span>
-                </button>
-              </div>
+            <Label htmlFor="password" className="mb-2">Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="h-14 pr-12 font-label-mono"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface hover:text-primary transition-colors flex items-center justify-center p-1"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {showPassword ? "visibility_off" : "visibility"}
+                </span>
+              </button>
             </div>
 
             <Button
@@ -123,16 +119,9 @@ const Login: React.FC = () => {
               variant="brutal"
               size="lg"
               disabled={isLoading}
-              className={`w-full mt-8 h-16 text-lg ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-full mt-8 h-16 text-lg flex items-center justify-center ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="material-symbols-outlined animate-spin text-[20px]">refresh</span>
-                  Processing...
-                </span>
-              ) : (
-                "Sign In"
-              )}
+              {isLoading ? "Processing..." : "Sign In"}
             </Button>
           </form>
 

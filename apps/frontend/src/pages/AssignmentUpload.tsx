@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -17,6 +17,8 @@ type GradingStatus = 'idle' | 'processing' | 'completed' | 'failed';
 
 const AssignmentUpload: React.FC = () => {
     const { assignmentId } = useParams<{ assignmentId: string }>();
+    const navigate = useNavigate();
+    const terminalEndRef = useRef<HTMLDivElement>(null);
 
     // File state
     const [file, setFile] = useState<File | null>(null);
@@ -42,6 +44,10 @@ const AssignmentUpload: React.FC = () => {
     const { data: assignmentData, isLoading } = useGetAssignmentQuery(assignmentId ?? '', { skip: !assignmentId });
     const [markSubmission] = useSubmitAssignmentMutation();
     const { socket } = useSocket();
+
+    useEffect(() => {
+        terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [progressLogs]);
 
     useEffect(() => {
         if (!socket) return;
@@ -132,6 +138,8 @@ const AssignmentUpload: React.FC = () => {
             setErrorMessage('University ID is required for this assignment.'); return;
         }
         setErrorMessage('');
+        setGradingStatus('idle');
+        setProgressLogs(['> Grading engine ready.', '[SYS] Initiating new request...']);
 
         try {
             await verifyOtp({ assignmentId: assignmentId!, otp }).unwrap();
@@ -368,7 +376,12 @@ const AssignmentUpload: React.FC = () => {
                                     </>
                                 )}
                                 {gradingStatus === 'completed' && (
-                                    <span className="text-secondary font-bold">✓ Grading complete.</span>
+                                    <div className="flex flex-col gap-3 w-full">
+                                        <span className="text-secondary font-bold">✓ Grading complete.</span>
+                                        <Button variant="brutal" size="sm" className="w-fit mt-2" onClick={() => navigate('/dashboard')}>
+                                            View Feedback
+                                        </Button>
+                                    </div>
                                 )}
                                 {gradingStatus === 'failed' && (
                                     <span className="text-error font-bold">✗ Grading failed. Contact your teacher.</span>
@@ -380,6 +393,7 @@ const AssignmentUpload: React.FC = () => {
                                     </>
                                 )}
                             </div>
+                            <div ref={terminalEndRef} />
                         </div>
                     </div>
                 </div>

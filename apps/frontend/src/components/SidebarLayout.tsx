@@ -16,12 +16,12 @@ const SidebarLayout: React.FC = () => {
         navigate('/');
     };
 
-    const navLinks = [
-        { path: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
-    ];
+    const navLinks = user
+        ? [{ path: '/dashboard', label: 'Dashboard', icon: 'dashboard' }]
+        : [{ path: location.pathname, label: 'Submission Portal', icon: 'upload_file' }];
 
     const getLinkClass = (path: string) => {
-        const isActive = location.pathname === path;
+        const isActive = location.pathname === path || (path === '/dashboard' && location.pathname.startsWith('/upload'));
         return `flex items-center gap-4 px-4 py-3 font-label-caps text-label-caps uppercase transition-colors brutal-button ${isActive
                 ? 'bg-secondary text-on-secondary border-[2px] border-on-surface brutal-shadow'
                 : 'text-on-surface-variant hover:bg-surface-variant border-[2px] border-transparent hover:border-on-surface'
@@ -54,20 +54,24 @@ const SidebarLayout: React.FC = () => {
                 <div className="px-4 mt-auto space-y-4">
                     {/* Logged-in user */}
                     {user && (
-                        <div className="flex items-center gap-3 px-4 py-3 bg-surface-variant border-[2px] border-on-surface">
-                            <span className="material-symbols-outlined text-on-surface-variant">person</span>
-                            <span className="font-label-mono text-xs text-on-surface-variant uppercase truncate">
-                                {user.email?.split('@')[0]}
-                            </span>
-                        </div>
+                        <>
+                            <div className="bg-primary-fixed border-[4px] border-on-surface p-4 brutal-shadow flex flex-col gap-1 mt-auto">
+                                <span className="font-label-caps text-[10px] uppercase font-black tracking-widest bg-surface border-[2px] border-on-surface px-2 w-fit text-on-surface">
+                                    {user?.role === 'TEACHER' ? 'EDUCATOR' : 'STUDENT'}
+                                </span>
+                                <span className="font-label-mono text-xs text-on-surface-variant uppercase truncate">
+                                    {user.email?.split('@')[0]}
+                                </span>
+                            </div>
+                            <button
+                                onClick={handleLogout}
+                                className="w-full flex items-center gap-4 px-4 py-3 text-error hover:bg-error-container border-[2px] border-transparent hover:border-error transition-colors font-label-caps text-label-caps uppercase"
+                            >
+                                <span className="material-symbols-outlined">logout</span>
+                                Logout
+                            </button>
+                        </>
                     )}
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-4 px-4 py-3 text-error hover:bg-error-container border-[2px] border-transparent hover:border-error transition-colors font-label-caps text-label-caps uppercase"
-                    >
-                        <span className="material-symbols-outlined">logout</span>
-                        Logout
-                    </button>
                 </div>
             </nav>
 
@@ -95,10 +99,12 @@ const SidebarLayout: React.FC = () => {
                         ))}
                     </div>
                     <div className="mt-8 space-y-4 pt-4 border-t-[4px] border-on-surface">
-                        <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-3 text-error hover:bg-error-container border-[2px] border-transparent hover:border-error transition-colors font-label-caps text-label-caps uppercase brutal-button">
-                            <span className="material-symbols-outlined">logout</span>
-                            Logout
-                        </button>
+                        {user && (
+                            <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-3 text-error hover:bg-error-container border-[2px] border-transparent hover:border-error transition-colors font-label-caps text-label-caps uppercase brutal-button">
+                                <span className="material-symbols-outlined">logout</span>
+                                Logout
+                            </button>
+                        )}
                     </div>
                 </div>
             )}

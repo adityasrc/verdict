@@ -1,13 +1,12 @@
 # -----------------------------
-# Base image: Node.js
+# Base image: Node.js (Debian Slim instead of Alpine)
 # -----------------------------
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 WORKDIR /app
-# Install pnpm globally so all stages can use it
 RUN npm install -g pnpm
 
 # -----------------------------
-# Dependencies (All deps for build)
+# Dependencies
 # -----------------------------
 FROM base AS deps
 COPY package.json pnpm-lock.yaml* ./
@@ -15,7 +14,6 @@ COPY prisma ./prisma/
 COPY prisma.config.ts ./
 RUN pnpm install
 
-# Dummy URL to allow Prisma to generate the client without connecting to a real DB
 ENV DATABASE_URL="postgresql://dummy:5432/dummy"
 RUN pnpm exec prisma generate
 
@@ -23,10 +21,8 @@ RUN pnpm exec prisma generate
 # Build worker
 # -----------------------------
 FROM base AS builder
-# Copy deps to avoid reinstalling during build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Compile TypeScript to JavaScript
 RUN pnpm run build
 
 # -----------------------------
@@ -35,32 +31,31 @@ RUN pnpm run build
 FROM base AS prod
 WORKDIR /app
 
-# 1. Install Python (runtime only)
-RUN apk add --no-cache python3 py3-pip && \
-    ln -sf /usr/bin/python3 /usr/bin/python
+# 1. Install Python (Debian way - much cleaner)
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip && \
+    rm -rf /var/lib/apt/lists/*
 
-# 2. Copy package files and install ONLY production Node deps
+# 2. Node Deps
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --prod
 
-# 3. Prisma setup for Production
+# 3. Prisma setup
 COPY --from=deps /app/prisma ./prisma
 COPY --from=deps /app/prisma.config.ts ./
 ENV DATABASE_URL="postgresql://dummy:5432/dummy"
 RUN pnpm exec prisma generate
 
-# 4. Copy Python requirements and build heavy AI packages
+# 4. Install Python requirements (Pre-built wheels, no C++ compilers needed!)
 COPY workers/python/requirements.txt ./workers/python/
-RUN apk add --no-cache --virtual .build-deps build-base python3-dev cargo clang clang-dev clang-libs llvm && \
-    pip3 install --no-cache-dir --default-timeout=100 --retries=5 \
-    -r workers/python/requirements.txt --break-system-packages && \
-    apk del .build-deps
+RUN pip3 install --no-cache-dir --default-timeout=100 --retries=5 \
+    -r workers/python/requirements.txt --break-system-packages
 
-# 5. Copy built worker files and Python scripts (maintaining __dirname logic)
+# 5. Copy built files
 COPY --from=builder /app/dist ./dist
 COPY workers/python ./dist/workers/python
 
-# 6. Security: Give node user ownership and switch to it
+# 6. Security
 RUN chown -R node:node /app
 USER node
 

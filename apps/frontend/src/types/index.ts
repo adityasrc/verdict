@@ -93,6 +93,7 @@ export interface Submission {
     publicUrl: string;
     fileKey: string;
     studentUniqueId?: string;
+    attemptNumber?: number;
     student?: {
         name: string;
         email: string;

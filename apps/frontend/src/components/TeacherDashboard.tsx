@@ -103,13 +103,13 @@ export const TeacherDashboard: React.FC = () => {
 
     return (
         <div className="w-full">
-            {isRubricManagerOpen && <RubricManager onClose={() => setIsRubricManagerOpen(false)} />}
-
             <CreateAssignmentModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onOpenRubricManager={() => setIsRubricManagerOpen(true)}
             />
+
+            {isRubricManagerOpen && <RubricManager onClose={() => setIsRubricManagerOpen(false)} />}
 
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                 <div>
@@ -238,7 +238,7 @@ export const TeacherDashboard: React.FC = () => {
                         {recentSubmissions.slice(0, 10).map((sub) => {
                             const progress = gradingProgress[sub.id];
                             const statusText = progress ? progress.step : sub.status;
-                            const isError = progress?.status === 'failed';
+                            const isError = progress?.status === 'failed' || sub.status === 'FAILED';
                             const isDone = sub.status === 'GRADED' || progress?.status === 'completed';
                             return (
                                 <div key={sub.id} className="flex gap-4 mb-2">
