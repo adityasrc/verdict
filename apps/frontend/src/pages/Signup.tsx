@@ -36,6 +36,14 @@ const Signup: React.FC = () => {
     }
   };
 
+  const getRoleButtonClass = (buttonRole: "STUDENT" | "TEACHER") => {
+    return `flex-1 py-3 border-[4px] font-label-caps uppercase font-bold transition-all brutal-button ${
+      role === buttonRole
+        ? "border-on-surface bg-on-surface text-surface brutal-shadow"
+        : "border-on-surface bg-transparent text-on-surface hover:bg-surface-variant"
+    }`;
+  };
+
   return (
     <div className="min-h-screen bg-surface flex flex-col md:flex-row font-sans selection:bg-primary selection:text-on-primary">
 
@@ -81,83 +89,68 @@ const Signup: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-
-            <div className="space-y-3 mb-8">
-              <Label>I am a...</Label>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setRole("TEACHER")}
-                  className={`flex-1 py-3 border-[4px] font-label-caps uppercase font-bold transition-all brutal-button ${role === "TEACHER"
-                    ? "border-on-surface bg-on-surface text-surface brutal-shadow"
-                    : "border-on-surface bg-transparent text-on-surface hover:bg-surface-variant"
-                    }`}
-                >
-                  Teacher
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole("STUDENT")}
-                  className={`flex-1 py-3 border-[4px] font-label-caps uppercase font-bold transition-all brutal-button ${role === "STUDENT"
-                    ? "border-on-surface bg-on-surface text-surface brutal-shadow"
-                    : "border-on-surface bg-transparent text-on-surface hover:bg-surface-variant"
-                    }`}
-                >
-                  Student
-                </button>
-              </div>
+          <form onSubmit={handleSubmit} className="flex flex-col">
+            <Label className="mb-3">I am a...</Label>
+            <div className="flex gap-4 mb-8">
+              <button
+                type="button"
+                onClick={() => setRole("TEACHER")}
+                className={getRoleButtonClass("TEACHER")}
+              >
+                Teacher
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole("STUDENT")}
+                className={getRoleButtonClass("STUDENT")}
+              >
+                Student
+              </button>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="name" className="mb-2">Full Name</Label>
+            <Input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jane Doe"
+              required
+              className="h-14 font-label-mono mb-6"
+            />
+
+            <Label htmlFor="email" className="mb-2">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              required
+              className="h-14 font-label-mono mb-6"
+            />
+
+            <Label htmlFor="password" className="mb-2">Password</Label>
+            <div className="relative">
               <Input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Jane Doe"
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
                 required
-                className="h-14 font-label-mono"
+                className="h-14 pr-12 font-label-mono"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                required
-                className="h-14 font-label-mono"
-              />
-            </div>
-
-            <div className="space-y-2 relative">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="h-14 pr-12 font-label-mono"
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface hover:text-primary transition-colors flex items-center justify-center p-1"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {showPassword ? "visibility_off" : "visibility"}
-                  </span>
-                </button>
-              </div>
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface hover:text-primary transition-colors flex items-center justify-center p-1"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {showPassword ? "visibility_off" : "visibility"}
+                </span>
+              </button>
             </div>
 
             <Button
@@ -165,16 +158,10 @@ const Signup: React.FC = () => {
               variant="brutal"
               size="lg"
               disabled={isLoading}
-              className={`w-full mt-8 h-16 text-lg ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-full mt-8 h-16 text-lg flex items-center justify-center gap-2 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="material-symbols-outlined animate-spin text-[20px]">refresh</span>
-                  Creating Account...
-                </span>
-              ) : (
-                "Create Account"
-              )}
+              {isLoading && <span className="material-symbols-outlined animate-spin text-[20px]">refresh</span>}
+              {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
 

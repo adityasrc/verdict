@@ -9,6 +9,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
 import { useSocket } from '../context/SocketContext';
 import {
     useAllowResubmissionMutation,
@@ -24,6 +25,8 @@ const AssignmentSubmissions: React.FC = () => {
     const { assignmentId } = useParams<{ assignmentId: string }>();
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+    const [isEditingScore, setIsEditingScore] = useState(false);
+    const [manualScore, setManualScore] = useState<string>('');
 
     const { data: assignmentData } = useGetAssignmentQuery(assignmentId || '', { skip: !assignmentId });
     const {
@@ -174,6 +177,7 @@ const AssignmentSubmissions: React.FC = () => {
                                         <p className="font-label-mono text-[12px] text-on-surface-variant mt-2 uppercase">
                                             Submitted: {new Date(submission.submittedAt).toLocaleString()}
                                         </p>
+                                        <span className="font-label-mono text-[11px] bg-surface-variant px-2 py-0.5 border-[2px] border-on-surface mt-1 inline-block font-bold">Attempt: {submission.attemptNumber || 1}/3</span>
                                     </div>
                                 </div>
 
@@ -239,11 +243,29 @@ const AssignmentSubmissions: React.FC = () => {
                         <div className="space-y-8 mt-4">
                             <div className="flex flex-wrap gap-4">
                                 <div className="bg-secondary-fixed border-[4px] border-on-surface p-4 brutal-shadow">
-                                    <h4 className="font-label-caps text-label-caps uppercase font-bold mb-1">Final Verdict</h4>
-                                    <div className="font-headline-lg font-black text-on-surface">
-                                        {selectedSubmission.score}
-                                        <span className="text-headline-md">/{assignment?.maxScore || 100}</span>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <h4 className="font-label-caps text-label-caps uppercase font-bold">Final Verdict</h4>
+                                        <button onClick={() => setIsEditingScore(!isEditingScore)} className="text-primary hover:opacity-80">
+                                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                                        </button>
                                     </div>
+                                    {isEditingScore ? (
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <Input
+                                                type="number"
+                                                className="w-24 font-headline-md font-black text-on-surface"
+                                                value={manualScore}
+                                                onChange={(e) => setManualScore(e.target.value)}
+                                            />
+                                            <span className="text-headline-md font-black text-on-surface">/{assignment?.maxScore || 100}</span>
+                                            <Button size="sm" variant="brutal" onClick={() => setIsEditingScore(false)}>Save</Button>
+                                        </div>
+                                    ) : (
+                                        <div className="font-headline-lg font-black text-on-surface">
+                                            {selectedSubmission.score}
+                                            <span className="text-headline-md">/{assignment?.maxScore || 100}</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex flex-col gap-2 justify-center">
                                     <Button
@@ -260,6 +282,14 @@ const AssignmentSubmissions: React.FC = () => {
                                     >
                                         Delete &amp; Allow Resubmission
                                     </Button>
+                                    <a
+                                        href={selectedSubmission.publicUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block w-full py-2 text-center text-sm border-[4px] border-on-surface bg-primary text-on-primary font-label-caps font-bold uppercase brutal-shadow brutal-button hover:bg-primary-container transition-colors duration-75"
+                                    >
+                                        View Submitted PDF
+                                    </a>
                                 </div>
                             </div>
 
@@ -269,15 +299,6 @@ const AssignmentSubmissions: React.FC = () => {
                                     <ReactMarkdown>{selectedSubmission.feedback || 'No feedback available.'}</ReactMarkdown>
                                 </div>
                             </div>
-
-                            <a
-                                href={selectedSubmission.publicUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block w-full py-4 text-center border-[4px] border-on-surface bg-primary text-on-primary font-label-caps font-bold uppercase brutal-shadow brutal-button hover:bg-primary-container transition-colors duration-75"
-                            >
-                                View Submitted PDF
-                            </a>
                         </div>
                     )}
                 </DialogContent>

@@ -63,12 +63,12 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-md bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none">
+      <DialogContent className="max-w-md bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none z-[40]">
         <DialogHeader>
           <DialogTitle className="font-headline-md font-black uppercase">New Assessment</DialogTitle>
           <DialogDescription className="font-body-md text-on-surface-variant">Fill details below.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+        <form onSubmit={handleSubmit} className="space-y-3 mt-2">
           <div className="space-y-2">
             <Label htmlFor="a-title">Title</Label>
             <Input
@@ -87,7 +87,7 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full px-3 py-2 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow resize-none"
-              rows={3}
+              rows={2}
             />
           </div>
 

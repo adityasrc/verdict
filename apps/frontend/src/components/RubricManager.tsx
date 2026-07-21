@@ -97,7 +97,7 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-on-surface/80 flex items-center justify-center z-50 backdrop-blur-[2px] p-4">
+        <div className="fixed inset-0 bg-on-surface/80 flex items-center justify-center z-[60] backdrop-blur-[2px] p-4">
             <div className="bg-surface w-full max-w-5xl border-[4px] border-on-surface brutal-shadow flex flex-col max-h-[90vh]">
 
                 <div className="p-6 border-b-[4px] border-on-surface flex justify-between items-center bg-accent-yellow flex-shrink-0">

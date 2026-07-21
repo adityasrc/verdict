@@ -12,25 +12,25 @@ import Onboarding from './pages/Onboarding';
 import Signup from './pages/Signup';
 import { Toaster } from './components/ui/sonner';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute = () => {
   const user = useSelector(selectCurrentUser);
   if (!user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+  return <Outlet />;
 };
 ProtectedRoute.displayName = 'ProtectedRoute';
 
-const TeacherRoute = ({ children }: { children: React.ReactNode }) => {
+const TeacherRoute = () => {
   const user = useSelector(selectCurrentUser);
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'TEACHER') return <Navigate to="/dashboard" replace />;
-  return <>{children}</>;
+  return <Outlet />;
 };
 TeacherRoute.displayName = 'TeacherRoute';
 
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+const PublicRoute = () => {
   const user = useSelector(selectCurrentUser);
   if (user) return <Navigate to="/dashboard" replace />;
-  return <>{children}</>;
+  return <Outlet />;
 };
 PublicRoute.displayName = 'PublicRoute';
 
@@ -73,8 +73,10 @@ function App() {
       <Routes>
 
         <Route element={<AuthLayout />}>
-          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+          <Route element={<PublicRoute />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+          </Route>
         </Route>
 
         <Route element={<LayoutWithFooter />}>
@@ -82,17 +84,15 @@ function App() {
         </Route>
 
         <Route element={<SidebarLayout />}>
-          <Route path="/dashboard"
-            element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
-          />
-          <Route
-            path="/assignment/:assignmentId/submissions"
-            element={<TeacherRoute><AssignmentSubmissions /></TeacherRoute>}
-          />
-          <Route
-            path="/upload/:assignmentId"
-            element={<ProtectedRoute><AssignmentUpload /></ProtectedRoute>}
-          />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+          </Route>
+          
+          <Route element={<TeacherRoute />}>
+            <Route path="/assignment/:assignmentId/submissions" element={<AssignmentSubmissions />} />
+          </Route>
+
+          <Route path="/upload/:assignmentId" element={<AssignmentUpload />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />
