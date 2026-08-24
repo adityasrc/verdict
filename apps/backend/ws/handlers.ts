@@ -18,7 +18,7 @@ export const submissionHandlers = (socket: AuthenticatedSocket) => {
                 try {
                     socket.emit("submission-progress", JSON.parse(raw));
                 } catch {
-
+                    /* ignore parse errors for individual corrupted cache entries */
                 }
             }
         } catch (err) {
