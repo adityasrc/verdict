@@ -42,10 +42,10 @@ export const StudentDashboard: React.FC = () => {
                             You have {pendingCount} pending assignment{pendingCount !== 1 ? 's' : ''}.
                         </p>
                     </div>
-                    <div className="lg:w-1/3 bg-accent-yellow border-[4px] border-on-surface brutal-shadow flex flex-col">
+                    <div className="lg:w-1/3 bg-surface-variant border-[4px] border-on-surface brutal-shadow flex flex-col">
                         <div className="bg-on-surface text-surface px-6 py-3 font-label-caps text-[11px] tracking-widest uppercase border-b-[4px] border-on-surface flex justify-between items-center font-bold">
                             <span>Status</span>
-                            <span className="material-symbols-outlined text-accent-yellow">priority_high</span>
+                            <span className="material-symbols-outlined text-surface">info</span>
                         </div>
                         <div className="flex-1 p-8 flex flex-col justify-center items-center text-center">
                             <span className={`material-symbols-outlined text-[64px] mb-4 text-on-surface ${pendingCount > 0 ? 'animate-spin' : ''}`} style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -67,9 +67,9 @@ export const StudentDashboard: React.FC = () => {
                         <span className="font-label-caps uppercase font-bold text-sm tracking-widest mb-2 text-on-primary">Average Score</span>
                         <span className="font-headline-lg text-4xl font-black uppercase tracking-tighter text-on-primary">{averageScore}%</span>
                     </div>
-                    <div className="bg-secondary text-on-secondary border-[4px] border-on-surface brutal-shadow p-6 flex flex-col justify-between">
-                        <span className="font-label-caps uppercase font-bold text-sm tracking-widest mb-2 text-on-secondary">Highest Score</span>
-                        <span className="font-headline-lg text-4xl font-black uppercase tracking-tighter text-on-secondary">{highestScore}%</span>
+                    <div className="bg-surface border-[4px] border-on-surface brutal-shadow p-6 flex flex-col justify-between">
+                        <span className="font-label-caps uppercase font-bold text-sm tracking-widest mb-2">Highest Score</span>
+                        <span className="font-headline-lg text-4xl font-black uppercase tracking-tighter">{highestScore}%</span>
                     </div>
                 </div>
             </section>
@@ -82,9 +82,9 @@ export const StudentDashboard: React.FC = () => {
                     <div className="space-y-6">
                         {recentSubmissions.slice(0, 3).map(sub => (
                             <div key={sub.id} className="bg-surface border-[4px] border-on-surface brutal-shadow flex flex-col hover:-translate-y-1 transition-transform duration-75 linear">
-                                <div className="bg-secondary text-on-secondary px-4 py-2 font-label-caps text-[11px] uppercase tracking-widest border-b-[4px] border-on-surface flex justify-between items-center font-bold">
+                                <div className="bg-on-surface text-surface px-4 py-2 font-label-caps text-[11px] uppercase tracking-widest border-b-[4px] border-on-surface flex justify-between items-center font-bold">
                                     <span>{sub.assignment?.title}</span>
-                                    <span className="material-symbols-outlined text-[16px]">science</span>
+                                    <span className="material-symbols-outlined text-[16px] text-surface">science</span>
                                 </div>
                                 
                                 {sub.status === 'GRADED' ? (

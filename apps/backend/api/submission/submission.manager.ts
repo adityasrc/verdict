@@ -11,39 +11,27 @@ export class SubmissionManager {
         studentId: string;
         assignmentId: string;
         fileKey: string;
-        studentUniqueId?: string
     }) {
-        const MAX_ATTEMPTS = 3;
-
-        const existingSubmission = await prisma.submission.findFirst({
+        // One submission per student per assignment. If one already exists,
+        // it must be deleted first via allowResubmission before a new one can be created.
+        const existing = await prisma.submission.findUnique({
             where: {
-                assignmentId: data.assignmentId,
-                studentId: data.studentId,
+                studentId_assignmentId: {
+                    studentId: data.studentId,
+                    assignmentId: data.assignmentId,
+                },
             },
         });
 
-        if (existingSubmission) {
-            if (existingSubmission.attemptNumber >= MAX_ATTEMPTS) {
-                throw new AppError(`You have reached the maximum of ${MAX_ATTEMPTS} attempts`, 403);
-            }
-
-            return prisma.submission.update({
-                where: { id: existingSubmission.id },
-                data: {
-                    attemptNumber: existingSubmission.attemptNumber + 1,
-                    status: "PENDING",
-                    fileKey: data.fileKey,
-                }
-            });
+        if (existing) {
+            throw new AppError("You have already submitted this assignment. Ask your teacher to allow resubmission.", 409);
         }
 
         return prisma.submission.create({
             data: {
                 assignmentId: data.assignmentId,
                 studentId: data.studentId,
-                studentUniqueId: data.studentUniqueId,
                 fileKey: data.fileKey,
-                attemptNumber: 1,
             },
         });
     }
@@ -106,17 +94,18 @@ export class SubmissionManager {
     }
 
     async presignedUrl(fileName: string, type: string, assignmentId: string, studentId: string) {
-        const MAX_ATTEMPTS = 3;
-
-        const totalAttempts = await prisma.submission.count({
+        // Block upload if a submission already exists (student must ask teacher to allow resubmission first).
+        const existing = await prisma.submission.findUnique({
             where: {
-                assignmentId,
-                studentId,
+                studentId_assignmentId: {
+                    studentId,
+                    assignmentId,
+                },
             },
         });
 
-        if (totalAttempts >= MAX_ATTEMPTS) {
-            throw new AppError(`You have reached the maximum of ${MAX_ATTEMPTS} attempts`, 403);
+        if (existing) {
+            throw new AppError("You have already submitted this assignment. Ask your teacher to allow resubmission.", 409);
         }
 
         const bucketName = process.env.BUCKET_NAME;
@@ -124,9 +113,8 @@ export class SubmissionManager {
             throw new AppError("Storage configuration missing. Check BUCKET_NAME in .env", 500);
         }
 
-
         const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const key = `${assignmentId}/${studentId}/attempt_${totalAttempts + 1}_${Date.now()}_${safeFileName}`;
+        const key = `${assignmentId}/${studentId}/${Date.now()}_${safeFileName}`;
 
         const command = new PutObjectCommand({
             Bucket: bucketName,
@@ -156,15 +144,6 @@ export class SubmissionManager {
                 feedback: data.feedback ? data.feedback : Prisma.JsonNull,
                 status: data.status,
                 gradedAt: new Date(),
-            },
-        });
-    }
-
-    async verifyAssignmentOtp(assignmentId: string, otp: string) {
-        return prisma.assignment.findFirst({
-            where: {
-                id: assignmentId,
-                otp: otp,
             },
         });
     }

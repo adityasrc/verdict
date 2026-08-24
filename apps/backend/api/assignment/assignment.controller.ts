@@ -2,7 +2,6 @@ import { Router, type Request, type Response } from "express";
 import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
 import { catchAsync } from "../utils/catchAsyncWrapper.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
-import generateNumericOTP from "../utils/generateOTP.js";
 import { AssignmentManager } from "./assignment.manager.js";
 import { createAssignmentSchema } from "../../validators/zod.js";
 
@@ -46,11 +45,9 @@ export class AssignmentController {
         }
 
         const teacherId = req.user!.id;
-        const otp = generateNumericOTP(4);
 
         const assignment = await this._assignmentManager.createAssignment({
             ...parsed.data,
-            otp,
             teacherId,
         });
 

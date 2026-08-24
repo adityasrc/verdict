@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
 import { useSocket } from '../context/SocketContext';
 import {
     useGetAssignmentQuery,
     useLazyGetUploadUrlQuery,
     useSubmitAssignmentMutation,
-    useVerifyOtpMutation,
 } from '../features/assignments/assignmentApi';
 import { parseApiError } from '../lib/errors';
 
@@ -26,8 +23,6 @@ const AssignmentUpload: React.FC = () => {
     const [fileError, setFileError] = useState('');
 
     // Form state
-    const [otp, setOtp] = useState('');
-    const [studentUniqueId, setStudentUniqueId] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [isUploading, setIsUploading] = useState(false);
 
@@ -40,7 +35,6 @@ const AssignmentUpload: React.FC = () => {
 
     // API hooks
     const [getUploadUrl] = useLazyGetUploadUrlQuery();
-    const [verifyOtp, { isLoading: isVerifyingOtp }] = useVerifyOtpMutation();
     const { data: assignmentData, isLoading } = useGetAssignmentQuery(assignmentId ?? '', { skip: !assignmentId });
     const [markSubmission] = useSubmitAssignmentMutation();
     const { socket } = useSocket();
@@ -127,27 +121,18 @@ const AssignmentUpload: React.FC = () => {
         if (e.dataTransfer.files?.[0]) applyFile(e.dataTransfer.files[0]);
     };
 
-    const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setOtp(e.target.value.replace(/\D/g, '').slice(0, 4));
-    };
-
     const runPipeline = async () => {
         if (!file) { setErrorMessage('Please select a PDF file.'); return; }
-        if (otp.length !== 4) { setErrorMessage('Enter the 4-digit session PIN.'); return; }
-        if (assignmentData?.data?.requireUniqueId && !studentUniqueId.trim()) {
-            setErrorMessage('University ID is required for this assignment.'); return;
-        }
         setErrorMessage('');
         setGradingStatus('idle');
         setProgressLogs(['> Grading engine ready.', '[SYS] Initiating new request...']);
 
         try {
-            await verifyOtp({ assignmentId: assignmentId!, otp }).unwrap();
-            const urlResult = await getUploadUrl({ fileName: file.name, type: file.type, assignmentId: assignmentId!, otp }).unwrap() as any;
+            const urlResult = await getUploadUrl({ fileName: file.name, type: file.type, assignmentId: assignmentId! }).unwrap() as any;
             const uploadData = urlResult.data ?? urlResult;
             await performUpload(uploadData);
         } catch (err) {
-            setErrorMessage(parseApiError(err, 'Authorization failed. Check your PIN.'));
+            setErrorMessage(parseApiError(err, 'Failed to start upload.'));
         }
     };
 
@@ -168,8 +153,6 @@ const AssignmentUpload: React.FC = () => {
 
             const res = await markSubmission({
                 assignmentId: assignmentId!,
-                otp,
-                studentUniqueId: studentUniqueId.trim() || undefined,
                 fileKey: uploadData.key,
             }).unwrap();
 
@@ -196,7 +179,6 @@ const AssignmentUpload: React.FC = () => {
     }
 
     const assignment = assignmentData.data;
-    const isDisabled = isUploading || isVerifyingOtp;
 
     return (
         <div className="w-full">
@@ -245,7 +227,7 @@ const AssignmentUpload: React.FC = () => {
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 onChange={handleFileChange}
                                 accept=".pdf,application/pdf"
-                                disabled={isDisabled}
+                                disabled={isUploading}
                             />
 
                             <div className={`w-16 h-16 bg-primary border-[4px] border-on-surface brutal-shadow flex items-center justify-center mb-4 transition-transform duration-75 ${isDragging ? 'scale-125' : ''}`}>
@@ -271,47 +253,13 @@ const AssignmentUpload: React.FC = () => {
                         </div>
                     </section>
 
-                    {/* Verification */}
+                    {/* Submit section */}
                     <section className="bg-surface border-[4px] border-on-surface brutal-shadow p-6 relative">
                         <div className="absolute -top-4 -left-4 bg-accent-yellow text-on-surface px-4 py-1 border-[4px] border-on-surface font-label-caps uppercase font-bold brutal-shadow z-10">
-                            Verification
+                            Submit
                         </div>
 
                         <div className="mt-4 space-y-6">
-                            {assignment.requireUniqueId && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="student-id">University ID</Label>
-                                    <Input
-                                        id="student-id"
-                                        type="text"
-                                        value={studentUniqueId}
-                                        onChange={e => setStudentUniqueId(e.target.value)}
-                                        placeholder="Your university student ID"
-                                        disabled={isDisabled}
-                                    />
-                                </div>
-                            )}
-
-                            <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
-                                <div className="flex-1">
-                                    <Label htmlFor="session-pin" className="mb-2">Session PIN</Label>
-                                    <p className="font-body-md text-on-surface-variant mt-1">
-                                        Enter the 4-digit PIN provided by your teacher.
-                                    </p>
-                                </div>
-                                <input
-                                    id="session-pin"
-                                    className="w-36 h-16 text-center font-black text-2xl border-[4px] border-on-surface bg-surface focus:bg-primary-fixed focus:outline-none focus:border-primary brutal-shadow tracking-[0.5em] transition-colors duration-75"
-                                    maxLength={4}
-                                    type="text"
-                                    value={otp}
-                                    onChange={handleOtpChange}
-                                    placeholder="••••"
-                                    aria-label="4-digit session PIN"
-                                    disabled={isDisabled}
-                                />
-                            </div>
-
                             {errorMessage && (
                                 <p className="text-error font-bold font-label-mono uppercase">{errorMessage}</p>
                             )}
@@ -320,11 +268,11 @@ const AssignmentUpload: React.FC = () => {
                                 variant="brutal-dark"
                                 size="lg"
                                 onClick={runPipeline}
-                                disabled={isDisabled}
+                                disabled={isUploading}
                                 className="w-full"
                             >
                                 <span className="material-symbols-outlined">play_circle</span>
-                                {isUploading ? 'Uploading...' : isVerifyingOtp ? 'Verifying...' : 'Run Evaluation Pipeline'}
+                                {isUploading ? 'Uploading...' : 'Run Evaluation Pipeline'}
                             </Button>
                         </div>
                     </section>

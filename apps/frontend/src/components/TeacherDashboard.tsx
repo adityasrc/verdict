@@ -147,7 +147,6 @@ export const TeacherDashboard: React.FC = () => {
                     label="Avg. Score"
                     value={`${avgScore}%`}
                     icon="analytics"
-                    className="bg-accent-yellow text-on-surface"
                 />
             </div>
 
@@ -179,7 +178,6 @@ export const TeacherDashboard: React.FC = () => {
                             {visibleAssignments.map((assignment) => (
                                 <div key={assignment.id} className="bg-surface border-[4px] border-on-surface brutal-shadow flex flex-col hover:-translate-y-1 transition-transform duration-75 linear">
                                     <div className="bg-on-surface text-surface px-4 py-2 flex justify-between items-center">
-                                        <span className="font-label-mono text-[12px] uppercase tracking-widest font-bold">PIN: {assignment.otp}</span>
                                         <span className="font-label-caps text-[11px] bg-secondary text-on-secondary px-2 py-0.5 border-[2px] border-transparent font-black tracking-widest">ACTIVE</span>
                                     </div>
                                     <div className="p-6">

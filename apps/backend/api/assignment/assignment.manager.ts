@@ -4,7 +4,7 @@ import type { CreateAssignmentInput } from "../../validators/zod.js";
 
 export class AssignmentManager {
     async createAssignment(
-        data: CreateAssignmentInput & { teacherId: string; otp: string }
+        data: CreateAssignmentInput & { teacherId: string }
     ) {
         if (data.rubricId) {
             const rubric = await prisma.rubric.findFirst({
@@ -17,10 +17,7 @@ export class AssignmentManager {
         }
 
         return prisma.assignment.create({
-            data: {
-                ...data,
-                status: "PUBLISHED",
-            },
+            data,
         });
     }
 
@@ -39,9 +36,6 @@ export class AssignmentManager {
     async getAssignmentById(id: string) {
         return prisma.assignment.findUnique({
             where: { id },
-            omit: {
-                otp: true,
-            },
             include: {
                 teacher: {
                     select: {
@@ -56,10 +50,6 @@ export class AssignmentManager {
 
     async getAllAssignments() {
         return prisma.assignment.findMany({
-            where: { status: "PUBLISHED" },
-            omit: {
-                otp: true,
-            },
             orderBy: { createdAt: "desc" },
             include: {
                 rubric: true,

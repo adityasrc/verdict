@@ -30,11 +30,10 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
   const [dueDate, setDueDate] = useState('');
   const [maxScore, setMaxScore] = useState('100');
   const [selectedRubricId, setSelectedRubricId] = useState('');
-  const [requireUniqueId, setRequireUniqueId] = useState(false);
 
   const handleClose = () => {
     setTitle(''); setDescription(''); setDueDate('');
-    setMaxScore('100'); setSelectedRubricId(''); setRequireUniqueId(false);
+    setMaxScore('100'); setSelectedRubricId('');
     onClose();
   };
 
@@ -52,7 +51,6 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
         dueDate,
         maxScore: parsedScore,
         rubricId: selectedRubricId && selectedRubricId !== 'none' ? selectedRubricId : undefined,
-        requireUniqueId,
       }).unwrap();
       toast.success('Assignment created!');
       handleClose();
@@ -137,19 +135,6 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="flex items-center gap-3 pt-1">
-            <input
-              id="a-require-id"
-              type="checkbox"
-              checked={requireUniqueId}
-              onChange={(e) => setRequireUniqueId(e.target.checked)}
-              className="w-5 h-5 border-[3px] border-on-surface bg-surface accent-primary cursor-pointer"
-            />
-            <Label htmlFor="a-require-id" className="cursor-pointer">
-              Require student university ID
-            </Label>
           </div>
 
           <Button

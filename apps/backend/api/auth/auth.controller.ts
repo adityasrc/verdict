@@ -18,9 +18,6 @@ export class AuthController {
         this.router.post("/login", catchAsync(this.login.bind(this)));
         this.router.get("/me", authMiddleware, catchAsync(this.getCurrentUser.bind(this)));
         this.router.post("/refresh", catchAsync(this.refreshToken.bind(this)));
-
-        // FIX: Added logout route
-        this.router.post("/logout", authMiddleware, catchAsync(this.logout.bind(this)));
     }
 
     public async register(req: Request, res: Response) {
@@ -59,11 +56,4 @@ export class AuthController {
         return res.status(200).json({ success: true, data: result });
     }
 
-
-    public async logout(req: Request, res: Response) {
-        const userId = req.user!.id;
-
-        await this._authManager.logout(userId);
-        return res.status(200).json({ success: true, data: null });
-    }
 }
