@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 import PIL.Image
 
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
 
 def publish(event):
     print(json.dumps(event), flush=True)
