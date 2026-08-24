@@ -36,6 +36,13 @@ export class AssignmentController {
         );
 
         this.router.get("/:id", authMiddleware, catchAsync(this.getAssignment.bind(this)));
+
+        this.router.delete(
+            "/:id",
+            authMiddleware,
+            requireRole("TEACHER"),
+            catchAsync(this.deleteAssignment.bind(this))
+        );
     }
 
     private async createAssignment(req: Request, res: Response) {
@@ -79,5 +86,17 @@ export class AssignmentController {
         }
 
         return res.status(200).json({ success: true, data: assignment });
+    }
+
+    private async deleteAssignment(req: Request, res: Response) {
+        const id = req.params.id as string;
+        if (!id) {
+            throw new AppError("Assignment ID is required", 400);
+        }
+
+        const teacherId = req.user!.id;
+        await this._assignmentManager.deleteAssignment(id, teacherId);
+
+        return res.status(200).json({ success: true, message: "Assignment deleted successfully" });
     }
 }

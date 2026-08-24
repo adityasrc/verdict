@@ -56,4 +56,18 @@ export class AssignmentManager {
             },
         });
     }
+
+    async deleteAssignment(id: string, teacherId: string) {
+        const assignment = await prisma.assignment.findFirst({
+            where: { id, teacherId },
+        });
+
+        if (!assignment) {
+            throw new AppError("Assignment not found or access denied", 404);
+        }
+
+        return prisma.assignment.delete({
+            where: { id },
+        });
+    }
 }

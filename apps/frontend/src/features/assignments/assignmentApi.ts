@@ -95,6 +95,13 @@ export const assignmentApi = createApi({
             }),
             invalidatesTags: ['Submission'],
         }),
+        deleteAssignment: builder.mutation<{ success: boolean; message: string }, string>({
+            query: (id) => ({
+                url: `/assignments/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Assignment', 'Submission'],
+        }),
     }),
 });
 
@@ -111,4 +118,5 @@ export const {
     useSubmitAssignmentMutation,
     useReEvaluateSubmissionMutation,
     useAllowResubmissionMutation,
+    useDeleteAssignmentMutation,
 } = assignmentApi;
