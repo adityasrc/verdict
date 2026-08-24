@@ -1,7 +1,7 @@
 # -----------------------------
 # Base Image (Node.js runtime)
 # -----------------------------
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 WORKDIR /app
 # Install pnpm globally
 RUN npm install -g pnpm
@@ -38,22 +38,33 @@ WORKDIR /app
 # 1. Copy package files
 COPY package.json pnpm-lock.yaml* ./
 
-# 2. Install ONLY production dependencies (keeps image small)
+# 2. Install Python for the optional embedded grading worker
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+
+# 3. Install ONLY production dependencies (keeps image small)
 RUN pnpm install --prod
 
-# 3. Copy Prisma files and generate client for the prod environment
+# 4. Copy Prisma files and generate client for the prod environment
 COPY --from=deps /app/prisma ./prisma
 COPY --from=deps /app/prisma.config.ts ./
 ENV DATABASE_URL="postgresql://dummy:5432/dummy"
 RUN pnpm exec prisma generate
 
-# 4. Copy only the compiled output from the builder stage
-COPY --from=builder /app/dist ./dist
+# 5. Install Python requirements used by the embedded grading worker
+COPY workers/python/requirements.txt ./workers/python/
+RUN pip3 install --no-cache-dir --default-timeout=100 --retries=5 \
+    -r workers/python/requirements.txt --break-system-packages
 
-# 5. Give ownership of the /app directory to the 'node' user
+# 6. Copy compiled output and Python worker scripts
+COPY --from=builder /app/dist ./dist
+COPY workers/python ./dist/workers/python
+
+# 7. Give ownership of the /app directory to the 'node' user
 RUN chown -R node:node /app
 
-# 6. Switch to non-root user for security
+# 8. Switch to non-root user for security
 USER node
 
 # Start the server

@@ -13,6 +13,10 @@ services:
         value: production
       - key: HTTP_PORT
         value: 4000
+      - key: RUN_WORKER_IN_API
+        value: "true"
+      - key: PYTHON_BIN
+        value: python3
       - key: DATABASE_URL
         sync: false
       - key: POOL_URL
@@ -41,38 +45,3 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-
-  # ─────────────────────────────────────────
-  # Grading worker (background worker)
-  # Consumes BullMQ jobs from Redis,
-  # runs Python PDF parser + Gemini grader
-  # ─────────────────────────────────────────
-  - type: worker
-    name: verdict-worker
-    runtime: docker
-    dockerfilePath: apps/backend/Dockerfile.workers
-    dockerContext: apps/backend
-    plan: free
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        sync: false
-      - key: POOL_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: R2_ENDPOINT
-        sync: false
-      - key: BUCKET_NAME
-        sync: false
-      - key: ACCESSKEYID
-        sync: false
-      - key: SECRETACCESSKEY
-        sync: false
-      - key: PUBLIC_ENDPOINT
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: PYTHON_BIN
-        value: python3
