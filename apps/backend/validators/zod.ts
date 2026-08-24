@@ -16,7 +16,6 @@ export const createAssignmentSchema = z.object({
     title: z.string().min(3),
     description: z.string().optional(),
     maxScore: z.number().int().positive().default(100),
-    requireUniqueId: z.boolean().default(false),
     dueDate: z.coerce.date().optional(),
     rubricId: z.string().uuid().optional(),
 });
@@ -36,21 +35,13 @@ export const updateRubricSchema = createRubricSchema.partial();
 
 export const createSubmissionSchema = z.object({
     assignmentId: z.string().min(1),
-    studentUniqueId: z.string().optional(),
-    otp: z.string().min(1),
     fileKey: z.string(),
-});
-
-export const verifyOtpSchema = z.object({
-    assignmentId: z.string().min(1),
-    otp: z.string().min(1),
 });
 
 export const uploadUrlSchema = z.object({
     fileName: z.string().min(1),
     type: z.string().min(1),
     assignmentId: z.string().min(1),
-    otp: z.string().min(1),
 });
 
 export const submissionActionSchema = z.object({

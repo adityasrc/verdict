@@ -45,7 +45,7 @@ export class PythonService {
                             extractedData = msg.result;
                         }
                         publishEvent(submissionId, { ...msg, assignmentId, studentId });
-                    } catch { }
+                    } catch { /* ignore non-JSON log lines from Python stdout */ }
                 }
             });
 
@@ -86,7 +86,7 @@ export class PythonService {
                             evaluation = msg.evaluation;
                         }
                         publishEvent(submissionId, { ...msg, assignmentId, studentId });
-                    } catch { }
+                    } catch { /* ignore non-JSON log lines from Python stdout */ }
                 }
             });
 

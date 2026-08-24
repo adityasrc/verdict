@@ -3,10 +3,7 @@ import { Server, type Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 
 import { redis } from "../utils/redis.js";
-import {
-    notificationHandlers,
-    submissionHandlers,
-} from "./handlers.js";
+import { submissionHandlers } from "./handlers.js";
 
 interface AuthenticatedSocket extends Socket {
     userId: string;
@@ -48,9 +45,6 @@ export const initSocket = (httpServer: HTTPServer) => {
 
                 io.to(submissionId).emit("submission-progress", eventWithId);
 
-                if (event.userId) {
-                    io.to(event.userId).emit("dashboard-update", eventWithId);
-                }
                 if (event.assignmentId) {
                     io.to(`assignment:${event.assignmentId}`).emit(
                         "assignment-grading-progress",
@@ -90,9 +84,7 @@ export const initSocket = (httpServer: HTTPServer) => {
         const authedSocket = socket as AuthenticatedSocket;
         console.log(`Client connected: ${authedSocket.id} (user: ${authedSocket.userId})`);
 
-
         submissionHandlers(authedSocket);
-        notificationHandlers(authedSocket);
 
         socket.on("disconnect", () => {
             console.log(`Client disconnected: ${authedSocket.id}`);

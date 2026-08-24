@@ -128,11 +128,6 @@ export class AuthManager {
         }
     }
 
-
-    async logout(userId: string) {
-        return true;
-    }
-
     private generateTokens(payload: TokenPayload) {
         const accessToken = jwt.sign(payload, this.JWT_SECRET, {
             expiresIn: this.JWT_EXPIRES_IN,

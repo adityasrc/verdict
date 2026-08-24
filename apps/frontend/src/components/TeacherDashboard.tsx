@@ -6,12 +6,14 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useSocket } from '../context/SocketContext';
 import {
+    useDeleteAssignmentMutation,
     useGetRecentSubmissionsQuery,
     useGetTeacherAssignmentsQuery,
 } from '../features/assignments/assignmentApi';
 import { selectCurrentUser } from '../features/auth/authSlice';
 import { toast } from 'sonner';
 import { CreateAssignmentModal } from './modals/CreateAssignmentModal';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 
 interface StatCardProps {
     label: string;
@@ -88,10 +90,24 @@ export const TeacherDashboard: React.FC = () => {
         return () => activeAssignments.forEach((a) => socket.emit('unwatch-assignment', a.id));
     }, [socket, activeAssignments]);
 
+    const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
+    const [deleteAssignment, { isLoading: isDeleting }] = useDeleteAssignmentMutation();
+
     const handleShareLink = async (assignmentId: string) => {
         const link = `${window.location.origin}/upload/${assignmentId}`;
         try { await navigator.clipboard.writeText(link); toast.success('Link copied'); }
         catch { window.prompt('Copy this link manually:', link); }
+    };
+
+    const handleDeleteAssignment = async () => {
+        if (!deleteAssignmentId) return;
+        try {
+            await deleteAssignment(deleteAssignmentId).unwrap();
+            toast.success('Assignment deleted successfully');
+            setDeleteAssignmentId(null);
+        } catch {
+            toast.error('Failed to delete assignment');
+        }
     };
 
     const pendingCount = recentSubmissions.filter((s) => s.status === 'PENDING').length;
@@ -147,7 +163,6 @@ export const TeacherDashboard: React.FC = () => {
                     label="Avg. Score"
                     value={`${avgScore}%`}
                     icon="analytics"
-                    className="bg-accent-yellow text-on-surface"
                 />
             </div>
 
@@ -179,7 +194,6 @@ export const TeacherDashboard: React.FC = () => {
                             {visibleAssignments.map((assignment) => (
                                 <div key={assignment.id} className="bg-surface border-[4px] border-on-surface brutal-shadow flex flex-col hover:-translate-y-1 transition-transform duration-75 linear">
                                     <div className="bg-on-surface text-surface px-4 py-2 flex justify-between items-center">
-                                        <span className="font-label-mono text-[12px] uppercase tracking-widest font-bold">PIN: {assignment.otp}</span>
                                         <span className="font-label-caps text-[11px] bg-secondary text-on-secondary px-2 py-0.5 border-[2px] border-transparent font-black tracking-widest">ACTIVE</span>
                                     </div>
                                     <div className="p-6">
@@ -203,6 +217,14 @@ export const TeacherDashboard: React.FC = () => {
                                                 aria-label="Copy share link"
                                             >
                                                 <span className="material-symbols-outlined text-[20px]">share</span>
+                                            </Button>
+                                            <Button
+                                                variant="brutal-ghost"
+                                                className="px-4 text-error hover:bg-error hover:text-on-error"
+                                                onClick={() => setDeleteAssignmentId(assignment.id)}
+                                                aria-label="Delete assessment"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">delete</span>
                                             </Button>
                                         </div>
                                     </div>
@@ -258,6 +280,34 @@ export const TeacherDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <Dialog open={!!deleteAssignmentId} onOpenChange={(open) => !open && setDeleteAssignmentId(null)}>
+                <DialogContent className="max-w-md bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow">
+                    <DialogHeader>
+                        <DialogTitle className="font-headline-md font-black uppercase">Delete Assessment</DialogTitle>
+                        <DialogDescription className="font-body-md text-on-surface-variant">
+                            Are you sure you want to delete this assignment? All associated student submissions and grading results will be permanently removed.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex gap-4 mt-4">
+                        <Button
+                            variant="brutal-ghost"
+                            className="flex-1"
+                            onClick={() => setDeleteAssignmentId(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="brutal-error"
+                            className="flex-1"
+                            disabled={isDeleting}
+                            onClick={handleDeleteAssignment}
+                        >
+                            {isDeleting ? 'Deleting...' : 'Delete'}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

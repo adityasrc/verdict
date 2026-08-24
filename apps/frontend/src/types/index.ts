@@ -2,7 +2,7 @@ export interface User {
     id: string;
     name: string;
     email: string;
-    role: 'STUDENT' | 'TEACHER' | 'ADMIN';
+    role: 'STUDENT' | 'TEACHER';
     createdAt: string;
     updatedAt: string;
 }
@@ -33,7 +33,7 @@ export interface RegisterData {
     email: string;
     password: string;
     name: string;
-    role?: 'STUDENT' | 'TEACHER' | 'ADMIN';
+    role?: 'STUDENT' | 'TEACHER';
 }
 
 export interface RubricCriterion {
@@ -57,11 +57,9 @@ export interface Assignment {
     description?: string;
     maxScore: number;
     dueDate?: string;
-    requireUniqueId?: boolean;
     teacherId: string;
     createdAt: string;
     updatedAt: string;
-    otp: string;
     _count?: {
         submissions: number;
     };
@@ -75,7 +73,6 @@ export interface CreateAssignmentRequest {
     maxScore?: number;
     dueDate?: string;
     rubricId?: string;
-    requireUniqueId?: boolean;
 }
 
 export type SubmissionStatus = 'PENDING' | 'REVIEWING' | 'GRADED' | 'FAILED';
@@ -92,8 +89,6 @@ export interface Submission {
     assignmentId: string;
     publicUrl: string;
     fileKey: string;
-    studentUniqueId?: string;
-    attemptNumber?: number;
     student?: {
         name: string;
         email: string;
@@ -112,7 +107,5 @@ export interface CreateSubmissionRequest {
 
 export interface SubmitAssignmentRequest {
     assignmentId: string;
-    otp: string;
-    studentUniqueId?: string;
     fileKey: string;
 }

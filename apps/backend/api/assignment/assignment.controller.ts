@@ -2,7 +2,6 @@ import { Router, type Request, type Response } from "express";
 import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
 import { catchAsync } from "../utils/catchAsyncWrapper.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
-import generateNumericOTP from "../utils/generateOTP.js";
 import { AssignmentManager } from "./assignment.manager.js";
 import { createAssignmentSchema } from "../../validators/zod.js";
 
@@ -37,6 +36,13 @@ export class AssignmentController {
         );
 
         this.router.get("/:id", authMiddleware, catchAsync(this.getAssignment.bind(this)));
+
+        this.router.delete(
+            "/:id",
+            authMiddleware,
+            requireRole("TEACHER"),
+            catchAsync(this.deleteAssignment.bind(this))
+        );
     }
 
     private async createAssignment(req: Request, res: Response) {
@@ -46,11 +52,9 @@ export class AssignmentController {
         }
 
         const teacherId = req.user!.id;
-        const otp = generateNumericOTP(4);
 
         const assignment = await this._assignmentManager.createAssignment({
             ...parsed.data,
-            otp,
             teacherId,
         });
 
@@ -82,5 +86,17 @@ export class AssignmentController {
         }
 
         return res.status(200).json({ success: true, data: assignment });
+    }
+
+    private async deleteAssignment(req: Request, res: Response) {
+        const id = req.params.id as string;
+        if (!id) {
+            throw new AppError("Assignment ID is required", 400);
+        }
+
+        const teacherId = req.user!.id;
+        await this._assignmentManager.deleteAssignment(id, teacherId);
+
+        return res.status(200).json({ success: true, message: "Assignment deleted successfully" });
     }
 }

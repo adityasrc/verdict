@@ -8,12 +8,10 @@ import { getIO } from "../../ws/index.js";
 import { SubmissionManager } from "./submission.manager.js";
 import {
     createSubmissionSchema,
-    verifyOtpSchema,
     uploadUrlSchema,
     submissionActionSchema
 } from "../../validators/zod.js";
 import { Prisma } from "@prisma/client";
-import rateLimit from "express-rate-limit";
 
 export class SubmissionController {
     public router = Router();
@@ -26,17 +24,8 @@ export class SubmissionController {
     private initializeRoutes() {
         this.router.use(authMiddleware);
 
-        const otpLimiter = rateLimit({
-            windowMs: 15 * 60 * 1000, // 15 minutes
-            limit: 10,
-            message: "Too many OTP attempts, please try again after 15 minutes",
-            standardHeaders: 'draft-8',
-            legacyHeaders: false,
-        });
-
         this.router.post("/", requireRole("STUDENT"), catchAsync(this.createSubmission.bind(this)));
-        this.router.post("/verifyAssignmentOtp", requireRole("STUDENT"), otpLimiter, catchAsync(this.verifyAssignmentOtp.bind(this)));
-        this.router.get("/uploadUrl", requireRole("STUDENT"), otpLimiter, catchAsync(this.getUploadUrl.bind(this)));
+        this.router.get("/uploadUrl", requireRole("STUDENT"), catchAsync(this.getUploadUrl.bind(this)));
         this.router.get("/my-submissions", requireRole("STUDENT"), catchAsync(this.getMySubmissions.bind(this)));
 
         this.router.get("/assignment/:assignmentId", requireRole("TEACHER"), catchAsync(this.getAssignmentSubmissions.bind(this)));
@@ -53,22 +42,16 @@ export class SubmissionController {
         }
 
         const studentId = req.user!.id;
-        const { assignmentId, otp, studentUniqueId, fileKey } = parsed.data;
+        const { assignmentId, fileKey } = parsed.data;
 
-        const assignment = await this._submissionManager.verifyAssignmentOtp(assignmentId, otp);
-
+        const assignment = await prisma.assignment.findUnique({ where: { id: assignmentId } });
         if (!assignment) {
-            throw new AppError("Invalid assignment PIN", 403);
-        }
-
-        if (assignment.requireUniqueId && !studentUniqueId?.trim()) {
-            throw new AppError("University ID is required for this assignment", 400);
+            throw new AppError("Assignment not found", 404);
         }
 
         const submission = await this._submissionManager.createSubmission({
             studentId,
             assignmentId,
-            studentUniqueId,
             fileKey,
         });
 
@@ -129,11 +112,11 @@ export class SubmissionController {
         }
 
         const studentId = req.user!.id;
-        const { fileName, type, assignmentId, otp } = parsed.data;
-        const assignment = await this._submissionManager.verifyAssignmentOtp(assignmentId, otp);
+        const { fileName, type, assignmentId } = parsed.data;
 
+        const assignment = await prisma.assignment.findUnique({ where: { id: assignmentId } });
         if (!assignment) {
-            throw new AppError("Invalid assignment PIN", 403);
+            throw new AppError("Assignment not found", 404);
         }
 
         const { url, key } = await this._submissionManager.presignedUrl(
@@ -155,22 +138,6 @@ export class SubmissionController {
             : await this._submissionManager.getSubmissionsByStudent(userId);
 
         return res.status(200).json({ success: true, data: submissions });
-    }
-
-    public async verifyAssignmentOtp(req: Request, res: Response) {
-        const parsed = verifyOtpSchema.safeParse(req.body);
-        if (!parsed.success) {
-            throw new AppError("Validation failed", 400, parsed.error.format());
-        }
-
-        const { otp, assignmentId } = parsed.data;
-        const isVerified = await this._submissionManager.verifyAssignmentOtp(assignmentId, otp);
-
-        if (!isVerified) {
-            throw new AppError("Invalid OTP", 403);
-        }
-
-        return res.status(200).json({ success: true, data: { message: "verified" } });
     }
 
     public async allowResubmission(req: Request, res: Response) {
@@ -240,11 +207,6 @@ export class SubmissionController {
             io.to(`assignment:${updatedSubmission.assignmentId}`).emit("submission-progress", {
                 submissionId: updatedSubmission.id,
                 status: "PENDING",
-            });
-
-            io.to(`user:${updatedSubmission.studentId}`).emit("notification", {
-                type: "REEVALUATION_STARTED",
-                message: "Your submission is being re-evaluated",
             });
         } catch (socketError) {
             console.warn("Could not emit socket event:", socketError);

@@ -43,9 +43,8 @@ const AssignmentSubmissions: React.FC = () => {
 
     const handleExportToExcel = () => {
         if (!submissions.length) return;
-        const headers = ['ID', 'Name', 'Score'];
+        const headers = ['Name', 'Score'];
         const rows = submissions.map((s) => [
-            s.studentUniqueId || '',
             s.student?.name || 'Unknown',
             s.score !== null && s.score !== undefined ? s.score.toString() : '',
         ]);
@@ -169,15 +168,9 @@ const AssignmentSubmissions: React.FC = () => {
                                         <h3 className="font-headline-md text-headline-md font-bold uppercase">
                                             {submission.student?.name || 'Unknown Student'}
                                         </h3>
-                                        {submission.studentUniqueId && (
-                                            <span className="font-label-mono text-xs bg-secondary-fixed px-2 py-1 border-[2px] border-on-surface inline-block mt-2 font-bold uppercase">
-                                                ID: {submission.studentUniqueId}
-                                            </span>
-                                        )}
                                         <p className="font-label-mono text-[12px] text-on-surface-variant mt-2 uppercase">
                                             Submitted: {new Date(submission.submittedAt).toLocaleString()}
                                         </p>
-                                        <span className="font-label-mono text-[11px] bg-surface-variant px-2 py-0.5 border-[2px] border-on-surface mt-1 inline-block font-bold">Attempt: {submission.attemptNumber || 1}/3</span>
                                     </div>
                                 </div>
 
@@ -203,24 +196,23 @@ const AssignmentSubmissions: React.FC = () => {
                                     )}
                                 </div>
 
-                                {/* Action Buttons — fixed double-border bug with last:border-b-0 */}
+                                {/* Action Buttons */}
                                 <div className="flex flex-row sm:flex-col border-t-[4px] sm:border-t-0 sm:border-l-[4px] border-on-surface">
                                     <button
                                         onClick={() => setSelectedSubmission(submission)}
-                                        className="flex-1 px-5 py-4 bg-primary text-on-primary font-label-caps uppercase font-bold hover:bg-primary-container transition-colors duration-75 border-r-[4px] sm:border-r-0 sm:border-b-[4px] border-on-surface brutal-button"
+                                        className="flex-1 px-5 py-4 bg-surface text-on-surface font-label-caps uppercase font-bold hover:bg-surface-variant transition-colors duration-75 border-r-[4px] sm:border-r-0 sm:border-b-[4px] border-on-surface brutal-button"
                                     >
                                         Inspect
                                     </button>
                                     <button
                                         onClick={() => handleReEvaluate(submission.id)}
-                                        className="flex-1 px-5 py-4 bg-accent-yellow text-on-surface font-label-caps uppercase font-bold hover:opacity-80 transition-colors duration-75 border-r-[4px] sm:border-r-0 sm:border-b-[4px] border-on-surface brutal-button"
+                                        className="flex-1 px-5 py-4 bg-surface text-on-surface font-label-caps uppercase font-bold hover:bg-surface-variant transition-colors duration-75 border-r-[4px] sm:border-r-0 sm:border-b-[4px] border-on-surface brutal-button"
                                     >
                                         Re-eval
                                     </button>
                                     <button
                                         onClick={() => setConfirmDeleteId(submission.id)}
                                         className="flex-1 px-5 py-4 bg-error text-on-error font-label-caps uppercase font-bold hover:bg-red-700 transition-colors duration-75 brutal-button"
-                                        // NOTE: last button — no bottom border to prevent doubling
                                     >
                                         Delete
                                     </button>

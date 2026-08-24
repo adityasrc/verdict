@@ -60,17 +60,17 @@ export const assignmentApi = createApi({
         }),
         getUploadUrl: builder.query<
             { success: boolean; data: { url: string; key: string } },
-            { fileName: string; type: string; assignmentId: string; otp: string }
+            { fileName: string; type: string; assignmentId: string }
         >({
-            query: ({ fileName, type, assignmentId, otp }) => ({
+            query: ({ fileName, type, assignmentId }) => ({
                 url: '/submissions/uploadUrl',
                 method: 'GET',
-                params: { fileName, type, assignmentId, otp },
+                params: { fileName, type, assignmentId },
             }),
         }),
         submitAssignment: builder.mutation<
             { success: boolean; data: Submission },
-            { assignmentId: string; otp: string; studentUniqueId?: string; fileKey: string }
+            { assignmentId: string; fileKey: string }
         >({
             query: (body) => ({
                 url: '/submissions/',
@@ -78,13 +78,6 @@ export const assignmentApi = createApi({
                 body: body,
             }),
             invalidatesTags: ['Submission'],
-        }),
-        verifyOtp: builder.mutation<{ success: boolean }, { assignmentId: string; otp: string }>({
-            query: (body) => ({
-                url: '/submissions/verifyAssignmentOtp',
-                method: 'POST',
-                body: body,
-            }),
         }),
         reEvaluateSubmission: builder.mutation<{ success: boolean }, { submissionId: string }>({
             query: (body) => ({
@@ -102,6 +95,13 @@ export const assignmentApi = createApi({
             }),
             invalidatesTags: ['Submission'],
         }),
+        deleteAssignment: builder.mutation<{ success: boolean; message: string }, string>({
+            query: (id) => ({
+                url: `/assignments/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Assignment', 'Submission'],
+        }),
     }),
 });
 
@@ -116,7 +116,7 @@ export const {
     useGetAssignmentSubmissionsQuery,
     useLazyGetUploadUrlQuery,
     useSubmitAssignmentMutation,
-    useVerifyOtpMutation,
     useReEvaluateSubmissionMutation,
     useAllowResubmissionMutation,
+    useDeleteAssignmentMutation,
 } = assignmentApi;

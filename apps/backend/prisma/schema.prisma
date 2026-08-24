@@ -23,21 +23,18 @@ model User {
 }
 
 model Assignment {
-  id              String       @id @default(uuid())
-  title           String
-  description     String?
-  maxScore        Int          @default(100)
-  dueDate         DateTime?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  otp             String
-  teacherId       String
-  rubricId        String?
-  requireUniqueId Boolean      @default(false)
-  status          FormStatus   @default(DRAFT)
-  rubric          Rubric?      @relation(fields: [rubricId], references: [id])
-  teacher         User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  submissions     Submission[]
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  maxScore    Int          @default(100)
+  dueDate     DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  teacherId   String
+  rubricId    String?
+  rubric      Rubric?      @relation(fields: [rubricId], references: [id])
+  teacher     User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  submissions Submission[]
 
   @@index([teacherId])
   @@map("assignments")
@@ -58,21 +55,19 @@ model Rubric {
 }
 
 model Submission {
-  id              String           @id @default(uuid())
-  score           Int?
-  status          SubmissionStatus @default(PENDING)
-  submittedAt     DateTime         @default(now())
-  gradedAt        DateTime?
-  studentId       String
-  assignmentId    String
-  studentUniqueId String?
-  fileKey         String
-  feedback        Json?
-  attemptNumber   Int              @default(1)
-  assignment      Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student         User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id           String           @id @default(uuid())
+  score        Int?
+  status       SubmissionStatus @default(PENDING)
+  submittedAt  DateTime         @default(now())
+  gradedAt     DateTime?
+  studentId    String
+  assignmentId String
+  fileKey      String
+  feedback     Json?
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@unique([studentId, assignmentId, attemptNumber])
+  @@unique([studentId, assignmentId])
   @@index([studentId])
   @@index([assignmentId])
   @@map("submissions")
@@ -81,12 +76,6 @@ model Submission {
 enum UserRole {
   STUDENT
   TEACHER
-}
-
-enum FormStatus {
-  DRAFT
-  PUBLISHED
-  CLOSED
 }
 
 enum SubmissionStatus {
