@@ -3,7 +3,7 @@ services:
   # API + WebSocket server (web service)
   # ─────────────────────────────────────────
   - type: web
-    name: verdict-api
+    name: verdict
     runtime: docker
     dockerfilePath: apps/backend/Dockerfile.api
     dockerContext: apps/backend
