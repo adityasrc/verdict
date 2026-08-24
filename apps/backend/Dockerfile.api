@@ -43,8 +43,8 @@ RUN apt-get update && \
     apt-get install -y python3 python3-pip && \
     rm -rf /var/lib/apt/lists/*
 
-# 3. Install ONLY production dependencies (keeps image small)
-RUN pnpm install --prod
+# 3. Install dependencies, including Prisma CLI for client generation
+RUN pnpm install
 
 # 4. Copy Prisma files and generate client for the prod environment
 COPY --from=deps /app/prisma ./prisma
