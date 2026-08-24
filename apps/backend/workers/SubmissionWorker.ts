@@ -22,7 +22,7 @@ async function publishEvent(submissionId: string, event: object): Promise<void> 
     ]);
 }
 
-const worker = new Worker(
+export const submissionWorker = new Worker(
     "grade_assignment",
     async (job: Job) => {
         const { id, publicUrl, studentId, assignmentId } = job.data;
@@ -88,4 +88,4 @@ const worker = new Worker(
 );
 
 console.log("[Worker] Listening for jobs on 'grade_assignment' queue");
-worker.on("failed", (job, err) => console.error(`[Worker] Job ${job?.id} failed:`, err.message));
+submissionWorker.on("failed", (job, err) => console.error(`[Worker] Job ${job?.id} failed:`, err.message));

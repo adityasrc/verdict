@@ -5,6 +5,7 @@ import { initSocket } from "./ws/socket.js";
 import { redis } from "./utils/redis.js";
 import S3Client from "./utils/S3client.js";
 import { prisma } from "./utils/db.js";
+import type { Worker } from "bullmq";
 
 const ServerConfig = {
     httpPort: process.env.HTTP_PORT || 4000
@@ -13,6 +14,8 @@ const ServerConfig = {
 const httpServer = http.createServer(app); // raw http server for express
 
 initSocket(httpServer);
+
+let embeddedSubmissionWorker: Worker | null = null;
 
 const startServer = async () => {
 
@@ -39,6 +42,12 @@ const startServer = async () => {
         }
     }
 
+    if (process.env.RUN_WORKER_IN_API === "true") {
+        const { submissionWorker } = await import("./workers/SubmissionWorker.js");
+        embeddedSubmissionWorker = submissionWorker;
+        console.log("Submission worker started inside API process");
+    }
+
     httpServer.listen(Number(ServerConfig.httpPort), "0.0.0.0", () => { // accept req from any ip address
         console.log(`Server is running on port ${ServerConfig.httpPort}`);
     });
@@ -53,6 +62,11 @@ const exitHandler = async () => {
         console.info("HTTP server closed.");
 
         try {
+            if (embeddedSubmissionWorker) {
+                await embeddedSubmissionWorker.close();
+                console.info("Submission worker closed.");
+            }
+
             await prisma.$disconnect();
             console.info("Prisma disconnected.");
 
