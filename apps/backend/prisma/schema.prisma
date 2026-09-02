@@ -12,7 +12,7 @@ model User {
   email       String       @unique
   password    String
   name        String
-  role        UserRole     @default(TEACHER)
+  role        UserRole     @default(STUDENT)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assignments Assignment[]
@@ -28,6 +28,7 @@ model Assignment {
   description String?
   maxScore    Int          @default(100)
   dueDate     DateTime?
+  accessPin   String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   teacherId   String
@@ -81,7 +82,6 @@ enum UserRole {
 enum SubmissionStatus {
   PENDING
   GRADED
-  REVIEWING
   EVALUATING
   FAILED
 }
