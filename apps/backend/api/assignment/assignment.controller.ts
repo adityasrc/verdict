@@ -1,9 +1,10 @@
 import { Router, type Request, type Response } from "express";
 import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
-import { catchAsync } from "../utils/catchAsyncWrapper.js";
+import { catchAsync } from "../middleware/catchAsync.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
 import { AssignmentManager } from "./assignment.manager.js";
 import { createAssignmentSchema } from "../../validators/zod.js";
+import { z } from "zod";
 
 export class AssignmentController {
     public router = Router();
@@ -69,14 +70,15 @@ export class AssignmentController {
     }
 
     private async getStudentAssignments(req: Request, res: Response) {
-        const assignments = await this._assignmentManager.getAllAssignments();
+        const assignments = await this._assignmentManager.getAllStudentAssignments();
         return res.status(200).json({ success: true, data: assignments });
     }
 
     private async getAssignment(req: Request, res: Response) {
         const id = req.params.id as string;
-        if (!id) {
-            throw new AppError("Assignment ID is required", 400);
+        const parsed = z.uuid().safeParse(id);
+        if (!parsed.success) {
+            throw new AppError("Invalid Assignment ID format", 400);
         }
 
         const assignment = await this._assignmentManager.getAssignmentById(id);

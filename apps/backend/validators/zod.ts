@@ -1,14 +1,14 @@
 import { z } from "zod";
 
 export const registerSchema = z.object({
-    email: z.string().email(),
+    email: z.email().trim().toLowerCase(),
     password: z.string().min(6),
-    name: z.string().min(2),
+    name: z.string().trim().min(2),
     role: z.enum(["STUDENT", "TEACHER"]).default("STUDENT"),
 });
 
 export const loginSchema = z.object({
-    email: z.string().email(),
+    email: z.email().trim().toLowerCase(),
     password: z.string().min(1),
 });
 
@@ -17,7 +17,7 @@ export const createAssignmentSchema = z.object({
     description: z.string().optional(),
     maxScore: z.number().int().positive().default(100),
     dueDate: z.coerce.date().optional(),
-    rubricId: z.string().uuid().optional(),
+    rubricId: z.uuid().optional(),
 });
 
 export const createRubricSchema = z.object({
@@ -39,13 +39,14 @@ export const createSubmissionSchema = z.object({
 });
 
 export const uploadUrlSchema = z.object({
-    fileName: z.string().min(1),
+    fileName: z.literal("application/pdf"),
     type: z.string().min(1),
-    assignmentId: z.string().min(1),
+    assignmentId: z.uuid(),
+    pin: z.string().length(4).optional(),
 });
 
 export const submissionActionSchema = z.object({
-    submissionId: z.string().min(1),
+    submissionId: z.uuid(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
