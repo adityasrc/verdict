@@ -32,11 +32,15 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-export const requireRole = (...roles: string[]) => {
+export const requireRole = (...roles: ("STUDENT" | "TEACHER")[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
         const userRole = req.user?.role;
 
-        if (!userRole || !roles.includes(userRole)) {
+        if (!userRole) {
+            return next(new AppError("Authentication required", 401));
+        }
+
+        if (!roles.includes(userRole as "STUDENT" | "TEACHER")) {
             return next(new AppError("Insufficient permissions", 403));
         }
 

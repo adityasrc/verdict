@@ -1,3 +1,4 @@
+import { randomInt } from "crypto";
 import { prisma } from "../../utils/db.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
 import type { CreateAssignmentInput } from "../../validators/zod.js";
@@ -16,8 +17,11 @@ export class AssignmentManager {
             }
         }
 
+        // auto-generate 4-digit pin
+        const accessPin = String(randomInt(1000, 9999));
+
         return prisma.assignment.create({
-            data,
+            data: { ...data, accessPin },
         });
     }
 
@@ -36,7 +40,16 @@ export class AssignmentManager {
     async getAssignmentById(id: string) {
         return prisma.assignment.findUnique({
             where: { id },
-            include: {
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                maxScore: true,
+                dueDate: true,
+                createdAt: true,
+                updatedAt: true,
+                teacherId: true,
+                rubricId: true,
                 teacher: {
                     select: {
                         name: true,
@@ -48,10 +61,19 @@ export class AssignmentManager {
         });
     }
 
-    async getAllAssignments() {
+    async getAllStudentAssignments() {
         return prisma.assignment.findMany({
             orderBy: { createdAt: "desc" },
-            include: {
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                maxScore: true,
+                dueDate: true,
+                createdAt: true,
+                updatedAt: true,
+                teacherId: true,
+                rubricId: true,
                 rubric: true,
             },
         });

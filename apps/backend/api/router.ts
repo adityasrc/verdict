@@ -16,8 +16,5 @@ router.use("/assignments", assignmentCtrl.router);
 router.use("/submissions", submissionCtrl.router);
 router.use("/rubrics", rubricCtrl.router);
 
-router.get("/health", (req, res) => {
-    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
-});
 
 export default router;
