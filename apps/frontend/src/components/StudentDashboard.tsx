@@ -22,21 +22,15 @@ export const StudentDashboard = () => {
     const navigate = useNavigate();
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
 
-    // Fetch all assignments this student can see
     const { data: assignmentsData } = useGetStudentAssignmentsQuery();
-    // Fetch this student's own submission history
     const { data: submissionsData } = useGetRecentSubmissionsQuery();
 
     const allAssignments = assignmentsData?.data || [];
     const recentSubmissions = submissionsData?.data || [];
 
-    // A student's submitted assignment IDs (to mark which are done)
     const submittedAssignmentIds = new Set(recentSubmissions.map((s) => s.assignmentId));
-
-    // Assignments not yet submitted
     const pendingAssignments = allAssignments.filter((a) => !submittedAssignmentIds.has(a.id));
 
-    // Stats — computed over all of the student's submissions, not a capped subset
     const totalSubmissions = recentSubmissions.length;
     const gradedSubmissions = recentSubmissions.filter((s) => s.status === 'GRADED' && s.score != null);
     const averageScore = gradedSubmissions.length > 0

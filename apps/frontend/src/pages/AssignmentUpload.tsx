@@ -17,25 +17,15 @@ const AssignmentUpload = () => {
     const navigate = useNavigate();
     const terminalEndRef = useRef<HTMLDivElement>(null);
 
-    // File state
     const [file, setFile] = useState<File | null>(null);
     const [fileError, setFileError] = useState('');
-
-    // PIN state
     const [pin, setPin] = useState('');
-
-    // Form state
     const [errorMessage, setErrorMessage] = useState('');
     const [isUploading, setIsUploading] = useState(false);
-
-    // Pipeline state
     const [progressLogs, setProgressLogs] = useState<string[]>(['> Grading engine ready.']);
     const [gradingStatus, setGradingStatus] = useState<GradingStatus>('idle');
-
-
     const [watchingSubmissionId, setWatchingSubmissionId] = useState<string | null>(null);
 
-    // API hooks
     const [getUploadUrl] = useLazyGetUploadUrlQuery();
     const { data: assignmentData, isLoading } = useGetAssignmentQuery(assignmentId ?? '', { skip: !assignmentId });
     const [markSubmission] = useSubmitAssignmentMutation();
