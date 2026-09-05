@@ -93,10 +93,14 @@ export const TeacherDashboard: React.FC = () => {
     const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
     const [deleteAssignment, { isLoading: isDeleting }] = useDeleteAssignmentMutation();
 
-    const handleShareLink = async (assignmentId: string) => {
+    const handleShareLink = async (assignmentId: string, accessPin?: string | null) => {
         const link = `${window.location.origin}/upload/${assignmentId}`;
-        try { await navigator.clipboard.writeText(link); toast.success('Link copied'); }
-        catch { window.prompt('Copy this link manually:', link); }
+        // Include PIN in clipboard text so teacher can share both at once
+        const shareText = accessPin
+            ? `Assignment Link: ${link}\nAccess PIN: ${accessPin}`
+            : link;
+        try { await navigator.clipboard.writeText(shareText); toast.success('Link + PIN copied to clipboard'); }
+        catch { window.prompt('Copy this manually:', shareText); }
     };
 
     const handleDeleteAssignment = async () => {
@@ -198,10 +202,19 @@ export const TeacherDashboard: React.FC = () => {
                                     </div>
                                     <div className="p-6">
                                         <h4 className="font-headline-md text-[24px] font-black mb-2 uppercase tracking-tighter">{assignment.title}</h4>
-                                        <div className="flex justify-between font-label-mono text-[12px] text-on-surface-variant mb-6 font-bold uppercase">
+                                        <div className="flex justify-between font-label-mono text-[12px] text-on-surface-variant mb-4 font-bold uppercase">
                                             <span>Submissions: {assignment._count?.submissions || 0}</span>
                                             <span>Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'Open'}</span>
                                         </div>
+
+                                        {/* PIN display — teachers share this with students out-of-band */}
+                                        {assignment.accessPin && (
+                                            <div className="bg-surface-variant border-[2px] border-on-surface px-4 py-2 mb-4 flex items-center justify-between">
+                                                <span className="font-label-caps text-[11px] uppercase tracking-widest font-bold text-on-surface-variant">Access PIN</span>
+                                                <span className="font-label-mono font-black tracking-[0.3em] text-xl text-on-surface">{assignment.accessPin}</span>
+                                            </div>
+                                        )}
+
                                         <div className="flex gap-3">
                                             <Button
                                                 variant="brutal-ghost"
@@ -213,8 +226,8 @@ export const TeacherDashboard: React.FC = () => {
                                             <Button
                                                 variant="brutal-ghost"
                                                 className="px-4"
-                                                onClick={() => handleShareLink(assignment.id)}
-                                                aria-label="Copy share link"
+                                                onClick={() => handleShareLink(assignment.id, assignment.accessPin)}
+                                                aria-label="Copy share link and PIN"
                                             >
                                                 <span className="material-symbols-outlined text-[20px]">share</span>
                                             </Button>

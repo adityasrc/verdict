@@ -185,8 +185,8 @@ const AssignmentSubmissions: React.FC = () => {
                                             [Grading Failed]
                                         </span>
                                     ) : (
-                                        <span className={`font-label-mono font-bold uppercase px-3 py-1 border-[2px] border-on-surface brutal-shadow ${submission.status === 'GRADED' ? 'bg-secondary text-on-secondary' : submission.status === 'REVIEWING' ? 'bg-accent-yellow text-on-surface' : 'bg-surface text-on-surface'}`}>
-                                            {submission.status === 'GRADED' ? 'Evaluated' : submission.status === 'REVIEWING' ? 'Reviewing' : 'Pending'}
+                                        <span className={`font-label-mono font-bold uppercase px-3 py-1 border-[2px] border-on-surface brutal-shadow ${submission.status === 'GRADED' ? 'bg-secondary text-on-secondary' : submission.status === 'EVALUATING' ? 'bg-accent-yellow text-on-surface' : submission.status === 'FAILED' ? 'bg-error text-on-error' : 'bg-surface text-on-surface'}`}>
+                                            {submission.status === 'GRADED' ? 'Evaluated' : submission.status === 'EVALUATING' ? 'Evaluating' : submission.status === 'FAILED' ? 'Failed' : 'Pending'}
                                         </span>
                                     )}
                                     {submission.score !== null && (
@@ -274,21 +274,21 @@ const AssignmentSubmissions: React.FC = () => {
                                     >
                                         Delete &amp; Allow Resubmission
                                     </Button>
-                                    <a
-                                        href={selectedSubmission.publicUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="block w-full py-2 text-center text-sm border-[4px] border-on-surface bg-primary text-on-primary font-label-caps font-bold uppercase brutal-shadow brutal-button hover:bg-primary-container transition-colors duration-75"
-                                    >
-                                        View Submitted PDF
-                                    </a>
+                                    {/* The View Submitted PDF link was removed because publicUrl is no longer returned by the API. */}
+                                    {/* A separate presigned GET URL would be required. */}
                                 </div>
                             </div>
 
                             <div>
                                 <h4 className="font-label-caps text-label-caps uppercase font-bold mb-2">AI Feedback</h4>
                                 <div className="bg-surface-variant border-[4px] border-on-surface p-6 prose max-w-none text-on-surface brutal-shadow font-body-md">
-                                    <ReactMarkdown>{selectedSubmission.feedback || 'No feedback available.'}</ReactMarkdown>
+                                    <ReactMarkdown>
+                                        {typeof selectedSubmission.feedback === 'string'
+                                            ? selectedSubmission.feedback
+                                            : selectedSubmission.feedback
+                                                ? (selectedSubmission.feedback as any).feedback || JSON.stringify(selectedSubmission.feedback, null, 2)
+                                                : 'No feedback available.'}
+                                    </ReactMarkdown>
                                 </div>
                             </div>
                         </div>

@@ -60,12 +60,12 @@ export const assignmentApi = createApi({
         }),
         getUploadUrl: builder.query<
             { success: boolean; data: { url: string; key: string } },
-            { fileName: string; type: string; assignmentId: string }
+            { fileName: string; type: string; assignmentId: string; pin?: string }
         >({
-            query: ({ fileName, type, assignmentId }) => ({
+            query: ({ fileName, type, assignmentId, pin }) => ({
                 url: '/submissions/uploadUrl',
                 method: 'GET',
-                params: { fileName, type, assignmentId },
+                params: { fileName, type, assignmentId, ...(pin ? { pin } : {}) },
             }),
         }),
         submitAssignment: builder.mutation<

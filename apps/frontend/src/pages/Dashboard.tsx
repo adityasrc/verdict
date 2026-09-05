@@ -1,10 +1,9 @@
-import React from 'react';
 import { useAppSelector } from '../app/store';
 import { selectCurrentUser } from '../features/auth/authSlice';
 import { TeacherDashboard } from '../components/TeacherDashboard';
 import { StudentDashboard } from '../components/StudentDashboard';
 
-const Dashboard: React.FC = () => {
+const Dashboard = () => {
   const user = useAppSelector(selectCurrentUser);
   return user?.role === 'TEACHER' ? <TeacherDashboard /> : <StudentDashboard />;
 };

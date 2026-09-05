@@ -35,7 +35,7 @@ const startServer = async () => {
         console.warn("S3/R2 not configured. File uploads are temporarily disabled.");
     } else {
         try {
-            await S3Client.list();
+            await S3Client.checkHealth();
             console.log("S3 connection established");
         } catch (error) {
             console.warn("S3 connection failed :", error);

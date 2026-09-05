@@ -9,7 +9,7 @@ import { Label } from "../components/ui/label";
 import { toast } from "sonner";
 import { parseApiError } from "../lib/errors";
 
-const Signup: React.FC = () => {
+const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -19,7 +19,7 @@ const Signup: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     try {
       const response = await signup({ email, password, name, role }).unwrap();
@@ -37,11 +37,10 @@ const Signup: React.FC = () => {
   };
 
   const getRoleButtonClass = (buttonRole: "STUDENT" | "TEACHER") => {
-    return `flex-1 py-3 border-[4px] font-label-caps uppercase font-bold transition-all brutal-button ${
-      role === buttonRole
-        ? "border-on-surface bg-on-surface text-surface brutal-shadow"
-        : "border-on-surface bg-transparent text-on-surface hover:bg-surface-variant"
-    }`;
+    return `flex-1 py-3 border-[4px] font-label-caps uppercase font-bold transition-all brutal-button ${role === buttonRole
+      ? "border-on-surface bg-on-surface text-surface brutal-shadow"
+      : "border-on-surface bg-transparent text-on-surface hover:bg-surface-variant"
+      }`;
   };
 
   return (
@@ -85,7 +84,7 @@ const Signup: React.FC = () => {
               Create account
             </h2>
             <p className="text-on-surface-variant text-base font-bold uppercase">
-              Join the workspace.
+              Start grading smarter.
             </p>
           </div>
 
@@ -114,7 +113,7 @@ const Signup: React.FC = () => {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Jane Doe"
+              placeholder="Elon Musk"
               required
               className="h-14 font-label-mono mb-6"
             />
@@ -125,7 +124,7 @@ const Signup: React.FC = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
+              placeholder="elonmusk@mail.com"
               required
               className="h-14 font-label-mono mb-6"
             />
@@ -137,7 +136,7 @@ const Signup: React.FC = () => {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="************"
                 required
                 className="h-14 pr-12 font-label-mono"
               />
@@ -160,7 +159,6 @@ const Signup: React.FC = () => {
               disabled={isLoading}
               className={`w-full mt-8 h-16 text-lg flex items-center justify-center gap-2 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isLoading && <span className="material-symbols-outlined animate-spin text-[20px]">refresh</span>}
               {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>

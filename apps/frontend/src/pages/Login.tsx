@@ -9,7 +9,7 @@ import { Label } from "../components/ui/label";
 import { parseApiError } from "../lib/errors";
 import { toast } from "sonner";
 
-const Login: React.FC = () => {
+const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,7 +17,7 @@ const Login: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     try {
       const response = await login({ email, password }).unwrap();
@@ -75,7 +75,7 @@ const Login: React.FC = () => {
               Sign In
             </h2>
             <p className="text-on-surface-variant text-base font-bold uppercase">
-              Access your grading workspace.
+              Welcome back, please enter your details
             </p>
           </div>
 
@@ -129,7 +129,7 @@ const Login: React.FC = () => {
             <p className="font-body-md font-bold text-on-surface uppercase text-sm">
               Don't have an account?
               <Link to="/signup" className="text-primary hover:text-primary-container font-black ml-2 transition-colors">
-                CREATE ACCOUNT
+                SIGN UP
               </Link>
             </p>
           </div>
