@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../app/store';
 import { Button } from './ui/button';
-import { useGetRecentSubmissionsQuery } from '../features/assignments/assignmentApi';
+import {
+    useGetRecentSubmissionsQuery,
+    useGetStudentAssignmentsQuery,
+} from '../features/assignments/assignmentApi';
 import { SubmissionFeedbackModal } from './modals/SubmissionFeedbackModal';
 import { selectCurrentUser } from '../features/auth/authSlice';
 import type { Submission } from '../types';
@@ -13,21 +17,33 @@ function getGreeting(): string {
     return 'Good Evening';
 }
 
-export const StudentDashboard: React.FC = () => {
+export const StudentDashboard = () => {
     const user = useAppSelector(selectCurrentUser);
+    const navigate = useNavigate();
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+
+    // Fetch all assignments this student can see
+    const { data: assignmentsData } = useGetStudentAssignmentsQuery();
+    // Fetch this student's own submission history
     const { data: submissionsData } = useGetRecentSubmissionsQuery();
 
+    const allAssignments = assignmentsData?.data || [];
     const recentSubmissions = submissionsData?.data || [];
-    const pendingCount = recentSubmissions.filter((s) => s.status === 'PENDING').length;
-    
+
+    // A student's submitted assignment IDs (to mark which are done)
+    const submittedAssignmentIds = new Set(recentSubmissions.map((s) => s.assignmentId));
+
+    // Assignments not yet submitted
+    const pendingAssignments = allAssignments.filter((a) => !submittedAssignmentIds.has(a.id));
+
+    // Stats — computed over all of the student's submissions, not a capped subset
     const totalSubmissions = recentSubmissions.length;
-    const gradedSubmissions = recentSubmissions.filter(s => s.status === 'GRADED' && s.score !== null);
-    const averageScore = gradedSubmissions.length > 0 
-        ? Math.round(gradedSubmissions.reduce((acc, s) => acc + (s.score || 0), 0) / gradedSubmissions.length) 
+    const gradedSubmissions = recentSubmissions.filter((s) => s.status === 'GRADED' && s.score != null);
+    const averageScore = gradedSubmissions.length > 0
+        ? Math.round(gradedSubmissions.reduce((acc, s) => acc + (s.score ?? 0), 0) / gradedSubmissions.length)
         : 0;
-    const highestScore = gradedSubmissions.length > 0 
-        ? Math.max(...gradedSubmissions.map(s => s.score || 0)) 
+    const highestScore = gradedSubmissions.length > 0
+        ? Math.max(...gradedSubmissions.map((s) => s.score ?? 0))
         : 0;
 
     return (
@@ -39,7 +55,9 @@ export const StudentDashboard: React.FC = () => {
                             {getGreeting()}, <span className="text-primary">{user?.name || user?.email?.split('@')[0] || 'Student'}!</span>
                         </h2>
                         <p className="font-body-lg text-lg text-on-surface-variant font-bold max-w-md relative z-10 uppercase tracking-widest">
-                            You have {pendingCount} pending assignment{pendingCount !== 1 ? 's' : ''}.
+                            {pendingAssignments.length > 0
+                                ? `You have ${pendingAssignments.length} assignment${pendingAssignments.length !== 1 ? 's' : ''} to submit.`
+                                : 'All assignments submitted. Well done!'}
                         </p>
                     </div>
                     <div className="lg:w-1/3 bg-surface-variant border-[4px] border-on-surface brutal-shadow flex flex-col">
@@ -48,11 +66,14 @@ export const StudentDashboard: React.FC = () => {
                             <span className="material-symbols-outlined text-surface">info</span>
                         </div>
                         <div className="flex-1 p-8 flex flex-col justify-center items-center text-center">
-                            <span className={`material-symbols-outlined text-[64px] mb-4 text-on-surface ${pendingCount > 0 ? 'animate-spin' : ''}`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                                {pendingCount === 0 ? 'check_circle' : 'sync'}
+                            <span
+                                className={`material-symbols-outlined text-[64px] mb-4 text-on-surface ${pendingAssignments.length > 0 ? 'animate-spin' : ''}`}
+                                style={{ fontVariationSettings: "'FILL' 1" }}
+                            >
+                                {pendingAssignments.length === 0 ? 'check_circle' : 'sync'}
                             </span>
                             <div className="font-headline-md text-3xl text-on-surface font-black uppercase tracking-tighter">
-                                {pendingCount === 0 ? 'All Caught Up' : 'Grading in Progress'}
+                                {pendingAssignments.length === 0 ? 'All Caught Up' : 'Submissions Pending'}
                             </div>
                         </div>
                     </div>
@@ -74,6 +95,38 @@ export const StudentDashboard: React.FC = () => {
                 </div>
             </section>
 
+            {/* P0 FIX: Available Assignments — previously missing from student dashboard.
+                Students had no way to discover assignments without a direct teacher-shared link. */}
+            {pendingAssignments.length > 0 && (
+                <section className="mb-12">
+                    <div className="flex justify-between items-end mb-6 border-b-[4px] border-on-surface pb-2">
+                        <h3 className="font-headline-md text-2xl font-black uppercase tracking-tight text-on-surface">Open Assignments</h3>
+                    </div>
+                    <div className="space-y-4">
+                        {pendingAssignments.map((assignment) => (
+                            <div key={assignment.id} className="bg-surface border-[4px] border-on-surface brutal-shadow p-4 flex justify-between items-center">
+                                <div>
+                                    <p className="font-headline-md font-black uppercase tracking-tighter text-on-surface">{assignment.title}</p>
+                                    <p className="font-label-mono text-xs uppercase text-on-surface-variant font-bold">
+                                        {assignment.dueDate
+                                            ? `Due: ${new Date(assignment.dueDate).toLocaleDateString()}`
+                                            : 'No due date'}
+                                        {assignment.maxScore ? ` · ${assignment.maxScore} pts` : ''}
+                                    </p>
+                                </div>
+                                <Button
+                                    variant="brutal"
+                                    size="sm"
+                                    onClick={() => navigate(`/upload/${assignment.id}`)}
+                                >
+                                    Submit PDF
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
                 <section>
                     <div className="flex justify-between items-end mb-6 border-b-[4px] border-on-surface pb-2">
@@ -86,14 +139,14 @@ export const StudentDashboard: React.FC = () => {
                                     <span>{sub.assignment?.title}</span>
                                     <span className="material-symbols-outlined text-[16px] text-surface">science</span>
                                 </div>
-                                
+
                                 {sub.status === 'GRADED' ? (
                                     <div className="p-6 flex-1 flex flex-col justify-center items-center bg-secondary-fixed border-b-[4px] border-on-surface">
                                         <div className="font-headline-xl text-[64px] font-black text-on-surface leading-none mb-2 tracking-tighter">
                                             {sub.score}<span className="text-[32px] font-black text-on-surface-variant">/{sub.assignment?.maxScore || 100}</span>
                                         </div>
                                         <div className="font-label-mono text-xs font-bold bg-surface border-[4px] border-on-surface px-4 py-1.5 brutal-shadow uppercase">
-                                            {sub.score! >= 90 ? 'Excellent' : 'Graded'}
+                                            {(sub.score ?? 0) >= 90 ? 'Excellent' : 'Graded'}
                                         </div>
                                     </div>
                                 ) : sub.status === 'FAILED' ? (
@@ -102,10 +155,10 @@ export const StudentDashboard: React.FC = () => {
                                             STATUS: FAILED
                                         </div>
                                     </div>
-                                ) : (sub.status === 'PENDING' || sub.status === 'REVIEWING') ? (
+                                ) : (sub.status === 'PENDING' || sub.status === 'EVALUATING') ? (
                                     <div className="p-12 flex-1 flex flex-col justify-center items-center bg-surface-variant border-b-[4px] border-on-surface">
                                         <div className="font-headline-md text-2xl font-black text-on-surface uppercase tracking-widest">
-                                            STATUS: PROCESSING
+                                            {sub.status === 'EVALUATING' ? 'AI EVALUATING...' : 'STATUS: PROCESSING'}
                                         </div>
                                     </div>
                                 ) : null}

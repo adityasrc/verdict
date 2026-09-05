@@ -1,6 +1,3 @@
--- Phase 1 + Phase 2 schema simplification
--- Removes: otp, requireUniqueId, studentUniqueId, status (FormStatus), attemptNumber
--- Replaces: compound unique [studentId, assignmentId, attemptNumber] → simple unique [studentId, assignmentId]
 
 -- Drop the compound unique index involving attemptNumber
 DROP INDEX IF EXISTS "submissions_studentId_assignmentId_attemptNumber_key";

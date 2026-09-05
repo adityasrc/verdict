@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
-import { catchAsync } from "../utils/catchAsyncWrapper.js";
+import { catchAsync } from "../middleware/catchAsync.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
 import { prisma } from "../../utils/db.js";
 import { submissionQueue } from "../../utils/queue.js";
@@ -38,8 +38,9 @@ export class SubmissionController {
     private async createSubmission(req: Request, res: Response) {
         const parsed = createSubmissionSchema.safeParse(req.body);
         if (!parsed.success) {
-            throw new AppError("Validation failed", 400, parsed.error.format());
+            throw new AppError("Validation failed", 400, parsed.error.issues);
         }
+
 
         const studentId = req.user!.id;
         const { assignmentId, fileKey } = parsed.data;
@@ -56,12 +57,7 @@ export class SubmissionController {
         });
 
         const publicUrl = `${process.env.PUBLIC_ENDPOINT}/${submission.fileKey}`;
-        await submissionQueue.add("grade_assignment", { ...submission, publicUrl }, {
-            attempts: 3,
-            backoff: { type: "exponential", delay: 5000 },
-            removeOnComplete: true,
-            removeOnFail: false,
-        });
+        await submissionQueue.add("grade_assignment", { ...submission, publicUrl });
 
         try {
             const io = getIO();
@@ -108,15 +104,21 @@ export class SubmissionController {
     private async getUploadUrl(req: Request, res: Response) {
         const parsed = uploadUrlSchema.safeParse(req.query);
         if (!parsed.success) {
-            throw new AppError("Validation failed", 400, parsed.error.format());
+            throw new AppError("Validation failed", 400, parsed.error.issues);
         }
 
         const studentId = req.user!.id;
-        const { fileName, type, assignmentId } = parsed.data;
+        const { fileName, type, assignmentId, pin } = parsed.data;
 
         const assignment = await prisma.assignment.findUnique({ where: { id: assignmentId } });
         if (!assignment) {
             throw new AppError("Assignment not found", 404);
+        }
+
+        if (assignment.accessPin !== null) {
+            if (!pin || pin !== assignment.accessPin) {
+                throw new AppError("Invalid PIN.", 403);
+            }
         }
 
         const { url, key } = await this._submissionManager.presignedUrl(
@@ -143,7 +145,7 @@ export class SubmissionController {
     public async allowResubmission(req: Request, res: Response) {
         const parsed = submissionActionSchema.safeParse(req.body);
         if (!parsed.success) {
-            throw new AppError("Validation failed", 400, parsed.error.format());
+            throw new AppError("Validation failed", 400, parsed.error.issues);
         }
 
         const teacherId = req.user!.id;
@@ -167,7 +169,7 @@ export class SubmissionController {
     public async allowRevaluate(req: Request, res: Response) {
         const parsed = submissionActionSchema.safeParse(req.body);
         if (!parsed.success) {
-            throw new AppError("Validation failed", 400, parsed.error.format());
+            throw new AppError("Validation failed", 400, parsed.error.issues);
         }
 
         const teacherId = req.user!.id;
@@ -194,12 +196,7 @@ export class SubmissionController {
         });
 
         const publicUrl = `${process.env.PUBLIC_ENDPOINT}/${updatedSubmission.fileKey}`;
-        await submissionQueue.add("grade_assignment", { ...updatedSubmission, publicUrl }, {
-            attempts: 3,
-            backoff: { type: "exponential", delay: 5000 },
-            removeOnComplete: true,
-            removeOnFail: false,
-        });
+        await submissionQueue.add("grade_assignment", { ...updatedSubmission, publicUrl });
 
         try {
             const io = getIO();

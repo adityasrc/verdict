@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
-import { catchAsync } from "../utils/catchAsyncWrapper.js";
+import { catchAsync } from "../middleware/catchAsync.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
 import { RubricManager } from "./rubric.manager.js";
 import { createRubricSchema, updateRubricSchema } from "../../validators/zod.js";

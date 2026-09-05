@@ -60,6 +60,9 @@ export interface Assignment {
     teacherId: string;
     createdAt: string;
     updatedAt: string;
+    // accessPin is only present when the teacher fetches their own assignments.
+    // The student-facing API route intentionally omits this field.
+    accessPin?: string | null;
     _count?: {
         submissions: number;
     };
@@ -75,19 +78,30 @@ export interface CreateAssignmentRequest {
     rubricId?: string;
 }
 
-export type SubmissionStatus = 'PENDING' | 'REVIEWING' | 'GRADED' | 'FAILED';
+// EVALUATING added — this is the status emitted by the worker during AI processing.
+// Was missing from types, causing UI to not handle this state correctly.
+export type SubmissionStatus = 'PENDING' | 'EVALUATING' | 'GRADED' | 'FAILED';
+
+// Structured JSON object that Gemini returns inside the feedback field.
+export interface GeminiFeedback {
+    score: number;
+    strengths: string[];
+    weaknesses: string[];
+    feedback: string;
+    summary: string;
+}
 
 export interface Submission {
     id: string;
-    content: string;
-    score?: number;
-    feedback?: string;
+    // content and publicUrl removed — these fields do not exist in the Prisma schema.
+    // content was a phantom field. publicUrl is derived at runtime in the worker, not stored.
+    score?: number | null;
+    feedback?: GeminiFeedback | string | null; // Gemini returns structured JSON stored as Prisma Json type
     status: SubmissionStatus;
     submittedAt: string;
-    gradedAt?: string;
+    gradedAt?: string | null;
     studentId: string;
     assignmentId: string;
-    publicUrl: string;
     fileKey: string;
     student?: {
         name: string;
@@ -101,7 +115,7 @@ export interface Submission {
 }
 
 export interface CreateSubmissionRequest {
-    content?: string;
+    // content removed — backend does not accept this field
     assignmentId: string;
 }
 

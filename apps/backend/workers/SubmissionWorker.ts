@@ -1,10 +1,11 @@
 import { Job, Worker } from "bullmq";
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { SubmissionManager } from "../api/submission/submission.manager.js";
 import { prisma } from "../utils/db.js";
 import { redis } from "../utils/redis.js";
+import { SubmissionJobData } from "../utils/queue.js";
 import { PythonService } from "./python.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,35 +19,37 @@ async function publishEvent(submissionId: string, event: object): Promise<void> 
     const cacheKey = `submission_events:${submissionId}`;
     await Promise.all([
         redis.publish(`submission:${submissionId}`, payload),
-        redis.rpush(cacheKey, payload).then(() => redis.expire(cacheKey, 7200)),
+        redis.rpush(cacheKey, payload).then(() => redis.expire(cacheKey, 7200)), // 2 hours
     ]);
 }
 
-export const submissionWorker = new Worker(
+export const submissionWorker = new Worker<SubmissionJobData>(
     "grade_assignment",
-    async (job: Job) => {
+    async (job: Job<SubmissionJobData>) => {
         const { id, publicUrl, studentId, assignmentId } = job.data;
         console.log(`[Worker] Processing ${id}`);
 
-        await prisma.submission.update({ where: { id }, data: { status: "EVALUATING" } });
-        await publishEvent(id, { step: "submission_started", percent: 5, assignmentId, studentId });
-
         const tmpDir = path.join(__dirname, "..", "tmp");
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+        await fs.mkdir(tmpDir, { recursive: true });
 
         const pdfPath = path.join(tmpDir, `submission_${id}.pdf`);
         const imagesDir = path.join(tmpDir, "extracted_images", id);
 
         try {
+            await prisma.submission.update({ where: { id }, data: { status: "EVALUATING" } });
+            await publishEvent(id, { step: "submission_started", assignmentId, studentId });
 
-            await publishEvent(id, { step: "downloading_pdf", percent: 5, assignmentId, studentId });
-            const buffer = await fetch(publicUrl, { signal: AbortSignal.timeout(30000) }).then(res => res.arrayBuffer());
-            fs.writeFileSync(pdfPath, Buffer.from(buffer));
-            await publishEvent(id, { step: "pdf_downloaded", percent: 10, assignmentId, studentId });
+            await publishEvent(id, { step: "downloading_pdf", assignmentId, studentId });
+            const response = await fetch(publicUrl, { signal: AbortSignal.timeout(30000) });
+            if (!response.ok) {
+                throw new Error(`Failed to download submission (${response.status})`);
+            }
 
+            const buffer = await response.arrayBuffer();
+            await fs.writeFile(pdfPath, Buffer.from(buffer));
+            await publishEvent(id, { step: "pdf_downloaded", assignmentId, studentId });
 
             const extractedData = await pythonService.parsePDF(id, pdfPath, assignmentId, studentId, publishEvent);
-
 
             const assignment = await prisma.assignment.findUniqueOrThrow({
                 where: { id: assignmentId },
@@ -60,28 +63,25 @@ export const submissionWorker = new Worker(
                 maxScore: assignment.maxScore,
             };
 
-
             const evaluation = await pythonService.gradeWithGemini(extractedData, assignmentId, id, studentId, context, publishEvent);
-
-
-            const fullFeedback = `**Summary:** ${evaluation.summary}\n\n**Score:** ${evaluation.score}/${assignment.maxScore}\n\n**Detailed Feedback:**\n${evaluation.feedback}`.trim();
 
             await submissionManager.updateSubmissionGrade(id, {
                 score: evaluation.score,
-                feedback: fullFeedback,
+                feedback: evaluation as any,
                 status: "GRADED",
             });
 
             await publishEvent(id, { step: "grading_completed", score: evaluation.score, maxScore: assignment.maxScore, status: "GRADED", assignmentId, studentId });
 
             return true;
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Unknown grading error";
             await prisma.submission.update({ where: { id }, data: { status: "FAILED" } }).catch(() => { });
-            await publishEvent(id, { step: "failed", status: "FAILED", error: error.message });
+            await publishEvent(id, { step: "failed", status: "FAILED", error: message, assignmentId, studentId });
             throw error;
         } finally {
-            if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
-            if (fs.existsSync(imagesDir)) fs.rmSync(imagesDir, { recursive: true, force: true });
+            await fs.unlink(pdfPath).catch(() => { });
+            await fs.rm(imagesDir, { recursive: true, force: true }).catch(() => { });
         }
     },
     { connection: redis, concurrency: 1 }

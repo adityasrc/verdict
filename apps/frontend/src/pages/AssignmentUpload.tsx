@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { useSocket } from '../context/SocketContext';
@@ -12,25 +12,27 @@ import { parseApiError } from '../lib/errors';
 
 type GradingStatus = 'idle' | 'processing' | 'completed' | 'failed';
 
-const AssignmentUpload: React.FC = () => {
+const AssignmentUpload = () => {
     const { assignmentId } = useParams<{ assignmentId: string }>();
     const navigate = useNavigate();
     const terminalEndRef = useRef<HTMLDivElement>(null);
 
     // File state
     const [file, setFile] = useState<File | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
     const [fileError, setFileError] = useState('');
+
+    // PIN state
+    const [pin, setPin] = useState('');
 
     // Form state
     const [errorMessage, setErrorMessage] = useState('');
     const [isUploading, setIsUploading] = useState(false);
 
-    // Terminal / pipeline state
+    // Pipeline state
     const [progressLogs, setProgressLogs] = useState<string[]>(['> Grading engine ready.']);
     const [gradingStatus, setGradingStatus] = useState<GradingStatus>('idle');
 
-    // Track the submission being watched so we can re-join after socket reconnects
+
     const [watchingSubmissionId, setWatchingSubmissionId] = useState<string | null>(null);
 
     // API hooks
@@ -54,12 +56,12 @@ const AssignmentUpload: React.FC = () => {
             }
 
             const stepMessages: Record<string, string> = {
-                submission_started: '[SYS] Pipeline initiated...',
+                submission_started: '[STATUS] Pipeline initiated...',
                 downloading_pdf: '[INFO] Downloading submission...',
                 pdf_downloaded: '[OK] Download complete.',
                 parsing_started: '[INFO] Parsing PDF structure...',
                 parsing_completed: '[OK] Parsing complete.',
-                gemini_started: '[SYS] Verdict AI engine started.',
+                gemini_started: '[STATUS] Verdict AI engine started.',
                 gemini_processing: '[INFO] Evaluating against rubric...',
                 gemini_completed: '[OK] Evaluation complete.',
             };
@@ -78,22 +80,21 @@ const AssignmentUpload: React.FC = () => {
         return () => { socket.off('submission-progress', handleProgress); };
     }, [socket]);
 
-    // Auto-rejoin the submission room if the socket changes (new token → new socket instance)
-    // or reconnects. Without this, a token refresh mid-grading kills all event delivery.
     useEffect(() => {
         if (!socket || !watchingSubmissionId) return;
 
         const rejoin = () => socket.emit('watch-submission', watchingSubmissionId);
 
-        // If already connected (common after token refresh), rejoin immediately
         if (socket.connected) rejoin();
 
-        // Also handle future reconnects on this socket instance
         socket.on('connect', rejoin);
         return () => { socket.off('connect', rejoin); };
     }, [socket, watchingSubmissionId]);
 
-    const applyFile = useCallback((f: File) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+
         if (f.type !== 'application/pdf') {
             setFileError('Invalid format. Only PDF files are accepted.');
             setFile(null);
@@ -106,29 +107,19 @@ const AssignmentUpload: React.FC = () => {
         }
         setFileError('');
         setFile(f);
-    }, []);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) applyFile(e.target.files[0]);
-    };
-
-    const handleDragEnter = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
-    const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
-    const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        if (e.dataTransfer.files?.[0]) applyFile(e.dataTransfer.files[0]);
     };
 
     const runPipeline = async () => {
         if (!file) { setErrorMessage('Please select a PDF file.'); return; }
+        if (!pin || pin.length !== 4) { setErrorMessage('Please enter the 4-digit access PIN.'); return; }
         setErrorMessage('');
-        setGradingStatus('idle');
-        setProgressLogs(['> Grading engine ready.', '[SYS] Initiating new request...']);
 
         try {
-            const urlResult = await getUploadUrl({ fileName: file.name, type: file.type, assignmentId: assignmentId! }).unwrap() as any;
+            const urlResult = await getUploadUrl({ fileName: file.name, type: file.type, assignmentId: assignmentId!, pin }).unwrap() as any;
+
+            setGradingStatus('idle');
+            setProgressLogs(['> Grading engine ready.', '[STATUS] Uploading PDF to Cloudflare R2...']);
+
             const uploadData = urlResult.data ?? urlResult;
             await performUpload(uploadData);
         } catch (err) {
@@ -139,17 +130,17 @@ const AssignmentUpload: React.FC = () => {
     const performUpload = async (uploadData: { url: string; key: string }) => {
         setIsUploading(true);
         try {
-            // Upload the file directly to S3 via pre-signed URL
-            const ok = await new Promise<boolean>((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.addEventListener('load', () => resolve(xhr.status >= 200 && xhr.status < 300));
-                xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
-                xhr.open('PUT', uploadData.url);
-                xhr.setRequestHeader('Content-Type', file!.type);
-                xhr.send(file);
+            // Upload PDF directly to Cloudflare R2 via presigned URL
+            const uploadRes = await fetch(uploadData.url, {
+                method: 'PUT',
+                headers: { 'Content-Type': file!.type },
+                body: file,
             });
 
-            if (!ok) { setErrorMessage('Upload failed. Please try again.'); return; }
+            if (!uploadRes.ok) {
+                setErrorMessage('Upload failed. Please try again.');
+                return;
+            }
 
             const res = await markSubmission({
                 assignmentId: assignmentId!,
@@ -160,7 +151,7 @@ const AssignmentUpload: React.FC = () => {
             if (socket && submissionId) {
                 setWatchingSubmissionId(submissionId);
                 setGradingStatus('processing');
-                setProgressLogs(prev => [...prev, '[OK] Submission registered.', '[SYS] Starting grading pipeline...']);
+                setProgressLogs(prev => [...prev, '[OK] Submission registered.', '[STATUS] Starting grading pipeline...']);
                 socket.emit('watch-submission', submissionId);
             }
         } catch (err) {
@@ -207,17 +198,9 @@ const AssignmentUpload: React.FC = () => {
                         </div>
 
                         <div
-                            onDragEnter={handleDragEnter}
-                            onDragLeave={handleDragLeave}
-                            onDragOver={handleDragOver}
-                            onDrop={handleDrop}
                             className={`
                                 relative mt-4 flex flex-col items-center justify-center text-center p-12
-                                border-[4px] transition-all duration-75
-                                ${isDragging
-                                    ? 'border-primary bg-primary-fixed'
-                                    : 'border-dashed border-on-surface bg-surface-variant hover:bg-surface'
-                                }
+                                border-[4px] border-dashed border-on-surface bg-surface-variant hover:bg-surface transition-all duration-75
                                 ${gradingStatus === 'processing' ? 'processing-stripes' : ''}
                             `}
                         >
@@ -230,20 +213,16 @@ const AssignmentUpload: React.FC = () => {
                                 disabled={isUploading}
                             />
 
-                            <div className={`w-16 h-16 bg-primary border-[4px] border-on-surface brutal-shadow flex items-center justify-center mb-4 transition-transform duration-75 ${isDragging ? 'scale-125' : ''}`}>
-                                <span className="material-symbols-outlined text-3xl text-on-primary">
-                                    {isDragging ? 'download' : 'upload_file'}
-                                </span>
+                            <div className="w-16 h-16 bg-primary border-[4px] border-on-surface brutal-shadow flex items-center justify-center mb-4">
+                                <span className="material-symbols-outlined text-3xl text-on-primary">upload_file</span>
                             </div>
 
-                            {isDragging ? (
-                                <p className="font-headline-md text-primary font-bold uppercase">Drop to attach file</p>
-                            ) : file ? (
+                            {file ? (
                                 <p className="font-headline-md text-on-surface font-bold">{file.name}</p>
                             ) : (
                                 <>
-                                    <p className="font-headline-md text-on-surface font-bold mb-1">Drop PDF here</p>
-                                    <p className="font-label-mono text-on-surface-variant uppercase text-sm">or click to browse — max 10 MB</p>
+                                    <p className="font-headline-md text-on-surface font-bold mb-1">Click to select PDF</p>
+                                    <p className="font-label-mono text-on-surface-variant uppercase text-sm">max 10 MB</p>
                                 </>
                             )}
 
@@ -259,7 +238,27 @@ const AssignmentUpload: React.FC = () => {
                             Submit
                         </div>
 
-                        <div className="mt-4 space-y-6">
+                        <div className="mt-4 space-y-4">
+                            {/* PIN input */}
+                            <div>
+                                <label htmlFor="access-pin" className="font-label-caps text-[11px] uppercase tracking-widest font-bold text-on-surface-variant block mb-2">
+                                    Access PIN
+                                </label>
+                                <input
+                                    id="access-pin"
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={4}
+                                    placeholder="••••"
+                                    value={pin}
+                                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                    className="w-full px-4 py-3 border-[4px] border-on-surface bg-surface font-label-mono text-2xl tracking-[0.5em] text-center focus:outline-none focus:border-primary brutal-shadow"
+                                    disabled={isUploading}
+                                    autoComplete="off"
+                                />
+                                <p className="font-label-mono text-[11px] text-on-surface-variant uppercase mt-1">Ask your teacher for the 4-digit PIN</p>
+                            </div>
+
                             {errorMessage && (
                                 <p className="text-error font-bold font-label-mono uppercase">{errorMessage}</p>
                             )}
@@ -268,7 +267,7 @@ const AssignmentUpload: React.FC = () => {
                                 variant="brutal-dark"
                                 size="lg"
                                 onClick={runPipeline}
-                                disabled={isUploading}
+                                disabled={isUploading || pin.length !== 4}
                                 className="w-full"
                             >
                                 <span className="material-symbols-outlined">play_circle</span>

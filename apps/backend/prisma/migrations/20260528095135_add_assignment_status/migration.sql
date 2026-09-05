@@ -1,12 +1,4 @@
-/*
-  Warnings:
 
-  - You are about to drop the column `public_url` on the `submissions` table. All the data in the column will be lost.
-  - The `feedback` column on the `submissions` table would be dropped and recreated. This will lead to data loss if there is data in the column.
-  - Added the required column `fileKey` to the `submissions` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `publicUrl` to the `submissions` table without a default value. This is not possible if the table is not empty.
-
-*/
 -- CreateEnum
 CREATE TYPE "FormStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'CLOSED');
 

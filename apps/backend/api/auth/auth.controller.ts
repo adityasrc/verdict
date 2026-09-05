@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
-import { catchAsync } from "../utils/catchAsyncWrapper.js";
+import { catchAsync } from "../middleware/catchAsync.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
 import { AuthManager } from "./auth.manager.js";
 import { registerSchema, loginSchema } from "../../validators/zod.js";

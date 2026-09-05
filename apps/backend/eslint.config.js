@@ -38,9 +38,9 @@ export default defineConfig([
             "no-console": "off",
         },
     },
-    // Disable all checks for catchAsyncWrapper
+    // Disable all checks for catchAsync
     {
-        files: ["**/catchAsyncWrapper.ts"],
+        files: ["**/catchAsync*.ts"],
         rules: {
             "@typescript-eslint/no-explicit-any": "off",
         },
