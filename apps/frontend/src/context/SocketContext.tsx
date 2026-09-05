@@ -21,7 +21,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const token = useSelector(selectAccessToken);
 
     useEffect(() => {
-        if (!token) return;
+        if (!token) {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+                setSocket(null);
+                setIsConnected(false);
+            }
+            return;
+        }
 
         const wsUrl = getWsUrl();
         const socketInstance = io(wsUrl, {

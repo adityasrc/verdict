@@ -1,38 +1,30 @@
-import type { Socket } from "socket.io";
 import { redis } from "../utils/redis.js";
-
-interface AuthenticatedSocket extends Socket {
-    userId: string;
-    role: string;
-}
+import type { AuthenticatedSocket } from "./socket.js";
 
 export const submissionHandlers = (socket: AuthenticatedSocket) => {
     socket.on("watch-submission", async (submissionId: string) => {
         socket.join(submissionId);
-        console.log(`Socket ${socket.id} watching submission: ${submissionId}`);
 
-        // Replay any events that were published before this socket joined.
+        // replay past events if client joined late or refreshed
         try {
             const cachedEvents = await redis.lrange(`submission_events:${submissionId}`, 0, -1);
             for (const raw of cachedEvents) {
                 try {
-                    socket.emit("submission-progress", JSON.parse(raw));
-                } catch {
-                    /* ignore parse errors for individual corrupted cache entries */
-                }
+                    const event = JSON.parse(raw);
+                    socket.emit("submission-progress", { ...event, submissionId });
+                } catch {}
             }
         } catch (err) {
-            console.error(`Failed to replay cached events for ${submissionId}:`, err);
+            console.error(`Failed to replay events for ${submissionId}:`, err);
         }
     });
 
     socket.on("watch-assignment", (assignmentId: string) => {
+        if (socket.role !== "TEACHER") return;
         socket.join(`assignment:${assignmentId}`);
-        console.log(`Socket ${socket.id} watching assignment: ${assignmentId}`);
     });
 
     socket.on("unwatch-assignment", (assignmentId: string) => {
         socket.leave(`assignment:${assignmentId}`);
-        console.log(`Socket ${socket.id} stopped watching assignment: ${assignmentId}`);
     });
 };

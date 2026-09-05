@@ -86,7 +86,7 @@ export class PythonService {
             let stderrOutput = "";
             const backendDir = path.join(__dirname, "..");
 
-            // Stream large payloads via stdin instead of CLI args to avoid OS ARG_MAX / command line length limits
+            // stream payload via stdin to avoid cli argument length limits
             const proc = spawn(
                 PYTHON_BIN,
                 [script, assignmentId, submissionId],
@@ -96,9 +96,7 @@ export class PythonService {
                 }
             );
 
-            proc.stdin.on("error", () => {
-
-            });
+            proc.stdin.on("error", () => {});
 
             const payload = JSON.stringify({ extractedData, context });
             proc.stdin.write(payload, "utf-8", () => {

@@ -148,11 +148,10 @@ const AssignmentUpload = () => {
             }).unwrap();
 
             const submissionId = res.data?.id;
-            if (socket && submissionId) {
+            if (submissionId) {
                 setWatchingSubmissionId(submissionId);
                 setGradingStatus('processing');
                 setProgressLogs(prev => [...prev, '[OK] Submission registered.', '[STATUS] Starting grading pipeline...']);
-                socket.emit('watch-submission', submissionId);
             }
         } catch (err) {
             setErrorMessage(parseApiError(err, 'Upload failed. Please try again.'));
