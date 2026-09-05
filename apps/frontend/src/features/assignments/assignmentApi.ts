@@ -3,7 +3,6 @@ import { baseQueryWithReauth } from '../../app/baseQuery';
 import type {
     Assignment,
     CreateAssignmentRequest,
-    CreateSubmissionRequest,
     Submission,
 } from '../../types';
 
@@ -34,17 +33,6 @@ export const assignmentApi = createApi({
         getAssignment: builder.query<{ success: boolean; data: Assignment }, string>({
             query: (id) => `/assignments/${id}`,
             providesTags: (_result, _error, id) => [{ type: 'Assignment', id }],
-        }),
-        createSubmission: builder.mutation<
-            { success: boolean; data: Submission },
-            CreateSubmissionRequest
-        >({
-            query: (data) => ({
-                url: '/submissions',
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['Submission'],
         }),
         getMySubmissions: builder.query<{ success: boolean; data: Submission[] }, void>({
             query: () => '/submissions/my-submissions',
@@ -110,7 +98,6 @@ export const {
     useGetTeacherAssignmentsQuery,
     useGetStudentAssignmentsQuery,
     useGetAssignmentQuery,
-    useCreateSubmissionMutation,
     useGetMySubmissionsQuery,
     useGetRecentSubmissionsQuery,
     useGetAssignmentSubmissionsQuery,

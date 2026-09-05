@@ -114,11 +114,6 @@ export interface Submission {
     };
 }
 
-export interface CreateSubmissionRequest {
-    // content removed — backend does not accept this field
-    assignmentId: string;
-}
-
 export interface SubmitAssignmentRequest {
     assignmentId: string;
     fileKey: string;

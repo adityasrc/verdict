@@ -4,8 +4,7 @@ import { getApiUrl } from '../config';
 import { logout, setCredentials } from '../features/auth/authSlice';
 import type { RootState } from './store';
 
-// Module-level flags prevent multiple concurrent refresh requests.
-// If three API calls all 401 at the same time, only ONE refresh is sent to the server.
+// Mutex lock to prevent multiple concurrent token refresh requests
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -25,8 +24,7 @@ export const baseQueryWithReauth: BaseQueryFn<
     unknown,
     FetchBaseQueryError
 > = async (args, api, extraOptions) => {
-    // If another request is already refreshing the token, wait for it to finish
-    // before sending this request. This avoids sending multiple /auth/refresh calls.
+    // If another request is currently refreshing the token, wait for it first
     if (isRefreshing && refreshPromise) {
         await refreshPromise;
     }
@@ -35,18 +33,14 @@ export const baseQueryWithReauth: BaseQueryFn<
 
     if (result.error && result.error.status === 401) {
         if (!isRefreshing) {
-            // We are the first request to hit a 401 — we "win" the right to refresh.
             isRefreshing = true;
             const refreshToken = localStorage.getItem('refreshToken');
 
             if (!refreshToken) {
-                // No refresh token stored — the user must log in again.
                 api.dispatch(logout());
                 return result;
             }
 
-            // Store the refresh attempt as a shared promise so concurrent 401 requests
-            // can all await the same single network call (see the else-if branch below).
             refreshPromise = (async () => {
                 try {
                     const refreshResult = await baseQuery(
@@ -68,12 +62,10 @@ export const baseQueryWithReauth: BaseQueryFn<
                         if (accessToken) {
                             const currentUser = (api.getState() as RootState).auth.user;
                             if (currentUser) {
-                                // Store the new tokens so subsequent requests use them.
                                 api.dispatch(
                                     setCredentials({
                                         user: currentUser,
                                         accessToken,
-                                        // Use the rotated refresh token if the server issued one.
                                         refreshToken: newRefreshToken || refreshToken,
                                     })
                                 );
@@ -81,14 +73,13 @@ export const baseQueryWithReauth: BaseQueryFn<
                             }
                         }
                     }
-                    // Refresh failed — force a full logout.
+
                     api.dispatch(logout());
                     return false;
                 } catch {
                     api.dispatch(logout());
                     return false;
                 } finally {
-                    // Always reset the lock so future 401s can trigger a new refresh.
                     isRefreshing = false;
                     refreshPromise = null;
                 }
@@ -96,12 +87,10 @@ export const baseQueryWithReauth: BaseQueryFn<
 
             const success = await refreshPromise;
             if (success) {
-                // Retry the original request with the new access token in headers.
                 result = await baseQuery(args, api, extraOptions);
             }
         } else if (refreshPromise) {
-            // Another request already started a refresh. Wait for it to finish,
-            // then retry this request (prepareHeaders will now pick up the new token).
+            // Another request triggered the refresh; wait for it, then retry
             await refreshPromise;
             result = await baseQuery(args, api, extraOptions);
         }
