@@ -5,7 +5,6 @@ import { assignmentApi } from '../features/assignments/assignmentApi';
 import { authApi } from '../features/auth/authApi';
 import authReducer from '../features/auth/authSlice';
 import { rubricApi } from '../features/rubrics/rubricApi';
-import { unauthenticatedMiddleware } from './middleware';
 
 export const store = configureStore({
     reducer: {
@@ -18,8 +17,7 @@ export const store = configureStore({
         getDefaultMiddleware().concat(
             authApi.middleware,
             assignmentApi.middleware,
-            rubricApi.middleware,
-            unauthenticatedMiddleware
+            rubricApi.middleware
         ),
 });
 

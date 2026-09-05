@@ -48,7 +48,6 @@ const authSlice = createSlice({
 
 export const { setCredentials, logout } = authSlice.actions;
 
-// Two ways to check auth - use whichever fits the context
 export const selectCurrentUser = (state: RootState) => state.auth.user;
 export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
 export const selectAccessToken = (state: RootState) => state.auth.accessToken;
