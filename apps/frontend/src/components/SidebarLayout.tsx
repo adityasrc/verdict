@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, LogOut, Menu, Upload, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../app/store';
 import { logout, selectCurrentUser } from '../features/auth/authSlice';
+import { BrandMark } from './BrandMark';
+
+interface NavItem {
+    path: string;
+    label: string;
+    icon: LucideIcon;
+}
 
 const SidebarLayout: React.FC = () => {
     const dispatch = useAppDispatch();
@@ -16,58 +25,55 @@ const SidebarLayout: React.FC = () => {
         navigate('/');
     };
 
-    const navLinks = user
-        ? [{ path: '/dashboard', label: 'Dashboard', icon: 'dashboard' }]
-        : [{ path: location.pathname, label: 'Submission Portal', icon: 'upload_file' }];
+    const navLinks: NavItem[] = user
+        ? [{ path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }]
+        : [{ path: location.pathname, label: 'Submission Portal', icon: Upload }];
 
     const getLinkClass = (path: string) => {
         const isActive = location.pathname === path || (path === '/dashboard' && location.pathname.startsWith('/upload'));
-        return `flex items-center gap-4 px-4 py-3 font-label-caps text-label-caps uppercase transition-colors brutal-button ${isActive
-                ? 'bg-secondary text-on-secondary border-[2px] border-on-surface brutal-shadow'
-                : 'text-on-surface-variant hover:bg-surface-variant border-[2px] border-transparent hover:border-on-surface'
-            }`;
+        return `flex items-center gap-3 px-3 py-2 rounded-md text-body-sm font-medium transition-colors ${
+            isActive
+                ? 'bg-white/5 text-text-primary'
+                : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
+        }`;
     };
 
     return (
-        <div className="font-body-md bg-surface text-on-surface flex flex-col md:flex-row min-h-screen selection:bg-primary selection:text-on-primary">
+        <div className="bg-canvas text-text-primary flex flex-col md:flex-row min-h-screen">
             {/* Sidebar (Desktop) */}
-            <nav className="hidden md:flex flex-col h-screen w-64 border-r-[4px] border-on-surface bg-surface fixed left-0 top-0 pt-24 pb-8 z-40">
-                <div className="px-gutter mb-12">
-                    {/* Link to landing page */}
-                    <Link to="/" className="block">
-                        <h1 className="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter hover:text-primary transition-colors">Verdict</h1>
-                        <p className="font-label-mono text-label-mono text-on-surface-variant mt-2 border-t-[2px] border-on-surface pt-2">AI Grading Engine</p>
-                    </Link>
+            <nav className="hidden md:flex flex-col h-screen w-64 border-r border-border bg-surface fixed left-0 top-0 py-6 z-40">
+                <div className="px-5 mb-8">
+                    <BrandMark />
                 </div>
 
-                <div className="flex-1 px-4 space-y-4">
-                    {navLinks.map((link) => (
-                        <Link key={link.label} to={link.path} className={getLinkClass(link.path)}>
-                            <span className="material-symbols-outlined" style={{ fontVariationSettings: location.pathname === link.path ? "'FILL' 1" : "" }}>
-                                {link.icon}
-                            </span>
-                            {link.label}
-                        </Link>
-                    ))}
+                <div className="flex-1 px-3 space-y-1">
+                    {navLinks.map((link) => {
+                        const Icon = link.icon;
+                        return (
+                            <Link key={link.label} to={link.path} className={getLinkClass(link.path)}>
+                                <Icon className="h-4 w-4 shrink-0" />
+                                {link.label}
+                            </Link>
+                        );
+                    })}
                 </div>
 
-                <div className="px-4 mt-auto space-y-4">
-                    {/* Logged-in user */}
+                <div className="px-3 mt-auto space-y-3">
                     {user && (
                         <>
-                            <div className="bg-primary-fixed border-[4px] border-on-surface p-4 brutal-shadow flex flex-col gap-1 mt-auto">
-                                <span className="font-label-caps text-[10px] uppercase font-black tracking-widest bg-surface border-[2px] border-on-surface px-2 w-fit text-on-surface">
-                                    {user?.role === 'TEACHER' ? 'EDUCATOR' : 'STUDENT'}
-                                </span>
-                                <span className="font-label-mono text-xs text-on-surface-variant uppercase truncate">
-                                    {user.email?.split('@')[0]}
-                                </span>
+                            <div className="border-t border-border pt-3">
+                                <p className="text-body-sm font-medium text-text-primary truncate">
+                                    {user.name || user.email?.split('@')[0]}
+                                </p>
+                                <p className="font-mono text-[11px] text-text-muted uppercase tracking-wider mt-0.5">
+                                    {user?.role === 'TEACHER' ? 'Educator' : 'Student'}
+                                </p>
                             </div>
                             <button
                                 onClick={handleLogout}
-                                className="w-full flex items-center gap-4 px-4 py-3 text-error hover:bg-error-container border-[2px] border-transparent hover:border-error transition-colors font-label-caps text-label-caps uppercase"
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-body-sm text-text-secondary hover:text-error hover:bg-error-muted transition-colors"
                             >
-                                <span className="material-symbols-outlined">logout</span>
+                                <LogOut className="h-4 w-4 shrink-0" />
                                 Logout
                             </button>
                         </>
@@ -76,41 +82,62 @@ const SidebarLayout: React.FC = () => {
             </nav>
 
             {/* Top Nav (Mobile) */}
-            <nav className="flex md:hidden justify-between items-center px-margin-mobile py-4 w-full sticky top-0 z-50 bg-surface border-b-[4px] border-on-surface brutal-shadow">
-                <h1 className="font-headline-md text-headline-md font-black text-on-surface uppercase tracking-tighter">Verdict</h1>
+            <nav className="flex md:hidden justify-between items-center px-4 py-3 w-full sticky top-0 z-50 bg-canvas/90 backdrop-blur-md border-b border-border">
+                <BrandMark compact />
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="p-2 border-[2px] border-on-surface brutal-shadow hover:bg-primary hover:text-on-primary transition-colors brutal-button"
+                    className="p-2 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
                     aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
                 >
-                    <span className="material-symbols-outlined">{isMobileMenuOpen ? 'close' : 'menu'}</span>
+                    {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                 </button>
             </nav>
 
             {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (
-                <div className="md:hidden fixed inset-0 top-[72px] z-40 bg-surface flex flex-col p-4 border-b-[4px] border-on-surface brutal-shadow">
-                    <div className="flex-1 space-y-4">
-                        {navLinks.map((link) => (
-                            <Link key={link.label} to={link.path} onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass(link.path)}>
-                                <span className="material-symbols-outlined">{link.icon}</span>
-                                {link.label}
-                            </Link>
-                        ))}
+                <div className="md:hidden fixed inset-0 top-[56px] z-40 bg-surface flex flex-col p-4">
+                    <div className="flex-1 space-y-1">
+                        {navLinks.map((link) => {
+                            const Icon = link.icon;
+                            return (
+                                <Link
+                                    key={link.label}
+                                    to={link.path}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className={getLinkClass(link.path)}
+                                >
+                                    <Icon className="h-4 w-4 shrink-0" />
+                                    {link.label}
+                                </Link>
+                            );
+                        })}
                     </div>
-                    <div className="mt-8 space-y-4 pt-4 border-t-[4px] border-on-surface">
+                    <div className="mt-auto space-y-3 pt-4 border-t border-border">
                         {user && (
-                            <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-3 text-error hover:bg-error-container border-[2px] border-transparent hover:border-error transition-colors font-label-caps text-label-caps uppercase brutal-button">
-                                <span className="material-symbols-outlined">logout</span>
-                                Logout
-                            </button>
+                            <>
+                                <div className="border-t border-border pt-3 pb-1">
+                                    <span className="block text-body-sm font-medium text-text-primary truncate">
+                                        {user.name || user.email?.split('@')[0]}
+                                    </span>
+                                    <span className="font-mono text-[11px] text-text-muted uppercase tracking-wider mt-0.5 block">
+                                        {user?.role === 'TEACHER' ? 'Educator' : 'Student'}
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-body-sm text-text-secondary hover:text-error hover:bg-error-muted transition-colors"
+                                >
+                                    <LogOut className="h-4 w-4 shrink-0" />
+                                    Logout
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>
             )}
 
-            {/* Main Content Canvas */}
-            <main className="flex-1 w-full md:ml-64 p-margin-mobile md:p-margin-desktop bg-background min-h-screen">
+            {/* Main Content */}
+            <main className="flex-1 w-full md:ml-64 p-4 md:p-8 bg-canvas min-h-screen">
                 <Outlet />
             </main>
         </div>

@@ -6,7 +6,6 @@ import App from './App.tsx';
 import { store } from './app/store';
 import ErrorBoundary from './components/ErrorBoundary';
 import { SocketProvider } from './context/SocketContext';
-import { ThemeProvider } from './context/ThemeContext';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -15,9 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Provider store={store}>
                 <BrowserRouter>
                     <SocketProvider>
-                        <ThemeProvider>
-                            <App />
-                        </ThemeProvider>
+                        <App />
                     </SocketProvider>
                 </BrowserRouter>
             </Provider>

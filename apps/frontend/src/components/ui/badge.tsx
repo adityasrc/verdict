@@ -3,27 +3,27 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
-// Status badges: no rounding, 2px border, monospace label text, hard shadow.
-
 const badgeVariants = cva(
-  "inline-flex items-center border-[2px] border-on-surface px-3 py-0.5 font-label-caps text-[11px] uppercase font-bold tracking-widest brutal-shadow transition-colors duration-75",
+  "inline-flex items-center rounded-md px-2 py-0.5 text-label-sm font-medium transition-colors",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-on-primary border-on-surface",
+          "bg-surface-raised text-text-primary border border-border",
         secondary:
-          "bg-secondary text-on-secondary border-on-surface",
+          "bg-surface-raised text-text-secondary border border-border",
         destructive:
-          "bg-error text-on-error border-on-surface",
+          "bg-error-muted text-error border border-error/20",
         outline:
-          "bg-surface text-on-surface border-on-surface",
-        yellow:
-          "bg-accent-yellow text-on-surface border-on-surface",
+          "border border-border text-text-secondary bg-transparent",
         success:
-          "bg-secondary text-on-secondary border-on-surface",
+          "bg-success-muted text-success border border-success/20",
+        warning:
+          "bg-warning-muted text-warning border border-warning/20",
+        accent:
+          "bg-accent-muted text-accent border border-accent/20",
         muted:
-          "bg-surface-variant text-on-surface-variant border-on-surface",
+          "bg-surface-raised text-text-muted border border-border",
       },
     },
     defaultVariants: {

@@ -2,9 +2,6 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-// All cards: no border-radius, thick 4px border, hard shadow, surface background.
-// Use `className` to override bg color for colored stat cards.
-
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -12,7 +9,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "border-[4px] border-on-surface brutal-shadow bg-surface text-on-surface flex flex-col",
+      "bg-surface border border-border rounded-lg card-glow flex flex-col",
       className
     )}
     {...props}
@@ -26,7 +23,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex justify-between items-start p-6 pb-0", className)}
+    className={cn("flex justify-between items-start p-5 pb-0", className)}
     {...props}
   />
 ))
@@ -39,7 +36,7 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "font-label-mono text-label-mono uppercase font-bold opacity-80",
+      "text-label-sm uppercase tracking-wider text-text-muted font-medium",
       className
     )}
     {...props}
@@ -53,7 +50,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("text-sm font-body-md mt-1 opacity-70", className)}
+    className={cn("text-body-sm text-text-secondary mt-1", className)}
     {...props}
   />
 ))
@@ -63,7 +60,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-4 flex-1", className)} {...props} />
+  <div ref={ref} className={cn("p-5 pt-3 flex-1", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
 
@@ -74,7 +71,7 @@ const CardFooter = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "flex items-center p-6 pt-0 border-t-[4px] border-on-surface gap-4",
+      "flex items-center p-5 pt-0 border-t border-border gap-3 mt-auto",
       className
     )}
     {...props}

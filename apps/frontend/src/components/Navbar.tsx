@@ -1,21 +1,23 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { LogOut, Menu, X } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../app/store";
 import { logout, selectCurrentUser } from "../features/auth/authSlice";
+import { BrandMark } from "./BrandMark";
 import { Button } from "../components/ui/button";
 
 const Navbar = () => {
   const user = useAppSelector(selectCurrentUser);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll);
+    const handleScroll = () => setIsScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -40,113 +42,142 @@ const Navbar = () => {
     };
   }, [isMobileMenuOpen]);
 
+  // Close menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
   const handleLogout = () => {
     dispatch(logout());
-    setIsMobileMenuOpen(false);
     navigate("/login");
   };
 
-  const logoHref = "/";
+  const isDashboardActive = location.pathname.startsWith("/dashboard");
+  const displayName = user?.name || user?.email?.split("@")[0] || "User";
+  const roleLabel = user?.role === "TEACHER" ? "educator" : "student";
 
   return (
     <header
-      className={`fixed top-0 z-50 w-full transition-all duration-75 linear ${isScrolled
-          ? "bg-surface border-b-[4px] border-on-surface brutal-shadow"
-          : "bg-surface border-b-[4px] border-surface"
-        }`}
+      className={`fixed top-0 z-50 w-full transition-colors duration-150 ${
+        isScrolled || isMobileMenuOpen
+          ? "bg-surface border-b border-border"
+          : "bg-surface/95 border-b border-border/40"
+      }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
-        <Link to={logoHref} className="flex items-center gap-3 group">
-          <div className="bg-primary border-[4px] border-on-surface brutal-shadow flex items-center justify-center p-1.5 brutal-button">
-            <span className="material-symbols-outlined text-on-primary" style={{ fontVariationSettings: "'FILL' 1" }}>menu_book</span>
-          </div>
-          <span className="font-headline-md text-xl font-black uppercase tracking-tighter text-on-surface">
-            Verdict
-          </span>
-        </Link>
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-14">
+        {/* Left: Brand */}
+        <BrandMark to="/" />
 
-        <div className="hidden md:flex items-center gap-4">
+        {/* Right: Desktop navigation */}
+        <nav className="hidden md:flex items-center gap-5">
           {user ? (
-            <div className="flex items-center gap-4 pl-4 border-l-[4px] border-on-surface h-10">
-              <Link to="/dashboard" className="font-label-caps text-sm uppercase text-on-surface hover:text-primary font-bold transition-colors duration-75 linear">
+            <>
+              <Link
+                to="/dashboard"
+                className={`text-sm transition-colors ${
+                  isDashboardActive
+                    ? "text-text-primary font-medium"
+                    : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
                 Dashboard
               </Link>
-              <div className="flex items-center gap-2 px-3 py-1 bg-secondary border-[4px] border-on-surface brutal-shadow">
-                <span className="material-symbols-outlined text-sm text-on-secondary">person</span>
-                <span className="font-label-mono text-xs uppercase font-bold truncate max-w-[140px] text-on-secondary">{user.email?.split('@')[0]}</span>
-              </div>
-              <Button
+
+              {/* User identity */}
+              <span className="text-text-primary text-sm select-none">
+                {displayName}
+              </span>
+
+              <button
+                type="button"
                 onClick={handleLogout}
-                variant="brutal-error"
-                size="sm"
-                className="px-4"
+                className="p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-surface-raised transition-colors"
+                aria-label="Log out"
               >
-                Log Out
-              </Button>
-            </div>
+                <LogOut className="h-4 w-4" />
+              </button>
+            </>
           ) : (
-            <div className="flex items-center gap-4 pl-4 border-l-[4px] border-on-surface h-10">
-              <Button asChild variant="brutal-ghost" size="sm">
-                <Link to="/login">Log In</Link>
-              </Button>
-              <Button asChild variant="brutal" size="sm">
+            <div className="flex items-center gap-4">
+              <Link
+                to="/login"
+                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                Log In
+              </Link>
+              <Button asChild variant="default" size="sm">
                 <Link to="/signup">Get Started</Link>
               </Button>
             </div>
           )}
-        </div>
+        </nav>
 
-        <div className="flex md:hidden items-center gap-2">
+        {/* Mobile menu trigger */}
+        <div className="flex md:hidden items-center">
           <button
-            className="p-2 border-[4px] border-on-surface brutal-shadow bg-surface hover:bg-primary hover:text-on-primary transition-colors duration-75 linear brutal-button"
+            className="p-2 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMobileMenuOpen}
           >
-            <span className="material-symbols-outlined">
-              {isMobileMenuOpen ? "close" : "menu"}
-            </span>
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-
+      {/* Mobile Menu */}
       <div
         id="mobile-menu"
-        ref={menuRef}
-        className={`md:hidden fixed inset-0 top-16 z-40 bg-surface border-b-[4px] border-on-surface brutal-shadow transition-all duration-75 linear ${isMobileMenuOpen
-            ? "opacity-100 pointer-events-auto translate-y-0"
-            : "opacity-0 pointer-events-none -translate-y-4"
-          }`}
+        className={`md:hidden fixed inset-x-0 top-14 bottom-0 z-40 bg-surface border-t border-border overflow-y-auto transition-all duration-150 ${
+          isMobileMenuOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
       >
-        <nav className="flex flex-col p-6 gap-6">
+        <nav className="flex flex-col p-6 gap-3">
           {user ? (
             <>
-              <div className="flex items-center gap-3 bg-secondary border-[4px] border-on-surface p-4 brutal-shadow text-on-secondary">
-                <span className="material-symbols-outlined">person</span>
-                <span className="font-label-mono uppercase font-bold truncate">{user.email}</span>
+              {/* User info */}
+              <div className="pb-4 border-b border-border">
+                <p className="text-sm font-medium text-text-primary">{displayName}</p>
+                <p className="font-mono text-xs text-text-muted mt-0.5">{user.email}</p>
+                <span className="inline-block mt-2 font-mono text-[10px] text-text-muted uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-raised border border-border">
+                  {roleLabel}
+                </span>
               </div>
-              <Button asChild variant="brutal" className="w-full py-6 text-lg">
-                <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
-                  Dashboard
-                </Link>
-              </Button>
-              <Button onClick={handleLogout} variant="brutal-error" className="w-full py-6 text-lg">
-                Log Out
-              </Button>
+
+              <Link
+                to="/dashboard"
+                className={`text-sm py-2 transition-colors ${
+                  isDashboardActive
+                    ? "text-text-primary font-medium"
+                    : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                Dashboard
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors py-2 text-left"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Log out</span>
+              </button>
             </>
           ) : (
-            <>
-              <Button asChild variant="brutal-ghost" className="w-full py-6 text-lg bg-surface-variant">
-                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                  Log In
-                </Link>
+            <div className="flex flex-col gap-4 pt-1">
+              <Link
+                to="/login"
+                className="text-sm text-text-secondary hover:text-text-primary py-2 transition-colors"
+              >
+                Log In
+              </Link>
+              <Button asChild variant="default" className="w-full">
+                <Link to="/signup">Get Started</Link>
               </Button>
-              <Button asChild variant="brutal" className="w-full py-6 text-lg">
-                <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                  Get Started
-                </Link>
-              </Button>
-            </>
+            </div>
           )}
         </nav>
       </div>

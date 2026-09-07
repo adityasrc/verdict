@@ -1,5 +1,6 @@
 import { useSelector } from 'react-redux';
 import { Link, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import Navbar from './components/Navbar';
 import { Footer } from './components/Footer';
 import SidebarLayout from './components/SidebarLayout';
@@ -35,13 +36,13 @@ const PublicRoute = () => {
 PublicRoute.displayName = 'PublicRoute';
 
 const AuthLayout = () => (
-  <div className="min-h-screen bg-surface text-on-surface">
+  <div className="min-h-screen bg-canvas text-text-primary">
     <Outlet />
   </div>
 );
 
 const LayoutWithFooter = () => (
-  <div className="min-h-screen bg-surface text-on-surface flex flex-col">
+  <div className="min-h-screen bg-canvas text-text-primary flex flex-col">
     <Navbar />
     <main className="flex-1">
       <Outlet />
@@ -51,15 +52,15 @@ const LayoutWithFooter = () => (
 );
 
 const NotFound = () => (
-  <div className="min-h-[80vh] flex flex-col items-center justify-center px-4">
-    <div className="border-[4px] border-on-surface brutal-shadow p-12 text-center bg-surface">
-      <h1 className="text-8xl font-black text-on-surface mb-4 uppercase tracking-tighter">404</h1>
-      <p className="font-label-mono text-on-surface-variant uppercase font-bold mb-8">Page not found</p>
+  <div className="min-h-screen bg-canvas flex flex-col items-center justify-center px-4">
+    <div className="text-center">
+      <h1 className="text-[120px] font-semibold text-text-primary leading-none tracking-tight">404</h1>
+      <p className="text-text-secondary mt-4 mb-8 text-body-lg">This page doesn't exist.</p>
       <Link
         to="/dashboard"
-        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary border-[4px] border-on-surface font-label-caps uppercase font-bold brutal-shadow brutal-button hover:bg-primary-container transition-all duration-75"
+        className="inline-flex items-center gap-2 px-6 py-3 bg-mist text-zinc-950 rounded-md font-semibold text-sm hover:bg-mist-hover transition-colors"
       >
-        <span className="material-symbols-outlined">arrow_back</span>
+        <ArrowLeft className="h-4 w-4" />
         Go to Dashboard
       </Link>
     </div>

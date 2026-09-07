@@ -1,5 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import * as React from 'react';
+import { X } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -15,7 +16,7 @@ const DialogOverlay = React.forwardRef<
     <DialogPrimitive.Overlay
         ref={ref}
         className={cn(
-            'fixed inset-0 z-40 bg-on-surface/75 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-75',
+            'fixed inset-0 z-40 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             className
         )}
         {...props}
@@ -23,7 +24,6 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
-// No rounded corners. Thick 4px border. Hard shadow. Snappy enter animation.
 const DialogContent = React.forwardRef<
     React.ElementRef<typeof DialogPrimitive.Content>,
     React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
@@ -33,26 +33,22 @@ const DialogContent = React.forwardRef<
         <DialogPrimitive.Content
             ref={ref}
             className={cn(
-                // layout & positioning
                 'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4',
-                // brutalist styling — overrides all shadcn defaults
-                'border-[4px] border-on-surface brutal-shadow bg-surface text-on-surface p-8',
-                // snappy animation — no smooth zoom, just fast fade
+                'bg-surface border border-border rounded-xl shadow-elevated p-6',
                 'data-[state=open]:animate-in data-[state=closed]:animate-out',
                 'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-                'data-[state=closed]:slide-out-to-top-4 data-[state=open]:slide-in-from-top-4',
-                'duration-75',
+                'data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2',
+                'duration-200',
                 className
             )}
             {...props}
         >
             {children}
-            {/* Brutalist close button — top-right corner, always visible */}
             <DialogPrimitive.Close
-                className="absolute right-[-4px] top-[-4px] w-10 h-10 bg-on-surface text-surface border-[4px] border-on-surface flex items-center justify-center hover:bg-error hover:text-on-error transition-colors duration-75 brutal-button z-10 font-bold text-lg leading-none"
+                className="absolute right-4 top-4 w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-raised transition-colors"
                 aria-label="Close"
             >
-                ×
+                <X className="h-4 w-4" />
             </DialogPrimitive.Close>
         </DialogPrimitive.Content>
     </DialogPortal>
@@ -61,7 +57,7 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
     <div
-        className={cn('flex flex-col space-y-2 text-left', className)}
+        className={cn('flex flex-col space-y-1.5 text-left', className)}
         {...props}
     />
 );
@@ -69,7 +65,7 @@ DialogHeader.displayName = 'DialogHeader';
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
     <div
-        className={cn('flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t-[4px] border-on-surface mt-2', className)}
+        className={cn('flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-border mt-2', className)}
         {...props}
     />
 );
@@ -82,7 +78,7 @@ const DialogTitle = React.forwardRef<
     <DialogPrimitive.Title
         ref={ref}
         className={cn(
-            'font-headline-md text-headline-md font-black uppercase tracking-tighter text-on-surface border-b-[4px] border-on-surface pb-3 mb-2',
+            'text-heading-sm text-text-primary font-semibold',
             className
         )}
         {...props}
@@ -96,7 +92,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <DialogPrimitive.Description
         ref={ref}
-        className={cn('font-body-md text-on-surface-variant', className)}
+        className={cn('text-body-sm text-text-secondary', className)}
         {...props}
     />
 ));

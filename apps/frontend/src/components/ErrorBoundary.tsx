@@ -1,5 +1,6 @@
 import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
+import { AlertTriangle, RotateCcw } from "lucide-react";
 import { Button } from "../components/ui/button";
 
 interface Props {
@@ -28,38 +29,35 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-surface px-4">
-          <div className="w-full max-w-lg">
-            {/* Top accent bar */}
-            <div className="w-full h-2 bg-error mb-0 border-[4px] border-on-surface border-b-0" />
-            <div className="bg-surface border-[4px] border-on-surface border-t-0 brutal-shadow p-8 text-center">
+        <div className="min-h-screen flex items-center justify-center bg-canvas px-4">
+          <div className="w-full max-w-lg bg-surface border border-border rounded-xl shadow-elevated p-8 text-center">
+              <div className="w-12 h-12 rounded-xl bg-error-muted border border-error/20 flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle className="h-6 w-6 text-error" />
+              </div>
 
-              {/* Giant error number */}
-              <p className="font-black text-[120px] leading-none tracking-tighter text-on-surface opacity-10 select-none">
+              <p className="font-semibold text-[72px] leading-none tracking-tight text-text-muted/20 select-none">
                 ERR
               </p>
 
-              <h1 className="font-headline-md text-2xl font-black uppercase text-on-surface tracking-tighter -mt-4 mb-6">
+              <h1 className="text-heading-sm font-semibold text-text-primary tracking-tight -mt-2 mb-6">
                 Execution Halted
               </h1>
 
-              {/* Error message in terminal style */}
-              <div className="bg-on-surface p-4 mb-8 text-left overflow-x-auto">
-                <p className="font-label-mono text-sm text-error break-words">
+              <div className="bg-canvas border border-border rounded-lg p-4 mb-8 text-left overflow-x-auto">
+                <p className="font-mono text-mono-sm text-error break-words">
                   &gt; {this.state.error?.message || "Critical system failure encountered."}
                 </p>
               </div>
 
               <Button
-                variant="brutal-error"
+                variant="destructive"
                 size="lg"
                 className="w-full"
                 onClick={() => window.location.reload()}
               >
-                <span className="material-symbols-outlined">refresh</span>
+                <RotateCcw className="h-4 w-4" />
                 Reinitialize Session
               </Button>
-            </div>
           </div>
         </div>
       );

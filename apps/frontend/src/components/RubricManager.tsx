@@ -11,6 +11,14 @@ import {
 import type { RubricCriterion } from '../types';
 import { parseApiError } from '../lib/errors';
 import { toast } from 'sonner';
+import {
+    X,
+    Plus,
+    Pencil,
+    Trash2,
+    Loader2,
+    Sliders,
+} from 'lucide-react';
 
 const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const { data: rubricsData, isLoading } = useGetRubricsQuery();
@@ -97,42 +105,41 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-on-surface/80 flex items-center justify-center z-[60] backdrop-blur-[2px] p-4">
-            <div className="bg-surface w-full max-w-5xl border-[4px] border-on-surface brutal-shadow flex flex-col max-h-[90vh]">
-
-                <div className="p-6 border-b-[4px] border-on-surface flex justify-between items-center bg-accent-yellow flex-shrink-0">
-                    <h2 className="font-headline-lg text-headline-lg uppercase font-black tracking-tighter text-on-surface">
-                        Rubric Manager
-                    </h2>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] backdrop-blur-sm p-4">
+            <div className="bg-surface w-full max-w-5xl border border-border rounded-xl shadow-elevated flex flex-col max-h-[90vh] overflow-hidden">
+                <div className="p-5 border-b border-border flex justify-between items-center bg-surface-raised/50 flex-shrink-0">
+                    <div>
+                        <p className="text-label-sm uppercase tracking-wider text-text-muted font-medium mb-1">Assessment schema</p>
+                        <h2 className="text-heading-md font-semibold text-text-primary tracking-tight">
+                            Rubric Manager
+                        </h2>
+                    </div>
                     <Button
-                        variant="brutal-ghost"
+                        variant="ghost"
                         size="icon"
                         onClick={onClose}
                         aria-label="Close rubric manager"
                     >
-                        <span className="material-symbols-outlined">close</span>
+                        <X className="w-5 h-5" />
                     </Button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto md:overflow-hidden flex flex-col md:flex-row">
-
-                    <div className="w-full md:w-1/3 border-b-[4px] md:border-b-0 md:border-r-[4px] border-on-surface p-6 overflow-y-auto bg-surface-variant flex flex-col gap-4">
-                        <Button variant="brutal" onClick={handleNewRubric} className="w-full">
-                            <span className="material-symbols-outlined">add</span>
+                    <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-border p-5 overflow-y-auto bg-canvas flex flex-col gap-4">
+                        <Button variant="default" onClick={handleNewRubric} className="w-full">
+                            <Plus className="w-4 h-4 mr-2" />
                             New Rubric
                         </Button>
 
                         {isLoading ? (
-                            <p className="text-center font-label-mono uppercase font-bold text-on-surface animate-pulse">
+                            <p className="text-center font-mono text-mono-sm uppercase tracking-wider text-text-muted animate-pulse">
                                 Loading...
                             </p>
                         ) : rubricsData?.data.length === 0 ? (
-                            <div className="text-center py-8">
-                                <p className="font-headline-md text-2xl font-black uppercase tracking-tighter text-on-surface-variant">
-                                    NO RUBRICS
-                                </p>
-                                <p className="font-label-mono uppercase text-on-surface-variant mt-2 font-bold text-xs">
-                                    Create your first rubric above
+                            <div className="text-center py-8 border border-dashed border-border rounded-lg">
+                                <p className="text-heading-sm font-medium text-text-muted">No rubrics</p>
+                                <p className="text-body-sm text-text-muted mt-2">
+                                    Create your first rubric above.
                                 </p>
                             </div>
                         ) : (
@@ -140,10 +147,10 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                 {rubricsData?.data.map((rubric) => (
                                     <div
                                         key={rubric.id}
-                                        className={`p-4 border-[4px] border-on-surface flex flex-col gap-3 brutal-shadow transition-transform duration-75 ${
+                                        className={`p-4 border rounded-lg flex flex-col gap-3 card-glow transition-colors ${
                                             editingId === rubric.id
-                                                ? 'bg-secondary-fixed'
-                                                : 'bg-surface hover:-translate-y-0.5'
+                                                ? 'bg-surface-raised border-border-strong ring-1 ring-border-strong'
+                                                : 'bg-surface border-border hover:border-border-strong'
                                         }`}
                                     >
                                         <button
@@ -151,36 +158,36 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                             className="text-left"
                                             onClick={() => handleEdit(rubric)}
                                         >
-                                            <h4 className="font-headline-md text-lg uppercase font-bold text-on-surface">
+                                            <h4 className="text-body-md font-semibold text-text-primary">
                                                 {rubric.name}
                                             </h4>
-                                            <p className="font-label-mono text-xs text-on-surface-variant mt-1 uppercase font-bold">
+                                            <p className="font-mono text-mono-sm text-text-muted mt-1">
                                                 {rubric.criteria.length} criteria
                                             </p>
                                         </button>
                                         <div className="flex gap-2">
                                             <Button
-                                                variant="brutal-ghost"
+                                                variant="secondary"
                                                 size="icon-sm"
                                                 className="flex-1"
                                                 onClick={(e) => { e.stopPropagation(); handleEdit(rubric); }}
                                                 disabled={deletingId === rubric.id}
                                                 aria-label="Edit rubric"
                                             >
-                                                <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                <Pencil className="w-4 h-4" />
                                             </Button>
                                             <Button
-                                                variant="brutal-error"
+                                                variant="ghost"
                                                 size="icon-sm"
-                                                className="flex-1"
+                                                className="flex-1 text-text-muted hover:text-error"
                                                 onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(rubric.id); }}
                                                 disabled={deletingId === rubric.id}
                                                 aria-label="Delete rubric"
                                             >
                                                 {deletingId === rubric.id ? (
-                                                    <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
                                                 ) : (
-                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                    <Trash2 className="w-4 h-4" />
                                                 )}
                                             </Button>
                                         </div>
@@ -190,11 +197,11 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         )}
                     </div>
 
-                    <div className="flex-1 p-6 md:p-8 overflow-y-auto bg-surface">
+                    <div className="flex-1 p-5 md:p-8 overflow-y-auto bg-surface">
                         {isCreatingNew ? (
                             <form onSubmit={handleSubmit} className="flex flex-col min-h-full">
                                 <div className="mb-8">
-                                    <h3 className="font-headline-md text-2xl uppercase font-black text-on-surface tracking-tighter mb-6 inline-block border-b-[4px] border-primary pb-2">
+                                    <h3 className="text-heading-sm font-semibold text-text-primary tracking-tight mb-5">
                                         {editingId ? 'Edit Rubric' : 'New Rubric'}
                                     </h3>
                                     <div className="space-y-2">
@@ -205,48 +212,49 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                             value={name}
                                             onChange={(e) => setName(e.target.value)}
                                             placeholder="e.g. Essay Rubric, Code Review"
-                                            className="bg-surface-variant"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="flex-1 space-y-6">
-                                    <div className="flex justify-between items-end border-b-[4px] border-on-surface pb-4">
-                                        <h3 className="font-headline-md text-xl uppercase font-bold text-on-surface">
+                                <div className="flex-1 space-y-5">
+                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-border pb-4">
+                                        <h3 className="text-body-md font-semibold text-text-primary">
                                             Criteria
                                         </h3>
                                         <Button
                                             type="button"
-                                            variant="brutal"
+                                            variant="secondary"
                                             size="sm"
                                             onClick={handleAddCriterion}
                                         >
-                                            <span className="material-symbols-outlined text-[18px]">add</span>
+                                            <Plus className="w-4 h-4 mr-1.5" />
                                             Add Criterion
                                         </Button>
                                     </div>
 
-                                    <div className="space-y-6 pb-6">
+                                    <div className="space-y-4 pb-6">
                                         {criteria.map((criterion, index) => (
                                             <div
                                                 key={index}
-                                                className="p-6 border-[4px] border-on-surface bg-surface brutal-shadow space-y-4 relative group"
+                                                className="p-5 border border-border rounded-lg bg-surface-raised/40 card-glow space-y-4 relative"
                                             >
-                                                {/* Number badge */}
-                                                <div className="absolute -top-4 -left-4 bg-on-surface text-surface px-3 py-1 border-[4px] border-surface font-headline-md font-black">
-                                                    {index + 1}
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-md bg-surface border border-border px-2 font-mono text-mono-sm text-text-secondary">
+                                                        {index + 1}
+                                                    </span>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon-sm"
+                                                        className="text-text-muted hover:text-error"
+                                                        onClick={() => handleRemoveCriterion(index)}
+                                                        aria-label="Remove criterion"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </Button>
                                                 </div>
-                                                {/* Remove button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveCriterion(index)}
-                                                    className="absolute -top-4 -right-4 p-2 bg-error text-on-error border-[4px] border-on-surface brutal-shadow brutal-button"
-                                                    aria-label="Remove criterion"
-                                                >
-                                                    <span className="material-symbols-outlined">close</span>
-                                                </button>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                                     <div className="md:col-span-3 space-y-2">
                                                         <Label>Criterion Name</Label>
                                                         <Input
@@ -264,9 +272,9 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                                             required
                                                             min="1"
                                                             value={criterion.points}
-                                                            onChange={(e) => handleCriterionChange(index, 'points', parseInt(e.target.value))}
+                                                            onChange={(e) => handleCriterionChange(index, 'points', parseInt(e.target.value, 10) || 0)}
                                                             placeholder="Pts"
-                                                            className="text-center font-label-mono font-bold"
+                                                            className="text-center font-mono font-medium"
                                                         />
                                                     </div>
                                                 </div>
@@ -276,7 +284,7 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                                         required
                                                         value={criterion.description}
                                                         onChange={(e) => handleCriterionChange(index, 'description', e.target.value)}
-                                                        className="w-full p-4 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow resize-y min-h-[100px] transition-colors duration-75"
+                                                        className="w-full min-h-[100px] p-3 rounded-md bg-canvas border border-border text-body-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:shadow-input-focus transition-colors resize-y"
                                                         placeholder="Describe what earns full points for this criterion..."
                                                     />
                                                 </div>
@@ -285,10 +293,10 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end gap-4 pt-6 border-t-[4px] border-on-surface mt-auto">
+                                <div className="flex justify-end gap-3 pt-5 border-t border-border mt-auto">
                                     <Button
                                         type="button"
-                                        variant="brutal-ghost"
+                                        variant="secondary"
                                         onClick={resetForm}
                                         disabled={isSubmitting}
                                     >
@@ -296,12 +304,12 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                     </Button>
                                     <Button
                                         type="submit"
-                                        variant="brutal-secondary"
+                                        variant="default"
                                         disabled={isSubmitting}
                                     >
                                         {isSubmitting ? (
                                             <span className="flex items-center gap-2">
-                                                <span className="material-symbols-outlined animate-spin">refresh</span>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
                                                 Saving...
                                             </span>
                                         ) : editingId ? 'Save Changes' : 'Create Rubric'}
@@ -309,18 +317,15 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                 </div>
                             </form>
                         ) : (
-                            /* ── Empty Prompt ─────────────────────────────── */
-                            <div className="h-full flex flex-col items-center justify-center text-on-surface-variant space-y-6">
-                                <div className="border-[4px] border-on-surface border-dashed p-8">
-                                    <p className="font-black text-[120px] leading-none tracking-tighter text-on-surface opacity-10 select-none text-center">
-                                        R
-                                    </p>
+                            <div className="h-full min-h-[420px] flex flex-col items-center justify-center text-center space-y-4">
+                                <div className="w-16 h-16 rounded-xl bg-surface-raised border border-border flex items-center justify-center">
+                                    <Sliders className="w-8 h-8 text-text-muted" />
                                 </div>
-                                <div className="text-center">
-                                    <h3 className="font-headline-md text-3xl uppercase font-black text-on-surface tracking-tighter mb-2">
-                                        NO RUBRIC<br />SELECTED
+                                <div>
+                                    <h3 className="text-heading-sm font-semibold text-text-primary tracking-tight mb-2">
+                                        No rubric selected
                                     </h3>
-                                    <p className="font-label-mono uppercase font-bold text-sm">
+                                    <p className="text-body-sm text-text-muted">
                                         Create a new rubric or select one to edit.
                                     </p>
                                 </div>
@@ -331,24 +336,24 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </div>
 
             {confirmDeleteId && (
-                <div className="fixed inset-0 bg-on-surface/80 flex items-center justify-center z-[60] p-4">
-                    <div className="bg-surface border-[4px] border-on-surface brutal-shadow p-8 max-w-sm w-full">
-                        <h3 className="font-headline-md text-xl font-black uppercase tracking-tighter mb-2 border-b-[4px] border-on-surface pb-3">
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+                    <div className="bg-surface border border-border rounded-xl shadow-elevated p-6 max-w-sm w-full">
+                        <h3 className="text-heading-sm font-semibold text-text-primary mb-2">
                             Delete Rubric?
                         </h3>
-                        <p className="font-body-md text-on-surface-variant mt-3 mb-6">
+                        <p className="text-body-sm text-text-secondary mb-6">
                             This action cannot be undone. Assignments using this rubric will be unaffected.
                         </p>
                         <div className="flex gap-3">
                             <Button
-                                variant="brutal-ghost"
+                                variant="secondary"
                                 className="flex-1"
                                 onClick={() => setConfirmDeleteId(null)}
                             >
                                 Cancel
                             </Button>
                             <Button
-                                variant="brutal-error"
+                                variant="destructive"
                                 className="flex-1"
                                 onClick={() => handleDelete(confirmDeleteId)}
                             >

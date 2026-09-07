@@ -1,11 +1,22 @@
 import sys
 import json
 import os
+import logging
+import time
+
+# Suppress noisy SDK automatic function calling warning
+logging.getLogger("google.genai").setLevel(logging.ERROR)
+try:
+    from google.genai.models import Models
+    Models._logged_afc_warning = True
+except Exception:
+    pass
+
 from google import genai
 from google.genai import types
 import PIL.Image
 
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 def publish(event):
     """Prints a single-line JSON event to stdout for the Node.js worker."""
@@ -158,19 +169,30 @@ def main():
 
     try:
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=[prompt_text, *images],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.2,
-                system_instruction=(
-                    "You are an expert academic evaluator. Evaluate assignments strictly and objectively against the provided rubric. "
-                    "Always return a single valid JSON object adhering precisely to the requested schema with detailed, actionable, and point-wise feedback. "
-                    "No markdown fences around the JSON."
-                ),
-            ),
-        )
+        response = None
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                response = client.models.generate_content(
+                    model=MODEL_NAME,
+                    contents=[prompt_text, *images],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.2,
+                        system_instruction=(
+                            "You are an expert academic evaluator. Evaluate assignments strictly and objectively against the provided rubric. "
+                            "Always return a single valid JSON object adhering precisely to the requested schema with detailed, actionable, and point-wise feedback. "
+                            "No markdown fences around the JSON."
+                        ),
+                    ),
+                )
+                break
+            except Exception as api_err:
+                err_str = str(api_err)
+                if ("503" in err_str or "UNAVAILABLE" in err_str or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str) and attempt < max_attempts - 1:
+                    time.sleep(2 * (attempt + 1))
+                    continue
+                raise
 
         response_text = response.text if response else ""
         if not response_text:

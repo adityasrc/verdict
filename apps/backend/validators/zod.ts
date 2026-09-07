@@ -39,8 +39,8 @@ export const createSubmissionSchema = z.object({
 });
 
 export const uploadUrlSchema = z.object({
-    fileName: z.literal("application/pdf"),
-    type: z.string().min(1),
+    fileName: z.string().min(1),
+    type: z.literal("application/pdf"),
     assignmentId: z.uuid(),
     pin: z.string().length(4).optional(),
 });

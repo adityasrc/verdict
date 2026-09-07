@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { DatePicker } from '../ui/date-picker';
 import { toast } from 'sonner';
 import { parseApiError } from '../../lib/errors';
 
@@ -27,13 +28,14 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [dueDateObj, setDueDateObj] = useState<Date | undefined>(undefined);
   const [dueDate, setDueDate] = useState('');
   const [maxScore, setMaxScore] = useState('100');
   const [selectedRubricId, setSelectedRubricId] = useState('');
 
   const handleClose = () => {
     setTitle(''); setDescription(''); setDueDate('');
-    setMaxScore('100'); setSelectedRubricId('');
+    setDueDateObj(undefined); setMaxScore('100'); setSelectedRubricId('');
     onClose();
   };
 
@@ -48,7 +50,7 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
       await createAssignment({
         title,
         description,
-        dueDate,
+        dueDate: dueDate || undefined,
         maxScore: parsedScore,
         rubricId: selectedRubricId && selectedRubricId !== 'none' ? selectedRubricId : undefined,
       }).unwrap();
@@ -59,12 +61,25 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
     }
   };
 
+  const handleDateChange = (date: Date | undefined) => {
+    setDueDateObj(date);
+    if (date) {
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      setDueDate(endOfDay.toISOString());
+    } else {
+      setDueDate('');
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-md bg-surface border-[4px] border-on-surface text-on-surface brutal-shadow rounded-none">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-headline-md font-black uppercase">New Assessment</DialogTitle>
-          <DialogDescription className="font-body-md text-on-surface-variant">Fill details below.</DialogDescription>
+          <DialogTitle>New Assessment</DialogTitle>
+          <DialogDescription>
+            Configure assignment details, deadline, and optional grading rubric.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 mt-2">
           <div className="space-y-2">
@@ -84,20 +99,19 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
               id="a-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border-[4px] border-on-surface bg-surface font-body-md focus:outline-none focus:border-primary brutal-shadow resize-none"
+              className="w-full min-h-20 px-3 py-2 rounded-md bg-canvas border border-border text-body-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:shadow-input-focus transition-colors resize-none"
               rows={2}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="a-due">Due Date</Label>
-              <Input
-                id="a-due"
-                type="date"
-                required
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+              <Label>Due Date</Label>
+              <DatePicker
+                value={dueDateObj}
+                onChange={handleDateChange}
+                placeholder="dd/mm/yyyy"
+                minDate={new Date()}
               />
             </div>
             <div className="space-y-2">
@@ -119,7 +133,7 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
               <button
                 type="button"
                 onClick={onOpenRubricManager}
-                className="text-xs text-primary font-bold hover:underline"
+                className="text-label-sm text-text-secondary hover:text-accent transition-colors"
               >
                 Create Rubric
               </button>
@@ -139,7 +153,7 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
 
           <Button
             type="submit"
-            variant="brutal"
+            variant="default"
             disabled={isLoading}
             className="w-full mt-4"
           >

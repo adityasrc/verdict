@@ -2,27 +2,19 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-// No border-radius. Thick 4px border. Hard shadow. Snappy focus ring.
-
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
     return (
       <input
         type={type}
         className={cn(
-          // Layout
-          "flex h-12 w-full px-4",
-          // Brutalist styling
-          "border-[4px] border-on-surface bg-surface text-on-surface brutal-shadow",
-          // Typography
-          "font-body-md placeholder:text-on-surface-variant",
-          // States
-          "focus:outline-none focus:border-primary",
+          "flex h-10 w-full px-3 rounded-md",
+          "bg-canvas border border-border text-text-primary",
+          "text-body-sm placeholder:text-text-muted",
+          "focus:outline-none focus:border-accent focus:shadow-input-focus",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          // File input reset
-          "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-on-surface",
-          // Transition
-          "transition-colors duration-75",
+          "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-text-primary",
+          "transition-colors",
           className
         )}
         ref={ref}

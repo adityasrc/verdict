@@ -1,13 +1,38 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  Eye,
+  EyeOff,
+  GraduationCap,
+  LockKeyhole,
+  Mail,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 import { useAppDispatch } from "../app/store";
 import { useSignupMutation } from "../features/auth/authApi";
 import { setCredentials } from "../features/auth/authSlice";
+import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { toast } from "sonner";
 import { parseApiError } from "../lib/errors";
+
+const ROLES = [
+  {
+    value: "TEACHER" as const,
+    title: "Teacher",
+    description: "Create assignments and review evaluations.",
+    icon: GraduationCap,
+  },
+  {
+    value: "STUDENT" as const,
+    title: "Student",
+    description: "Submit coursework and view feedback.",
+    icon: UsersRound,
+  },
+];
 
 const Signup = () => {
   const [email, setEmail] = useState("");
@@ -36,142 +61,134 @@ const Signup = () => {
     }
   };
 
-  const getRoleButtonClass = (buttonRole: "STUDENT" | "TEACHER") => {
-    return `flex-1 py-3 border-[4px] font-label-caps uppercase font-bold transition-all brutal-button ${role === buttonRole
-      ? "border-on-surface bg-on-surface text-surface brutal-shadow"
-      : "border-on-surface bg-transparent text-on-surface hover:bg-surface-variant"
-      }`;
-  };
-
   return (
-    <div className="min-h-screen bg-surface flex flex-col md:flex-row font-sans selection:bg-primary selection:text-on-primary">
+    <div className="min-h-screen bg-canvas flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-[420px]">
+        <BrandMark className="mb-8" />
 
-
-      <div className="w-full md:w-[40%] lg:w-[35%] bg-accent-yellow border-b-[4px] md:border-b-0 md:border-r-[4px] border-on-surface p-8 md:p-12 flex flex-col relative md:min-h-screen">
-        <Link to="/" className="flex items-center gap-3 w-fit">
-          <div className="bg-primary border-[4px] border-on-surface brutal-shadow flex items-center justify-center p-1.5 brutal-button">
-            <span className="material-symbols-outlined text-on-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
-              menu_book
-            </span>
-          </div>
-          <span className="font-headline-md text-xl font-black uppercase tracking-tighter text-on-surface">
-            Verdict
-          </span>
-        </Link>
-
-        <div className="flex-1 flex flex-col justify-center mt-12 mb-4 md:mt-0 md:mb-0 md:pb-32">
-          <h1 className="text-4xl md:text-5xl lg:text-[72px] font-black uppercase tracking-tighter text-on-surface leading-none mb-6">
-            Start<br />grading<br />smarter.
+        <div className="mb-6">
+          <h1 className="text-heading-md text-text-primary font-semibold tracking-tight">
+            Create your account
           </h1>
-          <p className="text-on-surface-variant text-lg font-medium max-w-[280px] hidden md:block leading-relaxed">
-            Create your free Verdict account and automate your first evaluation pipeline.
+          <p className="text-body-sm text-text-secondary mt-1">
+            Choose your role and fill in your details.
           </p>
         </div>
 
-        <div className="hidden md:block absolute bottom-12 left-12 pr-12">
-          <p className="font-label-mono text-[11px] font-bold uppercase tracking-widest text-on-surface opacity-60">
-            Built for educators.
-          </p>
-        </div>
-      </div>
-
-
-      <div className="flex-1 flex items-center justify-center p-6 md:p-12 overflow-y-auto">
-        <div className="w-full max-w-[420px] mt-8 md:mt-12">
-
-          <div className="mb-10">
-            <h2 className="font-headline-md text-3xl font-black uppercase tracking-tighter text-on-surface mb-2">
-              Create account
-            </h2>
-            <p className="text-on-surface-variant text-base font-bold uppercase">
-              Start grading smarter.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex flex-col">
-            <Label className="mb-3">I am a...</Label>
-            <div className="flex gap-4 mb-8">
-              <button
-                type="button"
-                onClick={() => setRole("TEACHER")}
-                className={getRoleButtonClass("TEACHER")}
-              >
-                Teacher
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole("STUDENT")}
-                className={getRoleButtonClass("STUDENT")}
-              >
-                Student
-              </button>
+        <div className="rounded-xl border border-border bg-surface card-glow p-6">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {/* Role selection */}
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {ROLES.map((option) => {
+                  const Icon = option.icon;
+                  const selected = role === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setRole(option.value)}
+                      className={`rounded-lg border p-3 text-left transition-colors ${
+                        selected
+                          ? "border-border-strong bg-surface-raised text-text-primary"
+                          : "border-border bg-canvas text-text-secondary hover:border-border-strong hover:bg-surface-raised"
+                      }`}
+                    >
+                      <Icon
+                        className={`h-4 w-4 mb-2 ${
+                          selected ? "text-text-primary" : "text-text-muted"
+                        }`}
+                      />
+                      <span className="block text-body-sm font-semibold text-text-primary">
+                        {option.title}
+                      </span>
+                      <span className="block text-xs text-text-muted mt-0.5 leading-snug">
+                        {option.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <Label htmlFor="name" className="mb-2">Full Name</Label>
-            <Input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Elon Musk"
-              required
-              className="h-14 font-label-mono mb-6"
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="name">Full Name</Label>
+              <div className="relative">
+                <UserRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Full name"
+                  required
+                  className="h-10 pl-10"
+                />
+              </div>
+            </div>
 
-            <Label htmlFor="email" className="mb-2">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="elonmusk@mail.com"
-              required
-              className="h-14 font-label-mono mb-6"
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  required
+                  className="h-10 pl-10"
+                />
+              </div>
+            </div>
 
-            <Label htmlFor="password" className="mb-2">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="************"
-                required
-                className="h-14 pr-12 font-label-mono"
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface hover:text-primary transition-colors flex items-center justify-center p-1"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  {showPassword ? "visibility_off" : "visibility"}
-                </span>
-              </button>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="h-10 pl-10 pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2 rounded flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-raised transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <Button
               type="submit"
-              variant="brutal"
-              size="lg"
+              variant="default"
               disabled={isLoading}
-              className={`w-full mt-8 h-16 text-lg flex items-center justify-center gap-2 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className="w-full h-10 mt-1"
             >
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isLoading ? "Creating account…" : "Create Account"}
             </Button>
           </form>
-
-          <div className="mt-10 pt-8 border-t-[4px] border-on-surface flex flex-col items-center">
-            <p className="font-body-md font-bold text-on-surface uppercase text-sm">
-              Already have an account?
-              <Link to="/login" className="text-primary hover:text-primary-container font-black ml-2 transition-colors">
-                SIGN IN
-              </Link>
-            </p>
-          </div>
         </div>
+
+        <p className="text-center text-body-sm text-text-secondary mt-5">
+          Already have an account?{" "}
+          <Link to="/login" className="text-text-primary font-medium hover:underline">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );

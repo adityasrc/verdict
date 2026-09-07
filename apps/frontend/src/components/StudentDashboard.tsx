@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CheckCircle2, GraduationCap, RefreshCw, Trophy, TrendingUp, Upload } from 'lucide-react';
 import { useAppSelector } from '../app/store';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import {
     useGetRecentSubmissionsQuery,
     useGetStudentAssignmentsQuery,
@@ -17,14 +20,22 @@ function getGreeting(): string {
     return 'Good Evening';
 }
 
+const scoreLabel = (score: number | null | undefined) => {
+    if (score == null) return 'Graded';
+    if (score >= 90) return 'Excellent';
+    if (score >= 75) return 'Strong';
+    return 'Reviewed';
+};
+
 export const StudentDashboard = () => {
     const user = useAppSelector(selectCurrentUser);
     const navigate = useNavigate();
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
 
-    const { data: assignmentsData } = useGetStudentAssignmentsQuery();
-    const { data: submissionsData } = useGetRecentSubmissionsQuery();
+    const { data: assignmentsData, isLoading: isAssignmentsLoading } = useGetStudentAssignmentsQuery();
+    const { data: submissionsData, isLoading: isSubmissionsLoading } = useGetRecentSubmissionsQuery();
 
+    const isLoading = isAssignmentsLoading || isSubmissionsLoading;
     const allAssignments = assignmentsData?.data || [];
     const recentSubmissions = submissionsData?.data || [];
 
@@ -40,79 +51,120 @@ export const StudentDashboard = () => {
         ? Math.max(...gradedSubmissions.map((s) => s.score ?? 0))
         : 0;
 
+    if (isLoading) {
+        return (
+            <div className="w-full space-y-8 animate-pulse">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 h-44 rounded-lg bg-surface border border-border" />
+                    <div className="h-44 rounded-lg bg-surface border border-border" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="h-28 rounded-lg bg-surface border border-border" />
+                    <div className="h-28 rounded-lg bg-surface border border-border" />
+                    <div className="h-28 rounded-lg bg-surface border border-border" />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full">
-            <section className="mb-16">
-                <div className="flex flex-col lg:flex-row gap-8 items-stretch mb-12">
-                    <div className="flex-1 bg-surface border-[4px] border-on-surface brutal-shadow p-6 relative overflow-hidden flex flex-col justify-center">
-                        <h2 className="font-headline-xl text-4xl leading-none font-black text-on-surface tracking-tighter uppercase mb-2 relative z-10">
-                            {getGreeting()}, <span className="text-primary">{user?.name || user?.email?.split('@')[0] || 'Student'}!</span>
-                        </h2>
-                        <p className="font-body-lg text-lg text-on-surface-variant font-bold max-w-md relative z-10 uppercase tracking-widest">
-                            {pendingAssignments.length > 0
-                                ? `You have ${pendingAssignments.length} assignment${pendingAssignments.length !== 1 ? 's' : ''} to submit.`
-                                : 'All assignments submitted. Well done!'}
-                        </p>
-                    </div>
-                    <div className="lg:w-1/3 bg-surface-variant border-[4px] border-on-surface brutal-shadow flex flex-col">
-                        <div className="bg-on-surface text-surface px-6 py-3 font-label-caps text-[11px] tracking-widest uppercase border-b-[4px] border-on-surface flex justify-between items-center font-bold">
-                            <span>Status</span>
-                            <span className="material-symbols-outlined text-surface">info</span>
-                        </div>
-                        <div className="flex-1 p-8 flex flex-col justify-center items-center text-center">
-                            <span
-                                className={`material-symbols-outlined text-[64px] mb-4 text-on-surface ${pendingAssignments.length > 0 ? 'animate-spin' : ''}`}
-                                style={{ fontVariationSettings: "'FILL' 1" }}
-                            >
-                                {pendingAssignments.length === 0 ? 'check_circle' : 'sync'}
-                            </span>
-                            <div className="font-headline-md text-3xl text-on-surface font-black uppercase tracking-tighter">
-                                {pendingAssignments.length === 0 ? 'All Caught Up' : 'Submissions Pending'}
+            <section className="mb-10">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <Card className="lg:col-span-2 justify-center">
+                        <CardContent className="p-6 md:p-8">
+                            <Badge variant="default" className="mb-4 gap-1.5 font-mono text-label-sm">
+                                <GraduationCap className="h-3.5 w-3.5 text-text-secondary" />
+                                Student Workspace
+                            </Badge>
+                            <h2 className="text-heading-md text-text-primary font-semibold tracking-tight leading-tight">
+                                {getGreeting()}, {user?.name || user?.email?.split('@')[0] || 'Student'}
+                            </h2>
+                            <p className="text-body-md text-text-secondary mt-3 max-w-xl">
+                                {pendingAssignments.length > 0
+                                    ? `You have ${pendingAssignments.length} assignment${pendingAssignments.length !== 1 ? 's' : ''} ready for submission.`
+                                    : 'All assignments are submitted.'}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="justify-center">
+                        <CardHeader>
+                            <CardTitle>Queue Status</CardTitle>
+                            {pendingAssignments.length > 0 ? (
+                                <RefreshCw className="h-4 w-4 text-text-muted" />
+                            ) : (
+                                <CheckCircle2 className="h-4 w-4 text-success" />
+                            )}
+                        </CardHeader>
+                        <CardContent className="flex flex-col justify-center">
+                            <div className="text-heading-md font-semibold text-text-primary">
+                                {pendingAssignments.length === 0 ? 'All caught up' : 'Submissions pending'}
                             </div>
-                        </div>
-                    </div>
+                            <p className="text-body-sm text-text-secondary mt-2">
+                                {pendingAssignments.length === 0 ? 'No open work in the queue.' : 'Open assignments are waiting below.'}
+                            </p>
+                        </CardContent>
+                    </Card>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <div className="bg-surface border-[4px] border-on-surface brutal-shadow p-6 flex flex-col justify-between">
-                        <span className="font-label-caps uppercase font-bold text-sm tracking-widest mb-2">Total Submissions</span>
-                        <span className="font-headline-lg text-4xl font-black uppercase tracking-tighter">{totalSubmissions}</span>
-                    </div>
-                    <div className="bg-primary text-on-primary border-[4px] border-on-surface brutal-shadow p-6 flex flex-col justify-between">
-                        <span className="font-label-caps uppercase font-bold text-sm tracking-widest mb-2 text-on-primary">Average Score</span>
-                        <span className="font-headline-lg text-4xl font-black uppercase tracking-tighter text-on-primary">{averageScore}%</span>
-                    </div>
-                    <div className="bg-surface border-[4px] border-on-surface brutal-shadow p-6 flex flex-col justify-between">
-                        <span className="font-label-caps uppercase font-bold text-sm tracking-widest mb-2">Highest Score</span>
-                        <span className="font-headline-lg text-4xl font-black uppercase tracking-tighter">{highestScore}%</span>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Total Submissions</CardTitle>
+                            <Upload className="h-4 w-4 text-text-muted" />
+                        </CardHeader>
+                        <CardContent>
+                            <span className="text-heading-lg font-semibold text-text-primary tracking-tight font-mono">{totalSubmissions}</span>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Average Score</CardTitle>
+                            <TrendingUp className="h-4 w-4 text-text-muted" />
+                        </CardHeader>
+                        <CardContent>
+                            <span className="text-heading-lg font-semibold text-text-primary tracking-tight font-mono">{averageScore}%</span>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Highest Score</CardTitle>
+                            <Trophy className="h-4 w-4 text-text-muted" />
+                        </CardHeader>
+                        <CardContent>
+                            <span className="text-heading-lg font-semibold text-text-primary tracking-tight font-mono">{highestScore}%</span>
+                        </CardContent>
+                    </Card>
                 </div>
             </section>
 
-            {/* P0 FIX: Available Assignments — previously missing from student dashboard.
-                Students had no way to discover assignments without a direct teacher-shared link. */}
             {pendingAssignments.length > 0 && (
-                <section className="mb-12">
-                    <div className="flex justify-between items-end mb-6 border-b-[4px] border-on-surface pb-2">
-                        <h3 className="font-headline-md text-2xl font-black uppercase tracking-tight text-on-surface">Open Assignments</h3>
+                <section className="mb-10">
+                    <div className="flex justify-between items-end border-b border-border pb-3 mb-4">
+                        <h3 className="text-heading-sm text-text-primary font-semibold">Open Assignments</h3>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {pendingAssignments.map((assignment) => (
-                            <div key={assignment.id} className="bg-surface border-[4px] border-on-surface brutal-shadow p-4 flex justify-between items-center">
+                            <div
+                                key={assignment.id}
+                                className="bg-surface border border-border rounded-lg card-glow p-5 flex flex-col sm:flex-row justify-between gap-4 sm:items-center hover:border-border-strong transition-colors"
+                            >
                                 <div>
-                                    <p className="font-headline-md font-black uppercase tracking-tighter text-on-surface">{assignment.title}</p>
-                                    <p className="font-label-mono text-xs uppercase text-on-surface-variant font-bold">
+                                    <p className="text-body-md font-semibold text-text-primary">{assignment.title}</p>
+                                    <p className="font-mono text-mono-sm text-text-muted mt-1">
                                         {assignment.dueDate
                                             ? `Due: ${new Date(assignment.dueDate).toLocaleDateString()}`
                                             : 'No due date'}
-                                        {assignment.maxScore ? ` · ${assignment.maxScore} pts` : ''}
+                                        {assignment.maxScore ? ` | ${assignment.maxScore} pts` : ''}
                                     </p>
                                 </div>
                                 <Button
-                                    variant="brutal"
+                                    variant="default"
                                     size="sm"
                                     onClick={() => navigate(`/upload/${assignment.id}`)}
                                 >
+                                    <Upload className="h-4 w-4" />
                                     Submit PDF
                                 </Button>
                             </div>
@@ -121,65 +173,75 @@ export const StudentDashboard = () => {
                 </section>
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
-                <section>
-                    <div className="flex justify-between items-end mb-6 border-b-[4px] border-on-surface pb-2">
-                        <h3 className="font-headline-md text-2xl font-black uppercase tracking-tight text-on-surface">Recent Feedback</h3>
-                    </div>
-                    <div className="space-y-6">
-                        {recentSubmissions.slice(0, 3).map(sub => (
-                            <div key={sub.id} className="bg-surface border-[4px] border-on-surface brutal-shadow flex flex-col hover:-translate-y-1 transition-transform duration-75 linear">
-                                <div className="bg-on-surface text-surface px-4 py-2 font-label-caps text-[11px] uppercase tracking-widest border-b-[4px] border-on-surface flex justify-between items-center font-bold">
-                                    <span>{sub.assignment?.title}</span>
-                                    <span className="material-symbols-outlined text-[16px] text-surface">science</span>
-                                </div>
-
-                                {sub.status === 'GRADED' ? (
-                                    <div className="p-6 flex-1 flex flex-col justify-center items-center bg-secondary-fixed border-b-[4px] border-on-surface">
-                                        <div className="font-headline-xl text-[64px] font-black text-on-surface leading-none mb-2 tracking-tighter">
-                                            {sub.score}<span className="text-[32px] font-black text-on-surface-variant">/{sub.assignment?.maxScore || 100}</span>
-                                        </div>
-                                        <div className="font-label-mono text-xs font-bold bg-surface border-[4px] border-on-surface px-4 py-1.5 brutal-shadow uppercase">
-                                            {(sub.score ?? 0) >= 90 ? 'Excellent' : 'Graded'}
-                                        </div>
-                                    </div>
-                                ) : sub.status === 'FAILED' ? (
-                                    <div className="p-12 flex-1 flex flex-col justify-center items-center bg-error border-b-[4px] border-on-surface">
-                                        <div className="font-headline-md text-2xl font-black text-on-error uppercase tracking-widest">
-                                            STATUS: FAILED
-                                        </div>
-                                    </div>
-                                ) : (sub.status === 'PENDING' || sub.status === 'EVALUATING') ? (
-                                    <div className="p-12 flex-1 flex flex-col justify-center items-center bg-surface-variant border-b-[4px] border-on-surface">
-                                        <div className="font-headline-md text-2xl font-black text-on-surface uppercase tracking-widest">
-                                            {sub.status === 'EVALUATING' ? 'AI EVALUATING...' : 'STATUS: PROCESSING'}
-                                        </div>
-                                    </div>
-                                ) : null}
-
-                                <div className="p-4 bg-surface flex justify-between items-center">
-                                    <span className="font-label-mono text-[11px] uppercase font-bold truncate pr-4 text-on-surface-variant">ID: {sub.id.substring(0, 6)}</span>
-                                    {sub.status !== 'FAILED' && (
-                                        <Button variant="brutal" size="sm" onClick={() => setSelectedSubmission(sub)} disabled={sub.status !== 'GRADED'} aria-label="View feedback">
-                                            View Details
-                                        </Button>
-                                    )}
-                                </div>
+            <section>
+                <div className="flex justify-between items-end border-b border-border pb-3 mb-4">
+                    <h3 className="text-heading-sm text-text-primary font-semibold">Recent Feedback</h3>
+                </div>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    {recentSubmissions.slice(0, 4).map((sub) => (
+                        <Card key={sub.id} className="overflow-hidden hover:border-border-strong transition-colors">
+                            <div className="border-b border-border px-5 py-3 flex justify-between items-center bg-surface-raised/40">
+                                <span className="text-label text-text-secondary truncate pr-4">{sub.assignment?.title}</span>
+                                <Badge
+                                    variant={
+                                        sub.status === 'GRADED'
+                                            ? 'success'
+                                            : sub.status === 'FAILED'
+                                                ? 'destructive'
+                                                : sub.status === 'EVALUATING'
+                                                    ? 'accent'
+                                                    : 'warning'
+                                    }
+                                >
+                                    {sub.status === 'GRADED' ? 'Graded' : sub.status === 'EVALUATING' ? 'Evaluating' : sub.status === 'FAILED' ? 'Failed' : 'Pending'}
+                                </Badge>
                             </div>
-                        ))}
-                        {recentSubmissions.length === 0 && (
-                            <div className="border-[4px] border-on-surface border-dashed p-12 text-center bg-surface">
-                                <p className="font-headline-md text-3xl font-black uppercase tracking-tighter text-on-surface-variant">
-                                    NO FEEDBACK<br />YET
-                                </p>
-                                <p className="font-label-mono uppercase text-on-surface-variant mt-4 font-bold text-sm">
-                                    Submit an assignment to receive grades
-                                </p>
+
+                            {sub.status === 'GRADED' ? (
+                                <CardContent className="p-6">
+                                    <div className="flex items-end gap-2 mb-3">
+                                        <span className="text-heading-lg font-semibold text-text-primary leading-none font-mono">{sub.score}</span>
+                                        <span className="text-heading-sm text-text-muted mb-1 font-mono">/{sub.assignment?.maxScore || 100}</span>
+                                    </div>
+                                    <Badge variant="secondary">{scoreLabel(sub.score)}</Badge>
+                                </CardContent>
+                            ) : sub.status === 'FAILED' ? (
+                                <CardContent className="p-6">
+                                    <p className="text-error font-medium">Evaluation failed.</p>
+                                    <p className="text-body-sm text-text-secondary mt-1">Ask your teacher to review or reopen the submission.</p>
+                                </CardContent>
+                            ) : (
+                                <CardContent className="p-6 processing-stripes">
+                                    <p className="text-accent font-medium">{sub.status === 'EVALUATING' ? 'AI evaluation in progress' : 'Processing submission'}</p>
+                                    <p className="text-body-sm text-text-secondary mt-1">Feedback will appear here once complete.</p>
+                                </CardContent>
+                            )}
+
+                            <div className="p-5 pt-0 flex justify-between items-center">
+                                <span className="font-mono text-mono-sm text-text-muted">ID {sub.id.substring(0, 6)}</span>
+                                {sub.status !== 'FAILED' && (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => setSelectedSubmission(sub)}
+                                        disabled={sub.status !== 'GRADED'}
+                                        aria-label="View feedback"
+                                    >
+                                        View Details
+                                    </Button>
+                                )}
                             </div>
-                        )}
-                    </div>
-                </section>
-            </div>
+                        </Card>
+                    ))}
+
+                    {recentSubmissions.length === 0 && (
+                        <div className="xl:col-span-2 border border-dashed border-border rounded-lg p-12 text-center">
+                            <p className="text-heading-sm text-text-muted font-medium mb-2">No feedback yet</p>
+                            <p className="text-body-sm text-text-muted">Submit an assignment to receive grades.</p>
+                        </div>
+                    )}
+                </div>
+            </section>
 
             <SubmissionFeedbackModal
                 submission={selectedSubmission}
