@@ -10,9 +10,13 @@ app.use(express.urlencoded({ extended: true })); // for strings or arrays
 app.use(express.json()); // for json objects
 
 
+const corsOrigin = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
+    : "http://localhost:5173";
+
 const corsOption: CorsOptions = {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173", // only accept requests from this origin
-    credentials: true, // allow cookies to be sent
+    origin: corsOrigin,
+    credentials: true,
 };
 
 app.use(cors(corsOption));

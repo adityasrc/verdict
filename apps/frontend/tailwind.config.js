@@ -17,7 +17,11 @@ export default {
                 'text-secondary': '#a1a1aa',
                 'text-muted': '#52525b',
 
-                // Accent — muted indigo, used sparingly for interactive states only
+                // Brand signature color (the red 'V' mark)
+                brand: '#e05c5c',
+                'brand-muted': 'rgba(224, 92, 92, 0.15)',
+
+                // Accent - muted indigo, used sparingly for interactive states only
                 accent: '#8b9cf4',
                 'accent-muted': 'rgba(139, 156, 244, 0.1)',
                 'accent-subtle': 'rgba(139, 156, 244, 0.05)',

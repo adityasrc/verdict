@@ -25,12 +25,14 @@ export class SubmissionController {
         this.router.use(authMiddleware);
 
         this.router.post("/", requireRole("STUDENT"), catchAsync(this.createSubmission.bind(this)));
+        this.router.post("/uploadUrl", requireRole("STUDENT"), catchAsync(this.getUploadUrl.bind(this)));
         this.router.get("/uploadUrl", requireRole("STUDENT"), catchAsync(this.getUploadUrl.bind(this)));
         this.router.get("/my-submissions", requireRole("STUDENT"), catchAsync(this.getMySubmissions.bind(this)));
 
         this.router.get("/assignment/:assignmentId", requireRole("TEACHER"), catchAsync(this.getAssignmentSubmissions.bind(this)));
         this.router.post("/reEvaluate", requireRole("TEACHER"), catchAsync(this.allowRevaluate.bind(this)));
-        this.router.post("/allowResubmission", requireRole("TEACHER"), catchAsync(this.allowResubmission.bind(this)));
+        this.router.post("/deleteSubmission", requireRole("TEACHER"), catchAsync(this.deleteSubmission.bind(this)));
+        this.router.post("/allowResubmission", requireRole("TEACHER"), catchAsync(this.deleteSubmission.bind(this)));
 
         this.router.get("/recent", catchAsync(this.getRecentSubmissions.bind(this)));
     }
@@ -41,13 +43,18 @@ export class SubmissionController {
             throw new AppError("Validation failed", 400, parsed.error.issues);
         }
 
-
         const studentId = req.user!.id;
-        const { assignmentId, fileKey } = parsed.data;
+        const { assignmentId, fileKey, pin } = parsed.data;
 
         const assignment = await prisma.assignment.findUnique({ where: { id: assignmentId } });
         if (!assignment) {
             throw new AppError("Assignment not found", 404);
+        }
+
+        if (assignment.accessPin !== null) {
+            if (!pin || pin !== assignment.accessPin) {
+                throw new AppError("Invalid PIN.", 403);
+            }
         }
 
         const submission = await this._submissionManager.createSubmission({
@@ -57,7 +64,13 @@ export class SubmissionController {
         });
 
         const publicUrl = `${process.env.PUBLIC_ENDPOINT}/${submission.fileKey}`;
-        await submissionQueue.add("grade_assignment", { ...submission, publicUrl });
+        await submissionQueue.add("grade_assignment", {
+            id: submission.id,
+            assignmentId: submission.assignmentId,
+            fileKey: submission.fileKey,
+            studentId: submission.studentId,
+            publicUrl,
+        });
 
         try {
             const io = getIO();
@@ -102,7 +115,8 @@ export class SubmissionController {
     }
 
     private async getUploadUrl(req: Request, res: Response) {
-        const parsed = uploadUrlSchema.safeParse(req.query);
+        const inputData = Object.keys(req.body || {}).length > 0 ? req.body : req.query;
+        const parsed = uploadUrlSchema.safeParse(inputData);
         if (!parsed.success) {
             throw new AppError("Validation failed", 400, parsed.error.issues);
         }
@@ -142,7 +156,7 @@ export class SubmissionController {
         return res.status(200).json({ success: true, data: submissions });
     }
 
-    public async allowResubmission(req: Request, res: Response) {
+    public async deleteSubmission(req: Request, res: Response) {
         const parsed = submissionActionSchema.safeParse(req.body);
         if (!parsed.success) {
             throw new AppError("Validation failed", 400, parsed.error.issues);
@@ -165,6 +179,8 @@ export class SubmissionController {
         await this._submissionManager.deleteSubmission(submissionId);
         return res.status(200).json({ success: true, data: null });
     }
+
+    public allowResubmission = this.deleteSubmission;
 
     public async allowRevaluate(req: Request, res: Response) {
         const parsed = submissionActionSchema.safeParse(req.body);
@@ -196,7 +212,13 @@ export class SubmissionController {
         });
 
         const publicUrl = `${process.env.PUBLIC_ENDPOINT}/${updatedSubmission.fileKey}`;
-        await submissionQueue.add("grade_assignment", { ...updatedSubmission, publicUrl });
+        await submissionQueue.add("grade_assignment", {
+            id: updatedSubmission.id,
+            assignmentId: updatedSubmission.assignmentId,
+            fileKey: updatedSubmission.fileKey,
+            studentId: updatedSubmission.studentId,
+            publicUrl,
+        });
 
         try {
             const io = getIO();

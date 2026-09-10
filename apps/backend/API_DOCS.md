@@ -26,7 +26,7 @@ pnpm dev
 
 | Method | Path | Role | Purpose |
 | --- | --- | --- | --- |
-| POST | `/assignments` | Teacher | Create an assignment. Body: `title`, optional `description`, `maxScore`, `dueDate`, `rubricId`, and `requireUniqueId`. |
+| POST | `/assignments` | Teacher | Create an assignment. Body: `title`, optional `description`, `maxScore`, `dueDate`, `rubricId`. |
 | GET | `/assignments/teacher/my-assignments` | Teacher | List the signed-in teacher's assignments. |
 | GET | `/assignments/student/all` | Signed-in user | List published assignments. |
 | GET | `/assignments/:id` | Signed-in user | Get an assignment. The session PIN is never returned. |
@@ -51,14 +51,13 @@ Student submission routes require the student role.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| POST | `/submissions/verifyAssignmentOtp` | Check an assignment PIN. Body: `assignmentId`, `otp`. |
-| GET | `/submissions/uploadUrl` | Get a short-lived upload URL. Query: `fileName`, `type`, `assignmentId`, `otp`. |
-| POST | `/submissions` | Register a submission and queue grading. Body: `assignmentId`, `otp`, optional `studentUniqueId`. The ID is required when the assignment requires it. |
+| POST | `/submissions/uploadUrl` | Get a short-lived upload URL. Body: `fileName`, `type`, `assignmentId`, optional `pin`. |
+| POST | `/submissions` | Register a submission and queue grading. Body: `assignmentId`, `fileKey`, optional `pin`. |
 | GET | `/submissions/my-submissions` | List the signed-in student's submissions. |
 | GET | `/submissions/assignment/:assignmentId` | Teacher-only list of submissions for an assignment they own. |
 | GET | `/submissions/recent` | Recent submissions available to the signed-in user. |
 | POST | `/submissions/reEvaluate` | Teacher-only. Body: `submissionId`. |
-| POST | `/submissions/allowResubmission` | Teacher-only. Body: `submissionId`. |
+| POST | `/submissions/deleteSubmission` | Teacher-only. Body: `submissionId`. (also aliased to `/allowResubmission`). |
 
 Submission PIN checks are rate limited. Upload URLs expire after 10 minutes.
 

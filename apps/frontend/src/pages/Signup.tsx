@@ -9,9 +9,8 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
-import { useAppDispatch } from "../app/store";
 import { useSignupMutation } from "../features/auth/authApi";
-import { setCredentials } from "../features/auth/authSlice";
+import { useAuth } from "../hooks/useAuth";
 import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -23,13 +22,13 @@ const ROLES = [
   {
     value: "TEACHER" as const,
     title: "Teacher",
-    description: "Create assignments and review evaluations.",
+    description: "Create rubrics and manage assessments",
     icon: GraduationCap,
   },
   {
     value: "STUDENT" as const,
     title: "Student",
-    description: "Submit coursework and view feedback.",
+    description: "Submit coursework and view feedback",
     icon: UsersRound,
   },
 ];
@@ -41,20 +40,18 @@ const Signup = () => {
   const [role, setRole] = useState<"STUDENT" | "TEACHER">("STUDENT");
   const [showPassword, setShowPassword] = useState(false);
   const [signup, { isLoading }] = useSignupMutation();
-  const dispatch = useAppDispatch();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     try {
       const response = await signup({ email, password, name, role }).unwrap();
-      dispatch(
-        setCredentials({
-          user: response.data.user,
-          accessToken: response.data.accessToken,
-          refreshToken: response.data.refreshToken,
-        })
-      );
+      login({
+        user: response.data.user,
+        accessToken: response.data.accessToken,
+        refreshToken: response.data.refreshToken,
+      });
       navigate("/dashboard");
     } catch (err: unknown) {
       toast.error(parseApiError(err, "Signup failed. Please try again."));
@@ -64,23 +61,21 @@ const Signup = () => {
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-[420px]">
-        <BrandMark className="mb-8" />
-
-        <div className="mb-6">
-          <h1 className="text-heading-md text-text-primary font-semibold tracking-tight">
+        <div className="flex flex-col items-center text-center mb-6">
+          <BrandMark className="mb-4" />
+          <h1 className="text-xl sm:text-2xl text-text-primary font-semibold tracking-tight">
             Create your account
           </h1>
           <p className="text-body-sm text-text-secondary mt-1">
-            Choose your role and fill in your details.
+            Choose your role and enter your details to get started.
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface card-glow p-6">
+        <div className="rounded-xl border border-border bg-surface p-6 sm:p-7">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {/* Role selection */}
             <div className="space-y-1.5">
-              <Label>Role</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <Label>Select Role</Label>
+              <div className="grid grid-cols-2 gap-2.5">
                 {ROLES.map((option) => {
                   const Icon = option.icon;
                   const selected = role === option.value;

@@ -4,6 +4,7 @@ import type {
     Assignment,
     CreateAssignmentRequest,
     Submission,
+    SubmitAssignmentRequest,
 } from '../../types';
 
 export const assignmentApi = createApi({
@@ -46,19 +47,19 @@ export const assignmentApi = createApi({
             query: (assignmentId) => `/submissions/assignment/${assignmentId}`,
             providesTags: ['Submission'],
         }),
-        getUploadUrl: builder.query<
+        getUploadUrl: builder.mutation<
             { success: boolean; data: { url: string; key: string } },
             { fileName: string; type: string; assignmentId: string; pin?: string }
         >({
-            query: ({ fileName, type, assignmentId, pin }) => ({
+            query: (body) => ({
                 url: '/submissions/uploadUrl',
-                method: 'GET',
-                params: { fileName, type, assignmentId, ...(pin ? { pin } : {}) },
+                method: 'POST',
+                body,
             }),
         }),
         submitAssignment: builder.mutation<
             { success: boolean; data: Submission },
-            { assignmentId: string; fileKey: string }
+            SubmitAssignmentRequest
         >({
             query: (body) => ({
                 url: '/submissions/',
@@ -75,9 +76,17 @@ export const assignmentApi = createApi({
             }),
             invalidatesTags: ['Submission'],
         }),
+        deleteSubmission: builder.mutation<{ success: boolean }, { submissionId: string }>({
+            query: (body) => ({
+                url: '/submissions/deleteSubmission',
+                method: 'POST',
+                body: body,
+            }),
+            invalidatesTags: ['Submission'],
+        }),
         allowResubmission: builder.mutation<{ success: boolean }, { submissionId: string }>({
             query: (body) => ({
-                url: '/submissions/allowResubmission',
+                url: '/submissions/deleteSubmission',
                 method: 'POST',
                 body: body,
             }),
@@ -101,9 +110,10 @@ export const {
     useGetMySubmissionsQuery,
     useGetRecentSubmissionsQuery,
     useGetAssignmentSubmissionsQuery,
-    useLazyGetUploadUrlQuery,
+    useGetUploadUrlMutation,
     useSubmitAssignmentMutation,
     useReEvaluateSubmissionMutation,
+    useDeleteSubmissionMutation,
     useAllowResubmissionMutation,
     useDeleteAssignmentMutation,
 } = assignmentApi;

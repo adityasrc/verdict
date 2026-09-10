@@ -36,6 +36,7 @@ export const updateRubricSchema = createRubricSchema.partial();
 export const createSubmissionSchema = z.object({
     assignmentId: z.string().min(1),
     fileKey: z.string(),
+    pin: z.string().length(4).optional(),
 });
 
 export const uploadUrlSchema = z.object({

@@ -105,7 +105,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   return (
     <div className="relative w-full" ref={containerRef}>
-      {/* Trigger field */}
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
@@ -146,13 +145,11 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         )}
       </div>
 
-      {/* Calendar Popup Dropdown */}
       {isOpen && (
         <div
           className="absolute left-0 top-[calc(100%+6px)] z-50 w-[290px] rounded-xl border border-border bg-surface shadow-elevated p-3 text-text-primary font-sans select-none animate-in fade-in-0 zoom-in-95"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header with Month/Year quick selects & Arrow Navigation */}
           <div className="flex items-center justify-between mb-3 px-0.5">
             <div className="flex items-center gap-1.5 text-body-sm">
               <select
@@ -198,7 +195,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
             </div>
           </div>
 
-          {/* Weekday headers: M T W T F S S */}
           <div className="grid grid-cols-7 gap-1 text-center font-mono text-[11px] text-text-muted uppercase tracking-wider mb-1">
             {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
               <div key={idx} className="h-7 flex items-center justify-center font-medium">
@@ -207,7 +203,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
             ))}
           </div>
 
-          {/* Days grid */}
           <div className="grid grid-cols-7 gap-1">
             {calendarDays.map((day, idx) => {
               const isCurrentMonth = isSameMonth(day, viewDate);
@@ -239,7 +234,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
             })}
           </div>
 
-          {/* Footer actions matching user reference */}
           <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-[12px] font-medium">
             <button
               type="button"

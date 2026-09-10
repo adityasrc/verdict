@@ -110,4 +110,5 @@ export interface Submission {
 export interface SubmitAssignmentRequest {
     assignmentId: string;
     fileKey: string;
+    pin?: string;
 }

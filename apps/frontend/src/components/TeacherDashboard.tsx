@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppSelector } from '../app/store';
 import RubricManager from './RubricManager';
 import { Button } from './ui/button';
+import { StatCard } from './StatCard';
+import { AssignmentCard } from './AssignmentCard';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useSocket } from '../context/SocketContext';
 import {
@@ -10,41 +11,48 @@ import {
     useGetRecentSubmissionsQuery,
     useGetTeacherAssignmentsQuery,
 } from '../features/assignments/assignmentApi';
-import { selectCurrentUser } from '../features/auth/authSlice';
+import { useAuth } from '../hooks/useAuth';
 import { toast } from 'sonner';
 import { CreateAssignmentModal } from './modals/CreateAssignmentModal';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { CheckCheck, Clock, FileSpreadsheet, Plus, Share2, Sliders, Trash2, TrendingUp } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { CheckCheck, Clock, FileSpreadsheet, Plus, Sliders, TrendingUp } from 'lucide-react';
 import { parseApiError } from '../lib/errors';
 
-interface StatCardProps {
-    label: string;
-    value: string | number;
-    icon: LucideIcon;
+interface GradingProgressEvent {
+    submissionId: string;
+    step: string;
+    percent?: number;
+    error?: boolean;
+    assignmentId?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ label, value, icon: Icon }) => (
-    <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle>{label}</CardTitle>
-            <Icon className="h-4 w-4 text-text-muted" />
-        </CardHeader>
-        <CardContent>
-            <span className="text-heading-lg font-semibold block tracking-tight text-text-primary font-mono">{value}</span>
-        </CardContent>
-    </Card>
-);
+interface SubmissionProgress {
+    phase: string;
+    progressState: 'processing' | 'completed' | 'failed';
+}
+
+const computeProgress = (event: GradingProgressEvent): SubmissionProgress => {
+    if (event.error) {
+        return { phase: 'failed', progressState: 'failed' };
+    }
+    if (event.step === 'grading_completed') {
+        return { phase: 'graded', progressState: 'completed' };
+    }
+    if (event.step && ['downloading_pdf', 'pdf_downloaded', 'submission_started'].includes(event.step)) {
+        return { phase: 'downloading', progressState: 'processing' };
+    }
+    return { phase: 'grading', progressState: 'processing' };
+};
 
 export const TeacherDashboard: React.FC = () => {
-    const user = useAppSelector(selectCurrentUser);
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isRubricManagerOpen, setIsRubricManagerOpen] = useState(false);
     const [showAllAssignments, setShowAllAssignments] = useState(false);
     const { socket } = useSocket();
 
-    const [gradingProgress, setGradingProgress] = useState<Record<string, { step: string; percent: number; status: 'processing' | 'completed' | 'failed' }>>({});
+    const [gradingProgress, setGradingProgress] = useState<Record<string, SubmissionProgress>>({});
 
     const { data: assignmentsData, isLoading: isAssignmentsLoading, refetch: refetchAssignments } = useGetTeacherAssignmentsQuery();
     const { data: submissionsData, refetch: refetchSubmissions } = useGetRecentSubmissionsQuery();
@@ -59,30 +67,31 @@ export const TeacherDashboard: React.FC = () => {
 
     useEffect(() => {
         if (!socket) return;
-        const handleGradingProgress = (event: any) => {
-            let displayStatus: 'pending' | 'downloading' | 'grading' | 'graded' | 'failed' = 'pending';
-            if (event.error) displayStatus = 'failed';
-            else if (event.step === 'grading_completed') {
-                displayStatus = 'graded';
+
+        const handleGradingProgress = (event: GradingProgressEvent) => {
+            if (event.step === 'grading_completed') {
                 refetchSubmissions();
                 refetchAssignments();
-            } else if (['downloading_pdf', 'pdf_downloaded', 'submission_started'].includes(event.step)) displayStatus = 'downloading';
-            else displayStatus = 'grading';
+            }
 
+            const computed = computeProgress(event);
             setGradingProgress((prev) => ({
                 ...prev,
-                [event.submissionId]: {
-                    step: displayStatus,
-                    percent: event.percent || 0,
-                    status: event.error ? 'failed' : event.step === 'grading_completed' ? 'completed' : 'processing',
-                },
+                [event.submissionId]: computed,
             }));
         };
+
+        const handleNewSubmission = () => {
+            refetchAssignments();
+            refetchSubmissions();
+        };
+
         socket.on('assignment-grading-progress', handleGradingProgress);
-        socket.on('new-submission', () => { refetchAssignments(); refetchSubmissions(); });
+        socket.on('new-submission', handleNewSubmission);
+
         return () => {
             socket.off('assignment-grading-progress', handleGradingProgress);
-            socket.off('new-submission');
+            socket.off('new-submission', handleNewSubmission);
         };
     }, [socket, refetchAssignments, refetchSubmissions]);
 
@@ -96,12 +105,19 @@ export const TeacherDashboard: React.FC = () => {
     const [deleteAssignment, { isLoading: isDeleting }] = useDeleteAssignmentMutation();
 
     const handleShareLink = async (assignmentId: string, accessPin?: string | null) => {
-        const link = `${window.location.origin}/upload/${assignmentId}`;
-        const shareText = accessPin
-            ? `Assignment Link: ${link}\nAccess PIN: ${accessPin}`
-            : link;
-        try { await navigator.clipboard.writeText(shareText); toast.success('Link + PIN copied to clipboard'); }
-        catch { window.prompt('Copy this manually:', shareText); }
+        const link = accessPin
+            ? `${window.location.origin}/upload/${assignmentId}?pin=${accessPin}`
+            : `${window.location.origin}/upload/${assignmentId}`;
+        try {
+            await navigator.clipboard.writeText(link);
+            if (accessPin) {
+                toast.success(`Share link copied! Access PIN: ${accessPin}`);
+            } else {
+                toast.success('Assignment link copied to clipboard');
+            }
+        } catch {
+            window.prompt('Copy assignment link:', link);
+        }
     };
 
     const handleDeleteAssignment = async () => {
@@ -115,15 +131,21 @@ export const TeacherDashboard: React.FC = () => {
         }
     };
 
-    const pendingCount = recentSubmissions.filter((s) => s.status === 'PENDING').length;
+    const pendingCount = recentSubmissions.filter((s) => s.status === 'PENDING' || s.status === 'EVALUATING').length;
     const gradedCount = recentSubmissions.filter((s) => s.status === 'GRADED').length;
-    const gradedSubmissions = recentSubmissions.filter((s) => s.status === 'GRADED' && s.score !== null);
+    const gradedSubmissions = recentSubmissions.filter((s) => s.status === 'GRADED' && s.score !== null && s.score !== undefined);
+
     const avgScore = gradedSubmissions.length > 0
-        ? Math.round(gradedSubmissions.reduce((acc, s) => acc + (s.score || 0), 0) / gradedSubmissions.length)
+        ? Math.round(
+            gradedSubmissions.reduce((acc, s) => {
+                const max = s.assignment?.maxScore && s.assignment.maxScore > 0 ? s.assignment.maxScore : 100;
+                return acc + ((s.score ?? 0) / max) * 100;
+            }, 0) / gradedSubmissions.length
+        )
         : 0;
 
     return (
-        <div className="w-full">
+        <div className="w-full space-y-8">
             <CreateAssignmentModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
@@ -132,147 +154,152 @@ export const TeacherDashboard: React.FC = () => {
 
             {isRubricManagerOpen && <RubricManager onClose={() => setIsRubricManagerOpen(false)} />}
 
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-border/60">
                 <div>
-                    <h2 className="text-heading-md text-text-primary font-semibold tracking-tight leading-tight">
+                    <p className="font-mono text-mono-sm text-text-muted uppercase tracking-wider mb-1">
+                        Teacher Workspace
+                    </p>
+                    <h1 className="text-heading-md text-text-primary font-semibold tracking-tight leading-tight">
                         Welcome back, {user?.name || user?.email?.split('@')[0] || 'Educator'}
-                    </h2>
+                    </h1>
                 </div>
-                <div className="flex gap-3 flex-col sm:flex-row">
+                <div className="flex gap-3 flex-wrap">
                     <Button variant="secondary" onClick={() => setIsRubricManagerOpen(true)}>
-                        <Sliders className="h-4 w-4" />
+                        <Sliders className="h-4 w-4 mr-1.5" />
                         Manage Rubrics
                     </Button>
                     <Button variant="default" onClick={() => setIsCreateModalOpen(true)}>
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-4 w-4 mr-1.5" />
                         New Assessment
                     </Button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard label="Assessments" value={activeAssignments.length} icon={FileSpreadsheet} />
-                <StatCard label="Pending" value={pendingCount} icon={Clock} />
+                <StatCard label="In Queue" value={pendingCount} icon={Clock} />
                 <StatCard label="Graded" value={gradedCount} icon={CheckCheck} />
-                <StatCard label="Avg. Score" value={`${avgScore}%`} icon={TrendingUp} />
+                <StatCard label="Average Score" value={`${avgScore}%`} icon={TrendingUp} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 flex flex-col gap-4">
-                    <div className="flex justify-between items-end border-b border-border pb-3 mb-2">
-                        <h3 className="text-heading-sm text-text-primary font-semibold">Active Pipelines</h3>
+                    <div className="flex justify-between items-center border-b border-border pb-3">
+                        <h2 className="text-body-md font-semibold text-text-primary">
+                            Active Assessments
+                        </h2>
+                        <span className="font-mono text-[11px] text-text-muted">
+                            {activeAssignments.length} total
+                        </span>
                     </div>
 
                     {isAssignmentsLoading ? (
-                        <p className="text-body-sm text-text-muted animate-pulse">Loading...</p>
+                        <p className="text-body-sm text-text-muted animate-pulse py-4">Loading assessments…</p>
                     ) : activeAssignments.length === 0 ? (
-                        <div className="border border-dashed border-border rounded-lg p-12 text-center">
-                            <p className="text-heading-sm text-text-muted font-medium mb-2">No active assignments</p>
-                            <p className="text-body-sm text-text-muted mb-6">Create one to get started</p>
-                            <Button variant="default" onClick={() => setIsCreateModalOpen(true)}>
-                                <Plus className="h-4 w-4" />
+                        <div className="border border-dashed border-border rounded-xl p-12 text-center bg-surface/40">
+                            <p className="text-body-md text-text-primary font-medium mb-1">No active assessments</p>
+                            <p className="text-body-sm text-text-muted mb-5">Create your first assignment to begin receiving submissions.</p>
+                            <Button variant="default" size="default" onClick={() => setIsCreateModalOpen(true)}>
+                                <Plus className="h-4 w-4 mr-1.5" />
                                 New Assessment
                             </Button>
                         </div>
                     ) : (
-                        <>
+                        <div className="rounded-xl border border-border bg-surface divide-y divide-border/60 overflow-hidden">
                             {visibleAssignments.map((assignment) => (
-                                <div key={assignment.id} className="bg-surface border border-border rounded-lg overflow-hidden hover:border-border-strong transition-colors">
-                                    <div className="px-5 py-4">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <h4 className="text-body-md font-semibold text-text-primary">{assignment.title}</h4>
-                                            <span className="text-label-sm text-text-secondary bg-surface-raised border border-border px-2 py-0.5 rounded-md font-mono">Active</span>
-                                        </div>
-                                        <div className="flex justify-between font-mono text-mono-sm text-text-muted mb-4">
-                                            <span>Submissions: {assignment._count?.submissions || 0}</span>
-                                            <span>Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'Open'}</span>
-                                        </div>
-
-                                        {assignment.accessPin && (
-                                            <div className="bg-canvas border border-border rounded-md px-3.5 py-1.5 mb-4 flex items-center justify-between">
-                                                <span className="text-label-sm text-text-muted font-mono">Access PIN</span>
-                                                <span className="font-mono text-body-sm font-semibold tracking-[0.25em] text-text-primary">{assignment.accessPin}</span>
-                                            </div>
-                                        )}
-
-                                        <div className="flex gap-2">
-                                            <Button
-                                                variant="secondary"
-                                                size="sm"
-                                                className="flex-1"
-                                                onClick={() => navigate(`/assignment/${assignment.id}/submissions`)}
-                                            >
-                                                Review Submissions
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon-sm"
-                                                onClick={() => handleShareLink(assignment.id, assignment.accessPin)}
-                                                aria-label="Copy share link and PIN"
-                                            >
-                                                <Share2 className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon-sm"
-                                                className="text-text-muted hover:text-error"
-                                                onClick={() => setDeleteAssignmentId(assignment.id)}
-                                                aria-label="Delete assessment"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
+                                <AssignmentCard
+                                    key={assignment.id}
+                                    assignment={assignment}
+                                    onShare={handleShareLink}
+                                    onDelete={(id) => setDeleteAssignmentId(id)}
+                                    onReview={(id) => navigate(`/assignment/${id}/submissions`)}
+                                />
                             ))}
 
                             {activeAssignments.length > ASSIGNMENTS_PER_PAGE && (
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => setShowAllAssignments((v) => !v)}
-                                    className="w-full"
-                                >
-                                    {showAllAssignments
-                                        ? 'Show Less'
-                                        : `View All ${activeAssignments.length} Assignments`}
-                                </Button>
+                                <div className="p-3 bg-surface-raised/20 text-center">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowAllAssignments((v) => !v)}
+                                        className="text-xs text-text-secondary"
+                                    >
+                                        {showAllAssignments
+                                            ? 'Show Less'
+                                            : `View All ${activeAssignments.length} Assessments`}
+                                    </Button>
+                                </div>
                             )}
-                        </>
+                        </div>
                     )}
                 </div>
 
-                <div className="lg:col-span-1 flex flex-col">
-                    <div className="flex justify-between items-center border-b border-border pb-3 mb-4">
-                        <h3 className="text-heading-sm text-text-primary font-semibold flex items-center gap-2">
-                            <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
-                            Live Output
-                        </h3>
+                <div className="lg:col-span-1 flex flex-col gap-4">
+                    <div className="flex justify-between items-center border-b border-border pb-3">
+                        <h2 className="text-body-md font-semibold text-text-primary">
+                            Grading Activity
+                        </h2>
+                        <span className="font-mono text-[11px] text-text-muted">
+                            Real-time
+                        </span>
                     </div>
-                    <div className="terminal-window flex-1 bg-canvas border border-border rounded-lg p-4 font-mono text-mono-sm text-text-muted overflow-y-auto max-h-[480px] min-h-[320px] flex flex-col gap-1.5">
-                        <div className="text-text-muted/50 mb-3 border-b border-border pb-3 text-label-sm">
-                            Listening for grading activity...
-                        </div>
-                        {recentSubmissions.slice(0, 10).map((sub) => {
-                            const progress = gradingProgress[sub.id];
-                            const statusText = progress ? progress.step : sub.status;
-                            const isError = progress?.status === 'failed' || sub.status === 'FAILED';
-                            const isDone = sub.status === 'GRADED' || progress?.status === 'completed';
-                            return (
-                                <div key={sub.id} className="flex gap-3 mb-1">
-                                    <span className="text-text-muted/40 w-12 flex-shrink-0">
-                                        {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    <span className={isError ? 'text-error' : isDone ? 'text-success' : 'text-warning'}>
-                                        [{sub.assignment?.title.substring(0, 8)}] {sub.student?.email?.split('@')[0] || 'Unknown'} — {statusText.toUpperCase()}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                        <div className="flex gap-3 mt-auto pt-3 items-center">
-                             <span className="text-text-muted animate-pulse">_</span>
-                             <span className="text-text-muted/50">Awaiting next task...</span>
-                        </div>
-                    </div>
+
+                    <Card className="flex-1 flex flex-col min-h-[320px] max-h-[480px]">
+                        <CardHeader className="pb-3 border-b border-border">
+                            <CardTitle className="text-label-sm font-medium text-text-secondary">
+                                Recent Submissions
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 flex-1 overflow-y-auto divide-y divide-border/40">
+                            {recentSubmissions.length === 0 ? (
+                                <p className="text-body-sm text-text-muted text-center py-8">
+                                    No grading activity recorded yet.
+                                </p>
+                            ) : (
+                                recentSubmissions.slice(0, 10).map((sub) => {
+                                    const progress = gradingProgress[sub.id];
+                                    const statusText = progress ? progress.phase : sub.status.toLowerCase();
+                                    const isError = progress?.progressState === 'failed' || sub.status === 'FAILED';
+                                    const isDone = sub.status === 'GRADED' || progress?.progressState === 'completed';
+                                    const rawTitle = sub.assignment?.title || 'Assignment';
+                                    const displayTitle = rawTitle.length > 8 ? `${rawTitle.slice(0, 8)}…` : rawTitle;
+
+                                    return (
+                                        <div key={sub.id} className="py-2.5 flex items-baseline justify-between gap-3 text-body-sm">
+                                            <div className="min-w-0 space-y-0.5">
+                                                <p
+                                                    className="font-medium text-text-primary text-xs truncate max-w-[150px]"
+                                                    title={rawTitle}
+                                                >
+                                                    {displayTitle}
+                                                </p>
+                                                <p className="font-mono text-xs text-text-muted">
+                                                    {sub.student?.email?.split('@')[0] || 'Student'}
+                                                </p>
+                                            </div>
+
+                                            <div className="text-right shrink-0">
+                                                <span
+                                                    className={`font-mono text-xs uppercase tracking-wider block font-medium ${
+                                                        isError
+                                                            ? 'text-error'
+                                                            : isDone
+                                                                ? 'text-success'
+                                                                : 'text-text-secondary'
+                                                    }`}
+                                                >
+                                                    {statusText}
+                                                </span>
+                                                <span className="font-mono text-xs text-text-muted/60 block">
+                                                    {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
 
@@ -298,7 +325,7 @@ export const TeacherDashboard: React.FC = () => {
                             disabled={isDeleting}
                             onClick={handleDeleteAssignment}
                         >
-                            {isDeleting ? 'Deleting...' : 'Delete'}
+                            {isDeleting ? 'Deleting…' : 'Delete'}
                         </Button>
                     </div>
                 </DialogContent>
@@ -306,3 +333,5 @@ export const TeacherDashboard: React.FC = () => {
         </div>
     );
 };
+
+export default TeacherDashboard;

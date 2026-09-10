@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-
 import { useSocket } from '../context/SocketContext';
 import {
     useGetAssignmentQuery,
-    useLazyGetUploadUrlQuery,
+    useGetUploadUrlMutation,
     useSubmitAssignmentMutation,
 } from '../features/assignments/assignmentApi';
 import {
@@ -15,233 +14,160 @@ import {
     Play,
     CheckCircle2,
     AlertCircle,
+    Loader2,
+    FileText,
 } from 'lucide-react';
 import { parseApiError } from '../lib/errors';
 
 type GradingStatus = 'idle' | 'processing' | 'completed' | 'failed';
+type StageKey = 'upload' | 'parsing' | 'evaluating' | 'graded';
+type StageStatus = 'pending' | 'active' | 'completed' | 'failed';
 
-interface PipelineEventItem {
-    id: string;
+interface SubmissionProgressEvent {
     step: string;
-    label: string;
-    detail?: string;
-    status: 'info' | 'active' | 'ok' | 'done' | 'failed';
-    progress?: { current: number; total: number };
+    error?: string;
+    page?: number;
+    total_pages?: number;
+    score?: number;
+    maxScore?: number;
+    submissionId?: string;
+    assignmentId?: string;
+    studentId?: string;
 }
 
-const INITIAL_EVENTS: PipelineEventItem[] = [
-    {
-        id: 'ready',
-        step: 'PIPELINE_STANDBY',
-        label: 'Grading engine ready · worker listening on BullMQ queue',
-        status: 'info',
-    },
+interface StageDefinition {
+    key: StageKey;
+    title: string;
+}
+
+const STAGES: StageDefinition[] = [
+    { key: 'upload', title: 'Upload' },
+    { key: 'parsing', title: 'Parsing PDF' },
+    { key: 'evaluating', title: 'AI Evaluation' },
+    { key: 'graded', title: 'Graded' },
 ];
 
-const dotColor: Record<string, string> = {
-    info: 'bg-text-muted',
-    active: 'bg-accent animate-pulse ring-2 ring-accent/30',
-    ok: 'bg-text-secondary',
-    done: 'bg-success',
-    failed: 'bg-error',
+const STAGE_ORDER: StageKey[] = ['upload', 'parsing', 'evaluating', 'graded'];
+
+const STEP_LABELS: Record<string, string> = {
+    submission_started: 'Job queued',
+    downloading_pdf: 'Downloading your file...',
+    pdf_downloaded: 'File received',
+    parsing_started: 'Reading your PDF...',
+    parsing_completed: 'PDF processed',
+    gemini_started: 'Starting AI evaluation...',
+    gemini_processing: 'Evaluating against rubric...',
+    gemini_completed: 'Evaluation received',
+    grading_completed: 'Graded',
+};
+
+const STEP_TO_STAGE: Record<string, StageKey> = {
+    submission_started: 'upload',
+    downloading_pdf: 'upload',
+    pdf_downloaded: 'upload',
+    parsing_started: 'parsing',
+    page_parsed: 'parsing',
+    parsing_completed: 'parsing',
+    gemini_started: 'evaluating',
+    gemini_processing: 'evaluating',
+    gemini_completed: 'evaluating',
+    grading_completed: 'graded',
 };
 
 const AssignmentUpload = () => {
-    const { assignmentId } = useParams<{ assignmentId: string }>();
+    const { assignmentId: rawAssignmentId } = useParams<{ assignmentId: string }>();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const terminalEndRef = useRef<HTMLDivElement>(null);
+
+    // Sanitize assignmentId: Extract clean UUID in case URL has extra text, spaces, or encoded PIN info
+    const decodedRawId = decodeURIComponent(rawAssignmentId ?? '').trim();
+    const uuidMatch = decodedRawId.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    const assignmentId = uuidMatch ? uuidMatch[0] : decodedRawId;
 
     const [file, setFile] = useState<File | null>(null);
     const [fileError, setFileError] = useState('');
     const [pin, setPin] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [isUploading, setIsUploading] = useState(false);
-    const [events, setEvents] = useState<PipelineEventItem[]>(INITIAL_EVENTS);
-    const [rawLogs, setRawLogs] = useState<string[]>(['> Grading engine ready.']);
+
+    const [currentStage, setCurrentStage] = useState<StageKey | 'idle'>('idle');
     const [gradingStatus, setGradingStatus] = useState<GradingStatus>('idle');
+    const [stageMessage, setStageMessage] = useState('');
+    const [parsingProgress, setParsingProgress] = useState<{ current: number; total: number } | null>(null);
     const [completedScore, setCompletedScore] = useState<number | null>(null);
     const [watchingSubmissionId, setWatchingSubmissionId] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<'stream' | 'raw'>('stream');
 
-    const [getUploadUrl] = useLazyGetUploadUrlQuery();
-    const { data: assignmentData, isLoading } = useGetAssignmentQuery(assignmentId ?? '', { skip: !assignmentId });
+    const [getUploadUrl] = useGetUploadUrlMutation();
+    const { data: assignmentData, isLoading, isError, error } = useGetAssignmentQuery(assignmentId, { skip: !assignmentId });
     const [markSubmission] = useSubmitAssignmentMutation();
     const { socket } = useSocket();
 
+    // Auto-prefill PIN if present in query parameter (?pin=1234) or from pasted URL text ("Access PIN: 1234")
     useEffect(() => {
-        terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [events, rawLogs]);
+        if (!pin) {
+            const queryPin = searchParams.get('pin');
+            if (queryPin) {
+                setPin(queryPin);
+            } else if (decodedRawId) {
+                const pinMatch = decodedRawId.match(/(?:pin[:=\s]+)(\d{4})/i);
+                if (pinMatch) {
+                    setPin(pinMatch[1]);
+                }
+            }
+        }
+    }, [decodedRawId, searchParams, pin]);
 
     useEffect(() => {
         if (!socket) return;
 
-        const handleProgress = (event: any) => {
+        const handleProgress = (event: SubmissionProgressEvent) => {
             if (event.error) {
                 setGradingStatus('failed');
-                setRawLogs(prev => [...prev, `[ERROR] ${event.error}`]);
-                setEvents(prev => {
-                    const existingFail = prev.find(e => e.step === 'PIPELINE_FAILED');
-                    if (existingFail) {
-                        return prev.map(e => e.step === 'PIPELINE_FAILED' ? { ...e, label: event.error } : e);
-                    }
-                    return [
-                        ...prev.map(e => e.status === 'active' ? { ...e, status: 'failed' as const } : e),
-                        {
-                            id: `failed-${Date.now()}`,
-                            step: 'PIPELINE_FAILED',
-                            label: event.error,
-                            status: 'failed',
-                        },
-                    ];
-                });
+                setErrorMessage(event.error);
                 return;
             }
 
-            if (event.step === 'submission_started') {
+            if (event.step === 'page_parsed' && event.page && event.total_pages) {
                 setGradingStatus('processing');
-                setRawLogs(prev => [...prev, '[STATUS] Pipeline initiated...']);
-                setEvents(prev => {
-                    const cleaned = prev.filter(e => e.status !== 'failed' && e.step !== 'PIPELINE_FAILED');
-                    return [
-                        ...cleaned.map(e => e.status === 'active' ? { ...e, status: 'ok' as const } : e),
-                        {
-                            id: 'submission_started',
-                            step: 'SUBMISSION_STARTED',
-                            label: 'Job queued · status set to EVALUATING',
-                            status: 'ok',
-                        },
-                    ];
-                });
-            } else if (event.step === 'downloading_pdf') {
-                setRawLogs(prev => [...prev, '[INFO] Downloading submission...']);
-                setEvents(prev => [
-                    ...prev.map(e => e.status === 'active' ? { ...e, status: 'ok' as const } : e),
-                    {
-                        id: 'downloading_pdf',
-                        step: 'DOWNLOADING_PDF',
-                        label: 'Downloading PDF from Cloudflare R2...',
-                        status: 'active',
-                    },
-                ]);
-            } else if (event.step === 'pdf_downloaded') {
-                setRawLogs(prev => [...prev, '[OK] Download complete.']);
-                setEvents(prev => [
-                    ...prev.map(e => e.id === 'downloading_pdf' ? { ...e, status: 'ok' as const, label: 'PDF saved to worker disk' } : e),
-                    {
-                        id: 'pdf_downloaded',
-                        step: 'PDF_DOWNLOADED',
-                        label: 'PDF saved to worker disk',
-                        status: 'ok',
-                    },
-                ]);
-            } else if (event.step === 'parsing_started') {
-                setRawLogs(prev => [...prev, '[INFO] Parsing PDF structure...']);
-                const totalPages = event.total_pages;
-                setEvents(prev => [
-                    ...prev.map(e => e.status === 'active' ? { ...e, status: 'ok' as const } : e),
-                    {
-                        id: 'parsing_started',
-                        step: 'PARSING_STARTED',
-                        label: totalPages ? `Opening PDF with PyMuPDF (${totalPages} pages)...` : 'Opening PDF with PyMuPDF...',
-                        status: 'ok',
-                    },
-                ]);
-            } else if (event.step === 'page_parsed') {
-                setRawLogs(prev => [...prev, `[INFO] Page ${event.page}/${event.total_pages} read.`]);
-                setEvents(prev => {
-                    const existingIndex = prev.findIndex(e => e.id === 'page_parsed');
-                    const isComplete = event.page === event.total_pages;
-                    const parsedItem: PipelineEventItem = {
-                        id: 'page_parsed',
-                        step: 'PAGE_PARSED',
-                        label: isComplete
-                            ? `Pages extracted (${event.total_pages}/${event.total_pages} · text + images)`
-                            : `Extracting pages: ${event.page} of ${event.total_pages} (text + images)`,
-                        status: isComplete ? 'ok' : 'active',
-                        progress: { current: event.page, total: event.total_pages },
-                    };
+                setCurrentStage('parsing');
+                setParsingProgress({ current: event.page, total: event.total_pages });
+                setStageMessage(`Extracting page ${event.page} of ${event.total_pages}…`);
+                return;
+            }
 
-                    if (existingIndex >= 0) {
-                        const updated = [...prev];
-                        updated[existingIndex] = parsedItem;
-                        return updated;
-                    } else {
-                        return [...prev.map(e => e.status === 'active' ? { ...e, status: 'ok' as const } : e), parsedItem];
-                    }
-                });
-            } else if (event.step === 'parsing_completed') {
-                setRawLogs(prev => [...prev, '[OK] Parsing complete.']);
-                setEvents(prev => [
-                    ...prev.map(e => e.id === 'page_parsed' ? { ...e, status: 'ok' as const } : e),
-                    {
-                        id: 'parsing_completed',
-                        step: 'PARSING_COMPLETED',
-                        label: 'Extraction done · passing to Gemini',
-                        status: 'ok',
-                    },
-                ]);
-            } else if (event.step === 'gemini_started') {
-                setRawLogs(prev => [...prev, '[STATUS] Verdict AI engine started.']);
-                setEvents(prev => [
-                    ...prev.map(e => e.status === 'active' ? { ...e, status: 'ok' as const } : e),
-                    {
-                        id: 'gemini_started',
-                        step: 'GEMINI_STARTED',
-                        label: 'Calling Gemini 3.8 Flash with rubric context...',
-                        status: 'active',
-                    },
-                ]);
-            } else if (event.step === 'gemini_processing') {
-                setRawLogs(prev => [...prev, '[INFO] Evaluating against rubric...']);
-                setEvents(prev => [
-                    ...prev.map(e => e.id === 'gemini_started' ? { ...e, status: 'ok' as const } : e),
-                    {
-                        id: 'gemini_processing',
-                        step: 'GEMINI_PROCESSING',
-                        label: 'Evaluating against rubric criteria · generating breakdown...',
-                        status: 'active',
-                    },
-                ]);
-            } else if (event.step === 'gemini_completed') {
-                setRawLogs(prev => [...prev, '[OK] Evaluation complete.']);
-                setEvents(prev => [
-                    ...prev.map(e => (e.id === 'gemini_processing' || e.id === 'gemini_started') ? { ...e, status: 'ok' as const } : e),
-                    {
-                        id: 'gemini_completed',
-                        step: 'GEMINI_COMPLETED',
-                        label: 'Evaluation received from Gemini',
-                        status: 'ok',
-                    },
-                ]);
-            } else if (event.step === 'grading_completed') {
-                setRawLogs(prev => [...prev, `[SUCCESS] Score: ${event.score}/${event.maxScore ?? 100}`]);
+            if (event.step === 'grading_completed' && typeof event.score === 'number') {
                 setGradingStatus('completed');
+                setCurrentStage('graded');
                 setCompletedScore(event.score);
-                setEvents(prev => [
-                    ...prev.map(e => e.status === 'active' ? { ...e, status: 'ok' as const } : e),
-                    {
-                        id: 'grading_completed',
-                        step: 'GRADING_COMPLETED',
-                        label: `Score saved: ${event.score}/${event.maxScore ?? assignmentData?.data?.maxScore ?? 100} pts · status set to GRADED`,
-                        status: 'done',
-                    },
-                ]);
+                setStageMessage(`Graded: ${event.score} pts`);
+                return;
+            }
+
+            const targetStage = event.step ? STEP_TO_STAGE[event.step] : undefined;
+            const label = event.step ? STEP_LABELS[event.step] : undefined;
+            if (targetStage) {
+                setGradingStatus('processing');
+                setCurrentStage(targetStage);
+                if (label) setStageMessage(label);
             }
         };
 
         socket.on('submission-progress', handleProgress);
-        return () => { socket.off('submission-progress', handleProgress); };
-    }, [socket, assignmentData]);
+        return () => {
+            socket.off('submission-progress', handleProgress);
+        };
+    }, [socket]);
 
     useEffect(() => {
         if (!socket || !watchingSubmissionId) return;
 
         const rejoin = () => socket.emit('watch-submission', watchingSubmissionId);
-
         if (socket.connected) rejoin();
 
         socket.on('connect', rejoin);
-        return () => { socket.off('connect', rejoin); };
+        return () => {
+            socket.off('connect', rejoin);
+        };
     }, [socket, watchingSubmissionId]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,39 +189,34 @@ const AssignmentUpload = () => {
     };
 
     const runPipeline = async () => {
-        if (!file) { setErrorMessage('Please select a PDF file.'); return; }
-        if (!pin || pin.length !== 4) { setErrorMessage('Please enter the 4-digit access PIN.'); return; }
+        if (!file) {
+            setErrorMessage('Please select a PDF file.');
+            return;
+        }
+        if (!pin || pin.length !== 4) {
+            setErrorMessage('Please enter the 4-digit access PIN.');
+            return;
+        }
         setErrorMessage('');
 
         try {
-            const urlResult = await getUploadUrl({ fileName: file.name, type: file.type, assignmentId: assignmentId!, pin }).unwrap() as any;
+            const urlResult = await getUploadUrl({
+                fileName: file.name,
+                type: file.type,
+                assignmentId: assignmentId!,
+                pin,
+            }).unwrap();
 
-            setGradingStatus('idle');
+            setGradingStatus('processing');
+            setCurrentStage('upload');
             setCompletedScore(null);
-            setEvents([
-                {
-                    id: 'upload_init',
-                    step: 'AUTHORIZATION',
-                    label: 'Presigned R2 upload URL authorized',
-                    status: 'ok',
-                },
-                {
-                    id: 'uploading_r2',
-                    step: 'UPLOADING_PDF',
-                    label: `Uploading ${file.name} to Cloudflare R2...`,
-                    status: 'active',
-                },
-            ]);
-            setRawLogs([
-                '> Grading engine ready.',
-                `[STATUS] Requesting upload URL for ${file.name}...`,
-                '[OK] Presigned R2 URL granted.',
-                '[STATUS] Uploading PDF to Cloudflare R2...',
-            ]);
+            setParsingProgress(null);
+            setStageMessage(`Uploading ${file.name} to storage…`);
 
-            const uploadData = urlResult.data ?? urlResult;
-            await performUpload(uploadData);
+            await performUpload(urlResult.data);
         } catch (err) {
+            setGradingStatus('failed');
+            setCurrentStage('upload');
             setErrorMessage(parseApiError(err, 'Failed to start upload.'));
         }
     };
@@ -310,41 +231,102 @@ const AssignmentUpload = () => {
             });
 
             if (!uploadRes.ok) {
-                setErrorMessage('Upload failed. Please try again.');
+                setGradingStatus('failed');
+                setErrorMessage('Upload to storage failed. Please try again.');
                 return;
             }
+
+            setStageMessage('Registering submission…');
 
             const res = await markSubmission({
                 assignmentId: assignmentId!,
                 fileKey: uploadData.key,
+                pin: pin || undefined,
             }).unwrap();
 
             const submissionId = res.data?.id;
             if (submissionId) {
                 setWatchingSubmissionId(submissionId);
-                setGradingStatus('processing');
-                setEvents(prev => [
-                    ...prev.map(e => e.id === 'uploading_r2' ? { ...e, status: 'ok' as const, label: 'PDF successfully stored in Cloudflare R2' } : e),
-                    {
-                        id: 'submission_registered',
-                        step: 'SUBMISSION_QUEUED',
-                        label: `Submission registered [${submissionId.slice(0, 8)}] · job queued on BullMQ`,
-                        status: 'ok',
-                    },
-                ]);
-                setRawLogs(prev => [...prev, '[OK] Submission registered.', '[STATUS] Starting grading pipeline...']);
+                setStageMessage('Submission queued for evaluation…');
             }
         } catch (err) {
-            setErrorMessage(parseApiError(err, 'Upload failed. Please try again.'));
+            setGradingStatus('failed');
+            setErrorMessage(parseApiError(err, 'Submission registration failed. Please try again.'));
         } finally {
             setIsUploading(false);
         }
     };
 
-    if (isLoading || !assignmentData?.data) {
+    const getStageStatus = (stage: StageKey): StageStatus => {
+        if (gradingStatus === 'idle') return 'pending';
+
+        const stageIdx = STAGE_ORDER.indexOf(stage);
+        const currentIdx = currentStage === 'idle' ? 0 : STAGE_ORDER.indexOf(currentStage);
+
+        if (gradingStatus === 'failed') {
+            if (stage === currentStage) return 'failed';
+            return stageIdx < currentIdx ? 'completed' : 'pending';
+        }
+
+        if (gradingStatus === 'completed') {
+            return 'completed';
+        }
+
+        if (stageIdx < currentIdx) return 'completed';
+        if (stageIdx === currentIdx) return 'active';
+        return 'pending';
+    };
+
+    const getStageDetail = (stage: StageKey, status: StageStatus, maxScore: number): string => {
+        if (status === 'failed') {
+            return errorMessage || 'Stage encountered an error';
+        }
+        if (status === 'pending') {
+            if (stage === 'upload') return 'PDF file and PIN verification';
+            if (stage === 'parsing') return 'PyMuPDF text and figure extraction';
+            if (stage === 'evaluating') return 'Gemini 2.8 Flash analysis against criteria';
+            if (stage === 'graded') return 'Final score and recorded feedback';
+        }
+        if (status === 'active') {
+            if (stage === 'upload') return isUploading ? 'Uploading PDF to storage…' : (stageMessage || 'Queued for processing…');
+            if (stage === 'parsing') {
+                if (parsingProgress) {
+                    return `Processing page ${parsingProgress.current} of ${parsingProgress.total}…`;
+                }
+                return stageMessage || 'Reading your PDF…';
+            }
+            if (stage === 'evaluating') return stageMessage || 'Evaluating against criteria…';
+            if (stage === 'graded') return 'Finalizing grade…';
+        }
+        // status === 'completed'
+        if (stage === 'upload') return 'File received';
+        if (stage === 'parsing') return 'PDF processed';
+        if (stage === 'evaluating') return 'Evaluation received';
+        if (stage === 'graded') return completedScore !== null ? `Score: ${completedScore} / ${maxScore} pts` : 'Graded';
+        return '';
+    };
+
+    if (isLoading) {
         return (
             <div className="p-12 text-center">
-                <p className="font-mono text-mono-sm text-text-muted uppercase tracking-wider animate-pulse">Loading assignment...</p>
+                <p className="font-mono text-mono-sm text-text-muted uppercase tracking-wider animate-pulse">Loading assignment…</p>
+            </div>
+        );
+    }
+
+    if (isError || !assignmentData?.data) {
+        return (
+            <div className="p-12 text-center max-w-md mx-auto space-y-4">
+                <div className="w-12 h-12 rounded-full bg-error-muted border border-error/20 flex items-center justify-center mx-auto text-error">
+                    <AlertCircle className="w-6 h-6" />
+                </div>
+                <h2 className="text-lg font-semibold text-text-primary">Assignment Not Found</h2>
+                <p className="text-body-sm text-text-secondary">
+                    {parseApiError(error, 'Could not load this assignment. Please check the link and try again.')}
+                </p>
+                <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
+                    Go to Dashboard
+                </Button>
             </div>
         );
     }
@@ -352,35 +334,61 @@ const AssignmentUpload = () => {
     const assignment = assignmentData.data;
 
     return (
-        <div className="w-full max-w-7xl mx-auto space-y-8">
+        <div className="w-full max-w-6xl mx-auto space-y-8">
             <header className="border-b border-border pb-6">
-                <p className="font-mono text-mono-sm text-text-muted uppercase tracking-wider mb-3">
-                    Upload submission
+                <p className="font-mono text-mono-sm text-text-muted uppercase tracking-wider mb-2">
+                    Assignment Submission
                 </p>
-                <h1 className="text-heading-lg md:text-heading-xl font-semibold text-text-primary tracking-tight">
-                    {assignment.title}
-                </h1>
-                <p className="text-body-sm text-text-secondary mt-2 flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-text-muted" />
-                    Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleString() : 'Open'}
-                </p>
+                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3">
+                    <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary tracking-tight">
+                        {assignment.title}
+                    </h1>
+                    <div className="flex items-center gap-4 text-body-sm text-text-secondary">
+                        <span className="flex items-center gap-1.5 font-mono text-mono-sm text-text-muted">
+                            <Clock className="w-3.5 h-3.5" />
+                            Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'Open'}
+                        </span>
+                        <span className="font-mono text-mono-sm text-text-muted">
+                            {assignment.maxScore ?? 100} pts max
+                        </span>
+                    </div>
+                </div>
             </header>
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-                {/* Left side: Upload & PIN */}
-                <div className="xl:col-span-5 flex flex-col gap-6">
-                    {/* Drop zone Card */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-5 flex flex-col gap-6">
+                    {assignment.rubric?.criteria && Array.isArray(assignment.rubric.criteria) && assignment.rubric.criteria.length > 0 && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-body-sm font-semibold flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-text-muted" />
+                                    Evaluation Rubric
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2.5">
+                                <div className="space-y-2">
+                                    {assignment.rubric.criteria.map((c, idx) => (
+                                        <div key={idx} className="flex items-baseline justify-between gap-2 text-body-sm">
+                                            <span className="text-text-secondary truncate" title={c.name}>{c.name}</span>
+                                            <span className="font-mono text-mono-sm text-text-muted shrink-0">{c.points} pts</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     <Card>
-                        <CardHeader>
-                            <CardTitle>PDF Submission</CardTitle>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-body-sm font-semibold">PDF Document</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div
                                 className={`
-                                    relative mt-2 flex flex-col items-center justify-center text-center p-8
-                                    border border-dashed border-border rounded-lg bg-surface-raised/40 hover:bg-surface-raised/70
-                                    hover:border-accent/40 transition-colors
-                                    ${gradingStatus === 'processing' ? 'processing-stripes border-accent/30' : ''}
+                                    relative flex flex-col items-center justify-center text-center p-7
+                                    border border-dashed border-border rounded-lg bg-surface-raised/30 hover:bg-surface-raised/60
+                                    hover:border-border-strong transition-colors
+                                    ${isUploading || gradingStatus === 'processing' ? 'border-accent/30' : ''}
                                 `}
                             >
                                 <input
@@ -389,24 +397,24 @@ const AssignmentUpload = () => {
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                                     onChange={handleFileChange}
                                     accept=".pdf,application/pdf"
-                                    disabled={isUploading}
+                                    disabled={isUploading || gradingStatus === 'processing'}
                                 />
 
-                                <div className="w-12 h-12 rounded-xl bg-surface-raised border border-border flex items-center justify-center mb-3">
-                                    <Upload className="w-5 h-5 text-accent" />
+                                <div className="w-10 h-10 rounded-lg bg-surface-raised border border-border flex items-center justify-center mb-3">
+                                    <Upload className="w-4 h-4 text-text-muted" />
                                 </div>
 
                                 {file ? (
                                     <div className="space-y-1">
-                                        <p className="text-body-md text-text-primary font-medium">{file.name}</p>
-                                        <p className="text-mono-sm text-text-muted">
-                                            {(file.size / (1024 * 1024)).toFixed(2)} MB • Ready for submission
+                                        <p className="text-body-sm text-text-primary font-medium">{file.name}</p>
+                                        <p className="font-mono text-[11px] text-text-muted">
+                                            {(file.size / (1024 * 1024)).toFixed(2)} MB · Ready
                                         </p>
                                     </div>
                                 ) : (
                                     <>
-                                        <p className="text-body-md text-text-primary font-medium mb-1">Click or drag PDF file here</p>
-                                        <p className="text-mono-sm text-text-muted">Maximum file size: 10 MB</p>
+                                        <p className="text-body-sm text-text-primary font-medium mb-1">Click or drag PDF here</p>
+                                        <p className="font-mono text-[11px] text-text-muted">PDF up to 10 MB</p>
                                     </>
                                 )}
 
@@ -417,14 +425,13 @@ const AssignmentUpload = () => {
                         </CardContent>
                     </Card>
 
-                    {/* PIN & Submit Card */}
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Verification & Execution</CardTitle>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-body-sm font-semibold">Submission Verification</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-5">
+                        <CardContent className="space-y-4">
                             <div>
-                                <label htmlFor="access-pin" className="text-label-sm uppercase tracking-wider font-medium text-text-muted block mb-2">
+                                <label htmlFor="access-pin" className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-2">
                                     4-Digit Access PIN
                                 </label>
                                 <input
@@ -435,299 +442,184 @@ const AssignmentUpload = () => {
                                     placeholder="••••"
                                     value={pin}
                                     onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                    className="w-full px-4 py-3 pl-[0.5em] border border-border rounded-lg bg-surface-raised font-mono text-2xl tracking-[0.5em] text-center text-text-primary focus:outline-none focus:border-border-strong transition-colors"
-                                    disabled={isUploading}
+                                    className="w-full px-4 py-2.5 border border-border rounded-lg bg-surface-raised font-mono text-xl tracking-[0.4em] text-center text-text-primary focus:outline-none focus:border-border-strong transition-colors"
+                                    disabled={isUploading || gradingStatus === 'processing'}
                                     autoComplete="off"
                                 />
-                                <p className="font-mono text-mono-sm text-text-muted mt-1.5">Ask your teacher for the 4-digit PIN</p>
+                                <p className="font-mono text-[11px] text-text-muted mt-1.5">Enter the PIN provided by your teacher</p>
                             </div>
 
-                            {errorMessage && (
+                            {errorMessage && gradingStatus !== 'failed' && (
                                 <div className="p-3 bg-error-muted border border-error/20 rounded-md">
-                                    <p className="text-error text-body-sm font-medium">{errorMessage}</p>
+                                    <p className="text-error text-body-sm">{errorMessage}</p>
                                 </div>
                             )}
 
                             <Button
                                 variant="default"
-                                size="lg"
+                                size="default"
                                 onClick={runPipeline}
-                                disabled={isUploading || pin.length !== 4 || !file}
+                                disabled={isUploading || gradingStatus === 'processing' || pin.length !== 4 || !file}
                                 className="w-full"
                             >
-                                <Play className="w-4 h-4 mr-2" />
-                                {isUploading ? 'Uploading...' : 'Run Evaluation Pipeline'}
+                                <Play className="w-4 h-4 mr-1.5" />
+                                {isUploading ? 'Uploading…' : gradingStatus === 'processing' ? 'Evaluation in progress…' : 'Submit & Evaluate'}
                             </Button>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Right side: Polished Inspector & Event Stream */}
-                <div className="xl:col-span-7 flex flex-col">
-                    <div className="rounded-xl border border-border bg-surface shadow-elevated overflow-hidden flex flex-col min-h-[580px]">
-                        {/* Title bar matching mockup */}
-                        <div className="border-b border-border bg-surface-raised px-4 py-2.5 flex items-center justify-between flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                                <div className="flex gap-1.5">
-                                    <span className="h-2.5 w-2.5 rounded-full bg-surface-overlay" />
-                                    <span className="h-2.5 w-2.5 rounded-full bg-surface-overlay" />
-                                    <span className="h-2.5 w-2.5 rounded-full bg-surface-overlay" />
-                                </div>
-                                <span className="ml-2.5 font-mono text-mono-sm text-text-muted">
-                                    grade_assignment · BullMQ worker
-                                </span>
+                <div className="lg:col-span-7 flex flex-col">
+                    <Card className="flex-1 flex flex-col shadow-elevated">
+                        <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border">
+                            <div>
+                                <CardTitle className="text-body-md font-semibold">Evaluation Progress</CardTitle>
+                                <p className="text-[12px] text-text-muted mt-0.5">Automated rubric grading status</p>
                             </div>
-                            <div className="flex items-center gap-2.5">
-                                <span className="font-mono text-mono-sm text-text-muted">
-                                    {watchingSubmissionId ? `submission_events:${watchingSubmissionId.slice(0, 8)}` : 'submission_events:<id>'}
-                                </span>
+                            <div>
                                 {gradingStatus === 'processing' && (
-                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-accent-muted text-accent border border-accent/20">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-                                        LIVE
+                                    <span className="font-mono text-[11px] text-accent font-medium px-2 py-0.5 rounded bg-accent-muted border border-accent/20">
+                                        IN PROGRESS
                                     </span>
                                 )}
                                 {gradingStatus === 'completed' && (
-                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-success-muted text-success border border-success/20">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                                        DONE
+                                    <span className="font-mono text-[11px] text-success font-medium px-2 py-0.5 rounded bg-success-muted border border-success/20">
+                                        GRADED
+                                    </span>
+                                )}
+                                {gradingStatus === 'failed' && (
+                                    <span className="font-mono text-[11px] text-error font-medium px-2 py-0.5 rounded bg-error-muted border border-error/20">
+                                        FAILED
+                                    </span>
+                                )}
+                                {gradingStatus === 'idle' && (
+                                    <span className="font-mono text-[11px] text-text-muted px-2 py-0.5 rounded bg-surface-raised border border-border">
+                                        STANDBY
                                     </span>
                                 )}
                             </div>
-                        </div>
+                        </CardHeader>
 
-                        {/* Two-pane layout */}
-                        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] flex-1 min-h-0">
-                            {/* Left: Assignment metadata & Rubric */}
-                            <aside className="border-b lg:border-b-0 lg:border-r border-border bg-canvas/40 p-5 space-y-4 flex flex-col">
-                                <div>
-                                    <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted mb-1">
-                                        Assignment
-                                    </p>
-                                    <p className="text-body-sm font-semibold text-text-primary line-clamp-2">
-                                        {assignment.title}
-                                    </p>
-                                </div>
+                        <CardContent className="p-6 flex-1 flex flex-col justify-between">
+                            <div className="relative py-2">
+                                <div className="absolute left-4 top-5 bottom-5 -translate-x-1/2 border-l-2 border-border pointer-events-none" />
 
-                                <div className="space-y-2.5 pt-3 border-t border-border/60 font-mono text-mono-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-text-muted">Max score</span>
-                                        <span className="text-text-secondary font-medium">{assignment.maxScore ?? 100} pts</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-text-muted">Storage</span>
-                                        <span className="text-text-secondary">Cloudflare R2</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-text-muted">Concurrency</span>
-                                        <span className="text-text-secondary">1</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-text-muted">Model</span>
-                                        <span className="text-text-secondary">Gemini 2.5 Flash</span>
-                                    </div>
-                                </div>
+                                <div className="space-y-0">
+                                    {STAGES.map((stage) => {
+                                        const status = getStageStatus(stage.key);
+                                        const detail = getStageDetail(stage.key, status, assignment.maxScore ?? 100);
 
-                                {assignment.rubric?.criteria && Array.isArray(assignment.rubric.criteria) && assignment.rubric.criteria.length > 0 ? (
-                                    <div className="pt-3 border-t border-border/60 font-mono text-mono-sm space-y-1.5 flex-1">
-                                        <p className="text-[10px] uppercase tracking-wider text-text-muted mb-2">
-                                            Rubric criteria
-                                        </p>
-                                        <div className="space-y-2">
-                                            {assignment.rubric.criteria.map((c: any, idx: number) => (
-                                                <div key={idx} className="flex items-baseline justify-between gap-2 text-text-secondary text-[11px]">
-                                                    <span className="truncate" title={c.name}>{c.name}</span>
-                                                    <span className="shrink-0 text-text-muted">{c.points} pts</span>
+                                        return (
+                                            <div key={stage.key} className="relative flex items-start gap-4 py-4">
+                                                <div
+                                                    className={`
+                                                        relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors
+                                                        ${status === 'completed' ? 'bg-success text-white shadow-sm' : ''}
+                                                        ${status === 'active' ? 'bg-accent/20 border-2 border-accent text-accent animate-pulse' : ''}
+                                                        ${status === 'failed' ? 'bg-error text-white' : ''}
+                                                        ${status === 'pending' ? 'bg-surface-raised border border-border text-text-muted' : ''}
+                                                    `}
+                                                >
+                                                    {status === 'completed' && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                                    {status === 'active' && <Loader2 className="w-4 h-4 animate-spin" />}
+                                                    {status === 'failed' && <AlertCircle className="w-4 h-4 text-white" />}
+                                                    {status === 'pending' && <span className="w-2 h-2 rounded-full bg-text-muted/40" />}
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="pt-3 border-t border-border/60 font-mono text-mono-sm space-y-1.5 flex-1">
-                                        <p className="text-[10px] uppercase tracking-wider text-text-muted mb-1">
-                                            Rubric criteria
-                                        </p>
-                                        <p className="text-[11px] text-text-muted">Standard criteria · {assignment.maxScore ?? 100} pts</p>
-                                    </div>
-                                )}
-                            </aside>
 
-                            {/* Right: Event stream */}
-                            <div className="p-5 bg-surface flex flex-col min-h-0 flex-1">
-                                <div className="flex items-center justify-between pb-3 mb-3 border-b border-border/60 flex-shrink-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-body-sm font-medium text-text-primary">
-                                            Event stream
-                                        </span>
-                                        <span className="font-mono text-[10px] text-text-muted px-1.5 py-0.5 rounded bg-surface-raised border border-border/60">
-                                            {events.length} {events.length === 1 ? 'event' : 'events'}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="font-mono text-mono-sm text-text-muted hidden sm:inline">
-                                            Redis Pub/Sub · Socket.io relay
-                                        </span>
-                                        <div className="flex items-center rounded border border-border bg-canvas p-0.5 font-mono text-[10px]">
-                                            <button
-                                                type="button"
-                                                onClick={() => setViewMode('stream')}
-                                                className={`px-2 py-0.5 rounded transition-colors ${viewMode === 'stream' ? 'bg-surface text-text-primary font-medium shadow-button' : 'text-text-muted hover:text-text-secondary'}`}
-                                            >
-                                                Stream
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setViewMode('raw')}
-                                                className={`px-2 py-0.5 rounded transition-colors ${viewMode === 'raw' ? 'bg-surface text-text-primary font-medium shadow-button' : 'text-text-muted hover:text-text-secondary'}`}
-                                            >
-                                                Raw
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Content pane */}
-                                {viewMode === 'stream' ? (
-                                    <div className="terminal-window bg-canvas rounded-lg border border-border p-4 font-mono text-mono-sm space-y-2.5 overflow-y-auto flex-1 min-h-[380px] max-h-[560px]">
-                                        {events.map((ev, i) => (
-                                            <div key={ev.id || i} className="flex items-start gap-3 py-0.5">
-                                                <span className="text-text-muted/40 shrink-0 w-5 text-right tabular-nums pt-0.5 select-none">
-                                                    {String(i + 1).padStart(2, "0")}
-                                                </span>
-                                                <span
-                                                    className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${dotColor[ev.status] || 'bg-text-muted'}`}
-                                                />
-                                                <div className="min-w-0 flex-1">
+                                                <div className="min-w-0 flex-1 pt-1">
                                                     <div className="flex items-center justify-between gap-2">
-                                                        <span className="text-text-muted text-[10px] uppercase tracking-wider block mb-0.5 font-medium">
-                                                            {ev.step}
-                                                        </span>
-                                                        {ev.status === 'active' && (
-                                                            <span className="text-[10px] text-accent font-mono animate-pulse">
-                                                                RUNNING
-                                                            </span>
-                                                        )}
-                                                        {ev.status === 'done' && (
-                                                            <span className="text-[10px] text-success font-mono">
-                                                                OK
-                                                            </span>
-                                                        )}
-                                                        {ev.status === 'failed' && (
-                                                            <span className="text-[10px] text-error font-mono">
-                                                                FAIL
-                                                            </span>
-                                                        )}
+                                                        <p
+                                                            className={`text-sm font-semibold ${
+                                                                status === 'active'
+                                                                    ? 'text-text-primary'
+                                                                    : status === 'failed'
+                                                                        ? 'text-error'
+                                                                        : status === 'completed'
+                                                                            ? 'text-text-primary'
+                                                                            : 'text-text-muted'
+                                                            }`}
+                                                        >
+                                                            {stage.title}
+                                                        </p>
                                                     </div>
-                                                    <p
-                                                        className={
-                                                            ev.status === "done"
-                                                                ? "text-text-primary font-medium"
-                                                                : ev.status === "failed"
-                                                                    ? "text-error font-medium"
-                                                                    : ev.status === "active"
-                                                                        ? "text-text-primary"
-                                                                        : "text-text-secondary"
-                                                        }
-                                                    >
-                                                        {ev.label}
+                                                    <p className="text-sm text-text-secondary mt-0.5">
+                                                        {detail}
                                                     </p>
 
-                                                    {ev.progress && ev.progress.total > 0 && (
-                                                        <div className="mt-2 w-full max-w-xs space-y-1">
+                                                    {stage.key === 'parsing' && status === 'active' && parsingProgress && (
+                                                        <div className="mt-2.5 w-full max-w-xs space-y-1">
                                                             <div className="h-1.5 w-full bg-surface-raised rounded-full overflow-hidden border border-border/50">
                                                                 <div
                                                                     className="h-full bg-accent transition-all duration-300 ease-out"
-                                                                    style={{ width: `${Math.min(100, Math.round((ev.progress.current / ev.progress.total) * 100))}%` }}
+                                                                    style={{
+                                                                        width: `${Math.min(100, Math.round((parsingProgress.current / parsingProgress.total) * 100))}%`
+                                                                    }}
                                                                 />
                                                             </div>
+                                                            <p className="font-mono text-xs text-text-muted">
+                                                                {parsingProgress.current} of {parsingProgress.total} pages extracted
+                                                            </p>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
-                                        ))}
-
-                                        {/* Completion status card */}
-                                        {gradingStatus === 'completed' && (
-                                            <div className="mt-4 p-4 rounded-lg border border-success/20 bg-success-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-                                                        <span className="text-body-sm font-semibold text-text-primary">
-                                                            Evaluation Complete
-                                                        </span>
-                                                        {completedScore !== null && (
-                                                            <span className="font-mono text-label-sm font-medium px-2 py-0.5 rounded bg-success/20 text-success border border-success/30">
-                                                                {completedScore} / {assignment.maxScore ?? 100} PTS
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-[12px] text-text-secondary">
-                                                        Grade and rubric criteria feedback have been recorded to the database.
-                                                    </p>
-                                                </div>
-                                                <Button
-                                                    variant="default"
-                                                    size="sm"
-                                                    className="shrink-0"
-                                                    onClick={() => navigate('/dashboard')}
-                                                >
-                                                    View Feedback
-                                                </Button>
-                                            </div>
-                                        )}
-
-                                        {/* Failed status card */}
-                                        {gradingStatus === 'failed' && (
-                                            <div className="mt-4 p-4 rounded-lg border border-error/20 bg-error-muted/30 flex items-start gap-3">
-                                                <AlertCircle className="w-4 h-4 text-error shrink-0 mt-0.5" />
-                                                <div className="space-y-1">
-                                                    <p className="text-body-sm font-semibold text-error">
-                                                        Grading Failed
-                                                    </p>
-                                                    <p className="text-[12px] text-text-secondary">
-                                                        {errorMessage || 'The worker encountered an error during evaluation. Please contact your instructor.'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Idle waiting message */}
-                                        {gradingStatus === 'idle' && events.length === 1 && (
-                                            <div className="pt-3 text-text-muted/40 text-[11px] flex items-center gap-2 border-t border-border/40">
-                                                <span className="animate-pulse">_</span>
-                                                <span>Awaiting submission and PIN trigger...</span>
-                                            </div>
-                                        )}
-
-                                        <div ref={terminalEndRef} />
-                                    </div>
-                                ) : (
-                                    /* Raw terminal view fallback */
-                                    <div className="terminal-window flex-1 bg-canvas rounded-lg border border-border p-4 font-mono text-mono-sm overflow-y-auto space-y-1.5 min-h-[380px] max-h-[560px]">
-                                        {rawLogs.map((log, i) => (
-                                            <div
-                                                key={i}
-                                                className={
-                                                    log.startsWith('[ERROR]') || log.includes('FAIL')
-                                                        ? 'text-error font-medium'
-                                                        : log.startsWith('[SUCCESS]') || log.startsWith('[OK]')
-                                                            ? 'text-success font-medium'
-                                                            : log.startsWith('[STATUS]')
-                                                                ? 'text-text-primary'
-                                                                : log.startsWith('[INFO]')
-                                                                    ? 'text-text-secondary'
-                                                                    : 'text-text-muted'
-                                                }
-                                            >
-                                                {log}
-                                            </div>
-                                        ))}
-                                        <div ref={terminalEndRef} />
-                                    </div>
-                                )}
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    </div>
+
+                            {gradingStatus === 'completed' && (
+                                <div className="mt-6 p-4 rounded-xl border border-border bg-surface-raised/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                                            <span className="text-sm font-semibold text-text-primary">
+                                                Graded
+                                            </span>
+                                            {completedScore !== null && (
+                                                <span className="font-mono text-xs font-medium px-2 py-0.5 rounded-md bg-surface border border-border text-text-primary">
+                                                    {completedScore} / {assignment.maxScore ?? 100} PTS
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-text-secondary">
+                                            Your submission has been evaluated and recorded against the rubric.
+                                        </p>
+                                    </div>
+                                    <Button
+                                        variant="default"
+                                        size="sm"
+                                        className="shrink-0"
+                                        onClick={() => navigate('/dashboard')}
+                                    >
+                                        View Feedback
+                                    </Button>
+                                </div>
+                            )}
+
+                            {gradingStatus === 'failed' && (
+                                <div className="mt-6 p-4 rounded-xl border border-error/20 bg-error/5 flex items-start gap-3">
+                                    <AlertCircle className="w-4 h-4 text-error shrink-0 mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-semibold text-error">
+                                            Evaluation Failed
+                                        </p>
+                                        <p className="text-sm text-text-secondary">
+                                            {errorMessage || 'The worker encountered an error during evaluation. Please try again or contact your instructor.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {gradingStatus === 'idle' && (
+                                <div className="mt-6 p-3 rounded-xl border border-border/40 bg-surface-raised/20 text-center">
+                                    <p className="text-xs text-text-muted">
+                                        Select your PDF file and enter the 4-digit PIN to begin grading.
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>

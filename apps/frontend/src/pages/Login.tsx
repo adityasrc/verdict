@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
-import { useAppDispatch } from "../app/store";
 import { useLoginMutation } from "../features/auth/authApi";
-import { setCredentials } from "../features/auth/authSlice";
+import { useAuth } from "../hooks/useAuth";
 import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -15,21 +14,19 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [login, { isLoading }] = useLoginMutation();
-  const dispatch = useAppDispatch();
+  const [loginMutation, { isLoading }] = useLoginMutation();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     try {
-      const response = await login({ email, password }).unwrap();
-      dispatch(
-        setCredentials({
-          user: response.data.user,
-          accessToken: response.data.accessToken,
-          refreshToken: response.data.refreshToken,
-        })
-      );
+      const response = await loginMutation({ email, password }).unwrap();
+      login({
+        user: response.data.user,
+        accessToken: response.data.accessToken,
+        refreshToken: response.data.refreshToken,
+      });
       navigate("/dashboard");
     } catch (err) {
       toast.error(parseApiError(err, "Login failed. Please check your credentials."));
@@ -39,18 +36,17 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-[400px]">
-        <BrandMark className="mb-8" />
-
-        <div className="mb-6">
-          <h1 className="text-heading-md text-text-primary font-semibold tracking-tight">
+        <div className="flex flex-col items-center text-center mb-6">
+          <BrandMark className="mb-4" />
+          <h1 className="text-xl sm:text-2xl text-text-primary font-semibold tracking-tight">
             Sign in to Verdict
           </h1>
           <p className="text-body-sm text-text-secondary mt-1">
-            Enter your credentials to access your workspace.
+            Enter your credentials to access your account.
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface card-glow p-6">
+        <div className="rounded-xl border border-border bg-surface p-6 sm:p-7">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>

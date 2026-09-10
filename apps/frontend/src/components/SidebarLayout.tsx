@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, LogOut, Menu, Upload, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '../app/store';
-import { logout, selectCurrentUser } from '../features/auth/authSlice';
+import { useAuth } from '../hooks/useAuth';
 import { BrandMark } from './BrandMark';
 
 interface NavItem {
@@ -12,16 +11,15 @@ interface NavItem {
     icon: LucideIcon;
 }
 
-const SidebarLayout: React.FC = () => {
-    const dispatch = useAppDispatch();
+const SidebarLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const user = useAppSelector(selectCurrentUser);
+    const { user, logout } = useAuth();
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const handleLogout = () => {
-        dispatch(logout());
+        logout();
         navigate('/');
     };
 
@@ -31,16 +29,14 @@ const SidebarLayout: React.FC = () => {
 
     const getLinkClass = (path: string) => {
         const isActive = location.pathname === path || (path === '/dashboard' && location.pathname.startsWith('/upload'));
-        return `flex items-center gap-3 px-3 py-2 rounded-md text-body-sm font-medium transition-colors ${
-            isActive
+        return `flex items-center gap-3 px-3 py-2 rounded-md text-body-sm font-medium transition-colors ${isActive
                 ? 'bg-white/5 text-text-primary'
                 : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
-        }`;
+            }`;
     };
 
     return (
         <div className="bg-canvas text-text-primary flex flex-col md:flex-row min-h-screen">
-            {/* Sidebar (Desktop) */}
             <nav className="hidden md:flex flex-col h-screen w-64 border-r border-border bg-surface fixed left-0 top-0 py-6 z-40">
                 <div className="px-5 mb-8">
                     <BrandMark />
@@ -81,7 +77,6 @@ const SidebarLayout: React.FC = () => {
                 </div>
             </nav>
 
-            {/* Top Nav (Mobile) */}
             <nav className="flex md:hidden justify-between items-center px-4 py-3 w-full sticky top-0 z-50 bg-canvas/90 backdrop-blur-md border-b border-border">
                 <BrandMark compact />
                 <button
@@ -93,7 +88,6 @@ const SidebarLayout: React.FC = () => {
                 </button>
             </nav>
 
-            {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (
                 <div className="md:hidden fixed inset-0 top-[56px] z-40 bg-surface flex flex-col p-4">
                     <div className="flex-1 space-y-1">
@@ -136,7 +130,6 @@ const SidebarLayout: React.FC = () => {
                 </div>
             )}
 
-            {/* Main Content */}
             <main className="flex-1 w-full md:ml-64 p-4 md:p-8 bg-canvas min-h-screen">
                 <Outlet />
             </main>

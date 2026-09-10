@@ -1,8 +1,17 @@
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { getApiUrl } from '../config';
-import { logout, setCredentials } from '../features/auth/authSlice';
-import type { RootState } from './store';
+
+const AUTH_CHANGE_EVENT = 'verdict-auth-change';
+
+const clearAuthStorage = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+    }
+};
 
 // Mutex lock to prevent multiple concurrent token refresh requests
 let isRefreshing = false;
@@ -10,8 +19,8 @@ let refreshPromise: Promise<boolean> | null = null;
 
 const baseQuery = fetchBaseQuery({
     baseUrl: getApiUrl(),
-    prepareHeaders: (headers, { getState }) => {
-        const token = (getState() as RootState).auth.accessToken || localStorage.getItem('accessToken');
+    prepareHeaders: (headers) => {
+        const token = localStorage.getItem('accessToken');
         if (token) {
             headers.set('Authorization', `Bearer ${token}`);
         }
@@ -37,7 +46,7 @@ export const baseQueryWithReauth: BaseQueryFn<
             const refreshToken = localStorage.getItem('refreshToken');
 
             if (!refreshToken) {
-                api.dispatch(logout());
+                clearAuthStorage();
                 return result;
             }
 
@@ -60,24 +69,21 @@ export const baseQueryWithReauth: BaseQueryFn<
                         const { accessToken, refreshToken: newRefreshToken } = data.data || {};
 
                         if (accessToken) {
-                            const currentUser = (api.getState() as RootState).auth.user;
-                            if (currentUser) {
-                                api.dispatch(
-                                    setCredentials({
-                                        user: currentUser,
-                                        accessToken,
-                                        refreshToken: newRefreshToken || refreshToken,
-                                    })
-                                );
-                                return true;
+                            localStorage.setItem('accessToken', accessToken);
+                            if (newRefreshToken) {
+                                localStorage.setItem('refreshToken', newRefreshToken);
                             }
+                            if (typeof window !== 'undefined') {
+                                window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+                            }
+                            return true;
                         }
                     }
 
-                    api.dispatch(logout());
+                    clearAuthStorage();
                     return false;
                 } catch {
-                    api.dispatch(logout());
+                    clearAuthStorage();
                     return false;
                 } finally {
                     isRefreshing = false;

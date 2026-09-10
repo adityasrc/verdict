@@ -1,10 +1,9 @@
-import { useAppSelector } from '../app/store';
-import { selectCurrentUser } from '../features/auth/authSlice';
+import { useAuth } from '../hooks/useAuth';
 import { TeacherDashboard } from '../components/TeacherDashboard';
 import { StudentDashboard } from '../components/StudentDashboard';
 
 const Dashboard = () => {
-  const user = useAppSelector(selectCurrentUser);
+  const { user } = useAuth();
   return user?.role === 'TEACHER' ? <TeacherDashboard /> : <StudentDashboard />;
 };
 

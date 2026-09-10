@@ -10,14 +10,16 @@ Teachers create assignments and grading rubrics. Students submit PDF assignments
 
 ## Features
 
-- AI-assisted rubric-based grading
-- PDF submission and parsing
-- Background job processing with BullMQ
-- Real-time grading progress via WebSockets
-- Secure JWT authentication
-- Teacher and Student workflows
-- Assignment and submission management
-- Responsive brutalist-inspired interface
+- Rubric-based AI grading via Gemini 2.8 Flash
+- PDF submission, parsing, and image extraction (PyMuPDF)
+- Asynchronous grading pipeline with BullMQ workers
+- Real-time grading progress via WebSockets (Socket.IO + Redis Pub/Sub)
+- JWT authentication with access and refresh tokens
+- Teacher and student role-separated workflows
+- Assignment creation, rubric management, and submission review
+- CSV gradebook export
+- PIN-gated assignment access
+- Re-evaluation of existing submissions
 
 ---
 
@@ -29,26 +31,26 @@ Teachers create assignments and grading rubrics. Students submit PDF assignments
 - TypeScript
 - Vite
 - Tailwind CSS
-- Redux Toolkit
+- Redux Toolkit (RTK Query)
 - React Router
 - Socket.IO Client
 
 ### Backend
 
-- Node.js
-- Express
+- Node.js 20 · Express
 - TypeScript
-- Prisma ORM
-- PostgreSQL
-- Redis
-- BullMQ
+- Prisma ORM · PostgreSQL
+- Redis · BullMQ
 - Socket.IO
 
 ### AI Pipeline
 
-- Python
-- Gemini API
-- PDF Processing
+- Python 3 · PyMuPDF
+- Google Gemini API
+
+### Storage
+
+- Cloudflare R2 (or any S3-compatible endpoint)
 
 ---
 
@@ -58,29 +60,22 @@ Teachers create assignments and grading rubrics. Students submit PDF assignments
 Student Upload
        │
        ▼
-Express API
-       │
-       ▼
-PostgreSQL ─────────────── Prisma
+Express API ──── PostgreSQL (Prisma)
        │
        ▼
 Redis Queue (BullMQ)
        │
        ▼
-Background Workers
-       │
-       ├── PDF Parsing
-       ├── AI Evaluation
-       └── Rubric Scoring
-       │
-       ▼
-Database Update
+BullMQ Worker
+       ├── Download PDF from R2
+       ├── Python: PDF text + image extraction (PyMuPDF)
+       └── Python: Gemini evaluation with rubric context
        │
        ▼
-Socket.IO Events
+Database Update (score, feedback, status)
        │
        ▼
-Teacher & Student Dashboard
+Redis Pub/Sub → Socket.IO → Teacher & Student Dashboard
 ```
 
 ---
@@ -89,8 +84,8 @@ Teacher & Student Dashboard
 
 ```text
 apps/
-├── frontend      React application
-└── backend       Express API, workers, Prisma schema and WebSocket server
+├── frontend      React application (Vite)
+└── backend       Express API, BullMQ workers, WebSocket server, Prisma schema
 ```
 
 ---
@@ -101,98 +96,86 @@ apps/
 
 - Node.js 20+
 - pnpm 9+
-- Python 3.9+
+- Python 3.9+ with pip
 - PostgreSQL
 - Redis
 
 ### Installation
 
 ```bash
+# Install dependencies
 pnpm install
 
+# Copy and configure environment
 cp .env.example .env
-# Windows PowerShell
-# Copy-Item .env.example .env
 
+# Generate Prisma client and push schema
 pnpm --filter verdict-backend exec prisma generate
-
 pnpm --filter verdict-backend exec prisma db push
 
+# Install Python grading dependencies
+pip3 install -r apps/backend/workers/python/requirements.txt
+
+# Start all services
 pnpm dev
 ```
 
 ---
 
+## Docker
+
+Infrastructure services (PostgreSQL, Redis, MinIO) can be started with:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+To build and run the full application in containers:
+
+```bash
+docker compose up -d
+```
+
+The `docker-compose.yml` expects an `apps/backend/.env` file with production credentials.
+
+---
+
 ## Environment Variables
 
-Configure the following before running the application.
+Copy `.env.example` to `.env` and fill in the required values.
 
-```env
-DATABASE_URL=
-REDIS_URL=
-
-JWT_SECRET=
-
-GEMINI_API_KEY=
-
-BUCKET_NAME=
-ACCESSKEYID=
-SECRETACCESSKEY=
-R2_ENDPOINT=
-
-PYTHON_BIN=
-```
-
-On Windows:
-
-```text
-PYTHON_BIN=python
-```
-
-On macOS/Linux:
-
-```text
-PYTHON_BIN=python3
-```
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `REDIS_URL` | Yes | Redis connection URL |
+| `JWT_SECRET` | Yes | Secret for access token signing |
+| `JWT_REFRESH_SECRET` | Yes | Secret for refresh token signing |
+| `GEMINI_API_KEY` | Yes | Google AI Studio API key |
+| `R2_ENDPOINT` | Yes | S3-compatible storage endpoint |
+| `BUCKET_NAME` | Yes | Storage bucket name |
+| `ACCESSKEYID` | Yes | Storage access key |
+| `SECRETACCESSKEY` | Yes | Storage secret key |
+| `PUBLIC_ENDPOINT` | Yes | Public base URL for stored files |
+| `CORS_ORIGIN` | No | Allowed origin(s), comma-separated |
+| `GEMINI_MODEL` | No | Gemini model name (default: `gemini-2.8-flash`) |
+| `PYTHON_BIN` | No | Python binary name (default: `python3`) |
+| `RUN_WORKER_IN_API` | No | Set to `true` to run worker inside the API process |
 
 ---
 
 ## Local URLs
 
-Frontend
-
-```
-http://localhost:5173
-```
-
-Backend API
-
-```
-http://localhost:4000/api
-```
+| Service | URL |
+| --- | --- |
+| Frontend | `http://localhost:5173` |
+| Backend API | `http://localhost:4000/api` |
+| MinIO Console | `http://localhost:9001` |
 
 ---
 
 ## API Documentation
 
-Backend API documentation is available at:
-
-```
-apps/backend/API_DOCS.md
-```
-
----
-
-## Roadmap
-
-- Assignment creation
-- AI-powered grading pipeline
-- Rubric evaluation
-- Background workers
-- Real-time grading updates
-- Submission analytics
-- Teacher dashboard
-- Student dashboard
+Full API reference is at [`apps/backend/API_DOCS.md`](apps/backend/API_DOCS.md).
 
 ---
 

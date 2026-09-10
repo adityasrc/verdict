@@ -6,6 +6,7 @@ export interface SubmissionJobData {
     publicUrl: string;
     studentId: string;
     assignmentId: string;
+    fileKey?: string;
 }
 
 export const submissionQueue = new Queue<SubmissionJobData>("grade_assignment", {

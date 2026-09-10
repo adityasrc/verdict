@@ -18,11 +18,11 @@ export const BrandMark = ({ compact = false, className, to = '/' }: BrandMarkPro
     >
       <path
         d="M3.5 4.5L12 20.5L20.5 4.5H16.2L12 13.5L7.8 4.5H3.5Z"
-        fill="#e05c5c"
+        className="fill-brand"
       />
     </svg>
     <span className={cn(
-      'font-semibold tracking-tight text-white group-hover:text-text-secondary transition-colors',
+      'font-semibold tracking-tight text-text-primary group-hover:text-text-secondary transition-colors',
       compact ? 'text-sm' : 'text-[15px]'
     )}>
       Verdict

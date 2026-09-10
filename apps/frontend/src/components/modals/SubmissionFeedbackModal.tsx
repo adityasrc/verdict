@@ -36,7 +36,6 @@ export const SubmissionFeedbackModal = ({ submission, onClose }: Props) => {
         {submission && (
           <div className="space-y-6 mt-2">
 
-            {/* Score */}
             <div className="bg-surface-raised border border-border rounded-lg p-4 inline-block card-glow">
               <h3 className="text-label-sm uppercase tracking-wider text-text-muted font-medium mb-1">Score</h3>
               <div className="font-mono text-heading-lg font-semibold text-text-primary">
@@ -47,7 +46,6 @@ export const SubmissionFeedbackModal = ({ submission, onClose }: Props) => {
 
             {structured ? (
               <>
-                {/* Summary */}
                 {structured.summary && (
                   <div>
                     <h3 className="text-label-sm uppercase tracking-wider text-text-muted font-medium mb-2">Summary</h3>
@@ -57,7 +55,6 @@ export const SubmissionFeedbackModal = ({ submission, onClose }: Props) => {
                   </div>
                 )}
 
-                {/* Strengths */}
                 {structured.strengths?.length > 0 && (
                   <div>
                     <h3 className="text-label-sm uppercase tracking-wider text-success font-medium mb-2 flex items-center gap-1.5">
@@ -75,7 +72,6 @@ export const SubmissionFeedbackModal = ({ submission, onClose }: Props) => {
                   </div>
                 )}
 
-                {/* Weaknesses */}
                 {structured.weaknesses?.length > 0 && (
                   <div>
                     <h3 className="text-label-sm uppercase tracking-wider text-warning font-medium mb-2 flex items-center gap-1.5">
@@ -93,7 +89,6 @@ export const SubmissionFeedbackModal = ({ submission, onClose }: Props) => {
                   </div>
                 )}
 
-                {/* Detailed Feedback */}
                 {structured.feedback && (
                   <div>
                     <h3 className="text-label-sm uppercase tracking-wider text-text-muted font-medium mb-2 flex items-center gap-1.5">

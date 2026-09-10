@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { useSelector } from 'react-redux';
 import { io, Socket } from 'socket.io-client';
 import { getWsUrl } from '../config';
-import { selectAccessToken } from '../features/auth/authSlice';
+import { useAuth } from '../hooks/useAuth';
 
 interface SocketContextType {
     socket: Socket | null;
@@ -18,7 +17,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [isConnected, setIsConnected] = useState(false);
     const socketRef = useRef<Socket | null>(null);
     
-    const token = useSelector(selectAccessToken);
+    const { accessToken: token } = useAuth();
 
     useEffect(() => {
         if (!token) {

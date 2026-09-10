@@ -147,7 +147,7 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                 {rubricsData?.data.map((rubric) => (
                                     <div
                                         key={rubric.id}
-                                        className={`p-4 border rounded-lg flex flex-col gap-3 card-glow transition-colors ${
+                                        className={`p-4 border rounded-lg flex flex-col gap-3 transition-colors ${
                                             editingId === rubric.id
                                                 ? 'bg-surface-raised border-border-strong ring-1 ring-border-strong'
                                                 : 'bg-surface border-border hover:border-border-strong'

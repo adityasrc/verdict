@@ -1,10 +1,9 @@
-import { useSelector } from 'react-redux';
 import { Link, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Navbar from './components/Navbar';
 import { Footer } from './components/Footer';
 import SidebarLayout from './components/SidebarLayout';
-import { selectCurrentUser } from './features/auth/authSlice';
+import { useAuth } from './hooks/useAuth';
 import AssignmentSubmissions from './pages/AssignmentSubmissions';
 import AssignmentUpload from './pages/AssignmentUpload';
 import Dashboard from './pages/Dashboard';
@@ -14,14 +13,14 @@ import Signup from './pages/Signup';
 import { Toaster } from './components/ui/sonner';
 
 const ProtectedRoute = () => {
-  const user = useSelector(selectCurrentUser);
+  const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   return <Outlet />;
 };
 ProtectedRoute.displayName = 'ProtectedRoute';
 
 const TeacherRoute = () => {
-  const user = useSelector(selectCurrentUser);
+  const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'TEACHER') return <Navigate to="/dashboard" replace />;
   return <Outlet />;
@@ -29,7 +28,7 @@ const TeacherRoute = () => {
 TeacherRoute.displayName = 'TeacherRoute';
 
 const PublicRoute = () => {
-  const user = useSelector(selectCurrentUser);
+  const { user } = useAuth();
   if (user) return <Navigate to="/dashboard" replace />;
   return <Outlet />;
 };

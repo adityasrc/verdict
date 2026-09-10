@@ -16,7 +16,7 @@ from google import genai
 from google.genai import types
 import PIL.Image
 
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.8-flash")
 
 def publish(event):
     """Prints a single-line JSON event to stdout for the Node.js worker."""
@@ -201,8 +201,14 @@ def main():
 
         try:
             evaluation = json.loads(response_text)
-            if isinstance(evaluation.get("score"), str):
-                evaluation["score"] = int(evaluation["score"])
+            evaluation["score"] = max(0, min(max_score, int(evaluation.get("score", 0))))
+            evaluation = {
+                "score": evaluation.get("score", 0),
+                "summary": evaluation.get("summary", ""),
+                "strengths": evaluation.get("strengths", []),
+                "weaknesses": evaluation.get("weaknesses", []),
+                "feedback": evaluation.get("feedback", ""),
+            }
 
             publish({
                 "step": "gemini_completed",
@@ -211,16 +217,10 @@ def main():
 
         except (json.JSONDecodeError, ValueError) as parse_err:
             publish({
-                "step": "gemini_completed",
-                "evaluation": {
-                    "score": 0,
-                    "feedback": response_text,
-                    "summary": "SYSTEM ERROR: AI failed to format response correctly. Manual review required.",
-                    "strengths": [],
-                    "weaknesses": [],
-                },
-                "warning": f"Could not parse JSON response: {str(parse_err)}",
+                "step": "gemini_failed",
+                "error": f"Could not parse JSON response: {str(parse_err)}",
             })
+            sys.exit(1)
 
     except Exception as e:
         publish({

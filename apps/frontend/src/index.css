@@ -37,6 +37,14 @@
 }
 
 @layer utilities {
+  /* hover motion for interactive cards/rows */
+  .card-interactive {
+    transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease;
+  }
+  .card-interactive:hover {
+    transform: translateY(-2px);
+  }
+
   /* card inset highlight — tactile pressed/raised feel */
   .card-glow {
     box-shadow:
