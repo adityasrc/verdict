@@ -10,7 +10,7 @@ Teachers create assignments and grading rubrics. Students submit PDF assignments
 
 ## Features
 
-- Rubric-based AI grading via Gemini 2.8 Flash
+- Rubric-based AI grading via Gemini 3.7 Flash
 - PDF submission, parsing, and image extraction (PyMuPDF)
 - Asynchronous grading pipeline with BullMQ workers
 - Real-time grading progress via WebSockets (Socket.IO + Redis Pub/Sub)
@@ -157,7 +157,7 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `SECRETACCESSKEY` | Yes | Storage secret key |
 | `PUBLIC_ENDPOINT` | Yes | Public base URL for stored files |
 | `CORS_ORIGIN` | No | Allowed origin(s), comma-separated |
-| `GEMINI_MODEL` | No | Gemini model name (default: `gemini-2.8-flash`) |
+| `GEMINI_MODEL` | No | Gemini model name (default: `gemini-3.7-flash`) |
 | `PYTHON_BIN` | No | Python binary name (default: `python3`) |
 | `RUN_WORKER_IN_API` | No | Set to `true` to run worker inside the API process |
 

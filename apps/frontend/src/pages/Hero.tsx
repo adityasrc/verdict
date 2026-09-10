@@ -14,7 +14,7 @@ export const Hero: React.FC = () => {
 
           <p className="text-base md:text-lg text-text-secondary leading-relaxed max-w-[60ch] mt-6 [text-wrap:balance]">
             Configure weighted criteria, distribute 4-digit access PINs, and let
-            Gemini 2.8 Flash evaluate and score student submissions with rubric-based feedback.
+            Gemini 3.7 Flash evaluate and score student submissions with rubric-based feedback.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
@@ -64,7 +64,7 @@ export const Hero: React.FC = () => {
                     <span className="text-sm text-text-muted">/ 100 PTS</span>
                   </div>
                   <p className="text-xs text-text-secondary pt-1">
-                    Status: <strong className="text-success font-semibold">Graded</strong> · Evaluated by Gemini 2.8 Flash
+                    Status: <strong className="text-success font-semibold">Graded</strong> · Evaluated by Gemini 3.7 Flash
                   </p>
                 </div>
 
@@ -129,7 +129,7 @@ export const Hero: React.FC = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-text-primary">AI Evaluation</p>
-                        <p className="text-xs text-text-secondary">Criteria evaluation received from Gemini 2.8 Flash</p>
+                        <p className="text-xs text-text-secondary">Criteria evaluation received from Gemini 3.7 Flash</p>
                       </div>
                     </div>
 
@@ -147,7 +147,7 @@ export const Hero: React.FC = () => {
 
                 <div className="mt-6 pt-3 border-t border-border flex items-center justify-between text-xs text-text-muted font-mono">
                   <span>Fast, streamed evaluation</span>
-                  <span>Model: gemini-2.8-flash</span>
+                  <span>Model: gemini-3.7-flash</span>
                 </div>
               </div>
             </div>

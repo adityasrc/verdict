@@ -52,13 +52,13 @@ export const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-text-primary transition-colors">
+                <a href="https://github.com/adityasrc/verdict#architecture" target="_blank" rel="noopener noreferrer" className="hover:text-text-primary transition-colors">
                   Architecture Overview
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-text-primary transition-colors">
-                  Rubric Specification
+                <a href="https://github.com/adityasrc/verdict/blob/main/apps/backend/API_DOCS.md" target="_blank" rel="noopener noreferrer" className="hover:text-text-primary transition-colors">
+                  API Documentation
                 </a>
               </li>
             </ul>
@@ -69,7 +69,7 @@ export const Footer = () => {
               System
             </p>
             <ul className="space-y-2 text-xs text-text-muted font-mono">
-              <li>Engine: Gemini 2.8 Flash</li>
+              <li>Engine: Gemini 3.7 Flash</li>
               <li>Parser: Python · PyMuPDF</li>
               <li>Queue: BullMQ + Redis</li>
             </ul>

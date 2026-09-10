@@ -161,13 +161,19 @@ const Navbar = () => {
               </>
             ) : (
               <div className="flex flex-col gap-4 pt-1">
+                <div className="flex flex-col gap-4 pb-4 border-b border-border">
+                  <Link to="/#pipeline" onClick={() => setIsMobileMenuOpen(false)} className="text-sm text-text-secondary hover:text-text-primary transition-colors">Grading Pipeline</Link>
+                  <Link to="/#workflow" onClick={() => setIsMobileMenuOpen(false)} className="text-sm text-text-secondary hover:text-text-primary transition-colors">Evaluation Workflow</Link>
+                  <Link to="/#stack" onClick={() => setIsMobileMenuOpen(false)} className="text-sm text-text-secondary hover:text-text-primary transition-colors">Tech Stack</Link>
+                </div>
                 <Link
                   to="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className="text-sm text-text-secondary hover:text-text-primary py-2 transition-colors"
                 >
                   Log In
                 </Link>
-                <Button asChild variant="default" className="w-full">
+                <Button asChild variant="default" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
                   <Link to="/signup">Get Started</Link>
                 </Button>
               </div>

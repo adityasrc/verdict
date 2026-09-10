@@ -15,7 +15,8 @@ function parseFeedback(raw: Submission['feedback']): GeminiFeedback | null {
     try {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object' && 'score' in parsed) return parsed as GeminiFeedback;
-    } catch {
+    } catch (e) {
+      // ignore parsing errors
     }
   }
   return null;

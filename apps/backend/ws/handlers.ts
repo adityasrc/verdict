@@ -12,7 +12,9 @@ export const submissionHandlers = (socket: AuthenticatedSocket) => {
                 try {
                     const event = JSON.parse(raw);
                     socket.emit("submission-progress", { ...event, submissionId });
-                } catch {}
+                } catch (e) {
+                    // ignore json parsing errors
+                }
             }
         } catch (err) {
             console.error(`Failed to replay events for ${submissionId}:`, err);

@@ -16,7 +16,7 @@ from google import genai
 from google.genai import types
 import PIL.Image
 
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.8-flash")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
 
 def publish(event):
     """Prints a single-line JSON event to stdout for the Node.js worker."""
@@ -178,7 +178,6 @@ def main():
                     contents=[prompt_text, *images],
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
-                        temperature=0.2,
                         system_instruction=(
                             "You are an expert academic evaluator. Evaluate assignments strictly and objectively against the provided rubric. "
                             "Always return a single valid JSON object adhering precisely to the requested schema with detailed, actionable, and point-wise feedback. "

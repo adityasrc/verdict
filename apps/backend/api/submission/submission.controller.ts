@@ -4,6 +4,7 @@ import { catchAsync } from "../middleware/catchAsync.js";
 import { AppError } from "../../utils/apiResponseHandler.js";
 import { prisma } from "../../utils/db.js";
 import { submissionQueue } from "../../utils/queue.js";
+import { redis } from "../../utils/redis.js";
 import { getIO } from "../../ws/index.js";
 import { SubmissionManager } from "./submission.manager.js";
 import {
@@ -19,6 +20,26 @@ export class SubmissionController {
 
     constructor() {
         this.initializeRoutes();
+    }
+
+    private async verifyPinWithRateLimit(assignmentId: string, studentId: string, expectedPin: string | null, providedPin?: string | null) {
+        if (expectedPin === null) return;
+
+        const rateLimitKey = `pin-attempts:${assignmentId}:${studentId}`;
+        const attempts = await redis.get(rateLimitKey);
+        if (attempts !== null && parseInt(attempts, 10) >= 5) {
+            throw new AppError("Too many incorrect attempts. Try again later.", 429);
+        }
+
+        if (!providedPin || providedPin !== expectedPin) {
+            const newCount = await redis.incr(rateLimitKey);
+            if (newCount === 1) {
+                await redis.expire(rateLimitKey, 15 * 60);
+            }
+            throw new AppError("Invalid PIN.", 403);
+        }
+
+        await redis.del(rateLimitKey);
     }
 
     private initializeRoutes() {
@@ -51,11 +72,7 @@ export class SubmissionController {
             throw new AppError("Assignment not found", 404);
         }
 
-        if (assignment.accessPin !== null) {
-            if (!pin || pin !== assignment.accessPin) {
-                throw new AppError("Invalid PIN.", 403);
-            }
-        }
+        await this.verifyPinWithRateLimit(assignment.id, studentId, assignment.accessPin, pin);
 
         const submission = await this._submissionManager.createSubmission({
             studentId,
@@ -129,11 +146,7 @@ export class SubmissionController {
             throw new AppError("Assignment not found", 404);
         }
 
-        if (assignment.accessPin !== null) {
-            if (!pin || pin !== assignment.accessPin) {
-                throw new AppError("Invalid PIN.", 403);
-            }
-        }
+        await this.verifyPinWithRateLimit(assignment.id, studentId, assignment.accessPin, pin);
 
         const { url, key } = await this._submissionManager.presignedUrl(
             fileName,

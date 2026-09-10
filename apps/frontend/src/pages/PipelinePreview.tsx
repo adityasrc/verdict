@@ -78,7 +78,7 @@ export const PipelinePreview: React.FC<PipelinePreviewProps> = ({ events, stack 
                 </div>
                 <div className="flex justify-between">
                   <span className="text-text-muted">AI Model</span>
-                  <span className="text-text-secondary font-mono">gemini-2.8-flash</span>
+                  <span className="text-text-secondary font-mono">gemini-3.7-flash</span>
                 </div>
               </div>
 
@@ -135,7 +135,7 @@ export const PipelinePreview: React.FC<PipelinePreviewProps> = ({ events, stack 
           </div>
         </div>
 
-        <div id="stack" className="mt-14 pt-8 border-t border-border/60">
+        <div id="stack" className="mt-14 pt-8 pb-16 scroll-mt-24 border-t border-border/60">
           <p className="font-mono text-xs uppercase tracking-wider text-text-muted text-center mb-4">
             Underlying Infrastructure & Technologies
           </p>

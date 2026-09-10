@@ -30,10 +30,10 @@ export const WORKFLOW_STEPS = [
   },
   {
     step: "04",
-    title: "Gemini 2.8 Flash evaluation",
+    title: "Gemini 3.7 Flash evaluation",
     description:
-      "The extracted content and rubric are sent to geminiGrader.py, which calls Gemini 2.8 Flash and returns a structured result: score, per-criterion feedback, strengths, and weaknesses.",
-    detail: "Gemini 2.8 Flash · structured JSON output",
+      "The extracted content and rubric are sent to geminiGrader.py, which calls Gemini 3.7 Flash and returns a structured result: score, per-criterion feedback, strengths, and weaknesses.",
+    detail: "Gemini 3.7 Flash · structured JSON output",
   },
   {
     step: "05",
@@ -51,8 +51,8 @@ export const PREVIEW_EVENTS = [
   { step: "pdf_downloaded", label: "PDF saved to worker disk", status: "ok" as const },
   { step: "parsing_started", label: "Opening PDF with PyMuPDF…", status: "info" as const },
   { step: "page_parsed", label: "Pages extracted (text + images)", status: "ok" as const },
-  { step: "parsing_completed", label: "Extraction done · passing to Gemini 2.8 Flash", status: "ok" as const },
-  { step: "gemini_started", label: "Calling Gemini 2.8 Flash with rubric context…", status: "info" as const },
+  { step: "parsing_completed", label: "Extraction done · passing to Gemini 3.7 Flash", status: "ok" as const },
+  { step: "gemini_started", label: "Calling Gemini 3.7 Flash with rubric context…", status: "info" as const },
   { step: "gemini_processing", label: "Waiting for structured response…", status: "info" as const },
   { step: "gemini_completed", label: "Evaluation received", status: "ok" as const },
   { step: "grading_completed", label: "Score saved · status set to GRADED", status: "done" as const },
@@ -65,7 +65,7 @@ export const STACK = [
   "Express + TypeScript",
   "PostgreSQL + Prisma",
   "BullMQ + Redis",
-  "Gemini 2.8 Flash",
+  "Gemini 3.7 Flash",
   "Cloudflare R2",
   "Socket.io",
   "Python (PyMuPDF)",

@@ -59,7 +59,7 @@ Student submission routes require the student role.
 | POST | `/submissions/reEvaluate` | Teacher-only. Body: `submissionId`. |
 | POST | `/submissions/deleteSubmission` | Teacher-only. Body: `submissionId`. (also aliased to `/allowResubmission`). |
 
-Submission PIN checks are rate limited. Upload URLs expire after 10 minutes.
+Submission PIN checks are rate limited per assignment and student in Redis (maximum 5 failed attempts per 15-minute window before rejecting with HTTP 429). Upload URLs expire after 10 minutes.
 
 ## Health check
 

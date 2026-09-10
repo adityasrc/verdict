@@ -27,8 +27,8 @@ export const WorkflowSteps: React.FC<WorkflowStepsProps> = ({ steps }) => {
     },
     {
       icon: Sparkles,
-      title: "Gemini 2.8 Flash Grading",
-      description: "Extracted figures and text are evaluated by Gemini 2.8 Flash to generate structured scores, feedback, and strengths.",
+      title: "Gemini 3.7 Flash Grading",
+      description: "Extracted figures and text are evaluated by Gemini 3.7 Flash to generate structured scores, feedback, and strengths.",
     },
   ];
 

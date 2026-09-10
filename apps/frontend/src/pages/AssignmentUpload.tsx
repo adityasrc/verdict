@@ -284,7 +284,7 @@ const AssignmentUpload = () => {
         if (status === 'pending') {
             if (stage === 'upload') return 'PDF file and PIN verification';
             if (stage === 'parsing') return 'PyMuPDF text and figure extraction';
-            if (stage === 'evaluating') return 'Gemini 2.8 Flash analysis against criteria';
+            if (stage === 'evaluating') return 'Gemini 3.7 Flash analysis against criteria';
             if (stage === 'graded') return 'Final score and recorded feedback';
         }
         if (status === 'active') {

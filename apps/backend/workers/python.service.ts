@@ -36,6 +36,7 @@ export class PythonService {
             const script = path.join(__dirname, "python", "pdfParser.py");
             let extractedData: ParsedPage[] = [];
             let stderrOutput = "";
+            let pythonError = "";
 
             const proc = spawn(PYTHON_BIN, [script, filePath, submissionId], {
                 cwd: path.join(__dirname, "python"),
@@ -51,8 +52,12 @@ export class PythonService {
                     if (msg.step === "parsing_completed" && msg.result) {
                         extractedData = msg.result;
                     }
+                    if (msg.error) {
+                        pythonError = msg.error;
+                    }
                     publishEvent(submissionId, { ...msg, assignmentId, studentId });
                 } catch {
+                    /* ignore */
                 }
             });
 
@@ -66,7 +71,7 @@ export class PythonService {
                 if (code === 0) {
                     resolve(extractedData);
                 } else {
-                    reject(new Error(stderrOutput.trim() || `PDF parsing failed with code ${code}`));
+                    reject(new Error(pythonError || stderrOutput.trim() || `PDF parsing failed with code ${code}`));
                 }
             });
         });
@@ -83,6 +88,7 @@ export class PythonService {
         return new Promise<GeminiEvaluation>((resolve, reject) => {
             const script = path.join(__dirname, "python", "geminiGrader.py");
             let evaluation: GeminiEvaluation | null = null;
+            let pythonError = "";
             let stderrOutput = "";
             const backendDir = path.join(__dirname, "..");
 
@@ -113,9 +119,12 @@ export class PythonService {
                     if (msg.step === "gemini_completed" && msg.evaluation) {
                         evaluation = msg.evaluation;
                     }
+                    if (msg.error) {
+                        pythonError = msg.error;
+                    }
                     publishEvent(submissionId, { ...msg, assignmentId, studentId });
-                } catch {
-
+                } catch (e) {
+                    // ignore JSON parsing errors
                 }
             });
 
@@ -129,7 +138,7 @@ export class PythonService {
                 if (code === 0 && evaluation) {
                     resolve(evaluation);
                 } else {
-                    reject(new Error(stderrOutput.trim() || `Grading process exited with code ${code}`));
+                    reject(new Error(pythonError || stderrOutput.trim() || `Grading process exited with code ${code}`));
                 }
             });
         });
