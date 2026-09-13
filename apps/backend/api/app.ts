@@ -21,6 +21,14 @@ const corsOption: CorsOptions = {
 
 app.use(cors(corsOption));
 
+app.get("/health", (_req: Request, res: Response) => {
+    res.status(200).json({ status: "ok" });
+});
+
+app.get("/api/health", (_req: Request, res: Response) => {
+    res.status(200).json({ status: "ok" });
+});
+
 app.use("/api", router);
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
