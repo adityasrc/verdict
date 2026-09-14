@@ -2,12 +2,15 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { useInView } from "../hooks/useInView";
 
 export const Cta: React.FC = () => {
+  const { ref, isInView } = useInView({ threshold: 0.2 });
+
   return (
-    <section className="py-28 md:py-40">
+    <section ref={ref} className="py-28 md:py-40">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="rounded-xl border border-border bg-surface-raised/40 p-10 md:p-14 flex flex-col md:flex-row md:items-center justify-between gap-8 card-interactive">
+        <div className={`rounded-xl border border-border bg-surface-raised/40 p-10 md:p-14 flex flex-col md:flex-row md:items-center justify-between gap-8 card-interactive reveal ${isInView ? "revealed" : ""}`}>
           <div className="space-y-2">
             <p className="font-mono text-xs uppercase tracking-wider text-text-muted">
               Get Started
@@ -21,10 +24,10 @@ export const Cta: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <Button asChild variant="default" size="lg">
+            <Button asChild variant="default" size="lg" className="group">
               <Link to="/signup">
                 Create Account
-                <ArrowRight className="h-4 w-4 ml-1.5" />
+                <ArrowRight className="h-4 w-4 ml-1.5 btn-arrow" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">

@@ -1,8 +1,8 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Hero } from "./Hero";
 import { WorkflowSteps } from "./WorkflowSteps";
-import { PipelinePreview, dotColor, type PreviewStatus } from "./PipelinePreview";
+import { PipelinePreview } from "./PipelinePreview";
 import { Cta } from "./Cta";
 
 // Pipeline steps derived directly from SubmissionWorker.ts and python.service.ts
@@ -30,7 +30,7 @@ export const WORKFLOW_STEPS = [
   },
   {
     step: "04",
-    title: "Gemini 3.7 Flash evaluation",
+    title: "Gemini evaluation",
     description:
       "The extracted content and rubric are sent to geminiGrader.py, which calls Gemini 3.7 Flash and returns a structured result: score, per-criterion feedback, strengths, and weaknesses.",
     detail: "Gemini 3.7 Flash · structured JSON output",
@@ -58,8 +58,6 @@ export const PREVIEW_EVENTS = [
   { step: "grading_completed", label: "Score saved · status set to GRADED", status: "done" as const },
 ] as const;
 
-export { dotColor, type PreviewStatus };
-
 export const STACK = [
   "React + Vite",
   "Express + TypeScript",
@@ -71,7 +69,7 @@ export const STACK = [
   "Python (PyMuPDF)",
 ] as const;
 
-const Onboarding: React.FC = () => {
+const Onboarding = () => {
   const location = useLocation();
 
   useEffect(() => {

@@ -2,26 +2,32 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { useInView } from "../hooks/useInView";
 
 export const Hero: React.FC = () => {
+  const { ref, isInView } = useInView({ threshold: 0.1 });
+
   return (
-    <section className="border-b border-border py-28 md:py-40">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="max-w-4xl mx-auto text-center flex flex-col items-center">
-          <h1 className="text-6xl md:text-7xl font-semibold tracking-tight text-text-primary leading-[1.08] [text-wrap:balance]">
+    <section
+      ref={ref}
+      className="relative border-b border-border py-28 md:py-40 hero-glow"
+    >
+      <div className="relative z-10 max-w-6xl mx-auto px-6">
+        <div className={`max-w-4xl mx-auto text-center flex flex-col items-center stagger-children ${isInView ? "revealed" : ""}`}>
+          <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-text-primary leading-[1.08] [text-wrap:balance]">
             Automated PDF grading against structured rubrics.
           </h1>
 
           <p className="text-base md:text-lg text-text-secondary leading-relaxed max-w-[60ch] mt-6 [text-wrap:balance]">
             Configure weighted criteria, distribute 4-digit access PINs, and let
-            Gemini 3.7 Flash evaluate and score student submissions with rubric-based feedback.
+            AI evaluate and score student submissions with rubric-based feedback.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-            <Button asChild variant="default" size="lg">
+            <Button asChild variant="default" size="lg" className="group">
               <Link to="/signup">
                 Get Started
-                <ArrowRight className="h-4 w-4 ml-1.5" />
+                <ArrowRight className="h-4 w-4 ml-1.5 btn-arrow" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
@@ -30,7 +36,7 @@ export const Hero: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-14 max-w-5xl mx-auto">
+        <div className={`mt-14 max-w-5xl mx-auto reveal ${isInView ? "revealed" : ""}`}>
           <div className="rounded-xl border border-border bg-surface shadow-elevated overflow-hidden card-interactive">
             <div className="border-b border-border bg-surface-raised px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -64,7 +70,7 @@ export const Hero: React.FC = () => {
                     <span className="text-sm text-text-muted">/ 100 PTS</span>
                   </div>
                   <p className="text-xs text-text-secondary pt-1">
-                    Status: <strong className="text-success font-semibold">Graded</strong> · Evaluated by Gemini 3.7 Flash
+                    Status: <strong className="text-success font-semibold">Graded</strong> · Evaluated by Gemini
                   </p>
                 </div>
 
@@ -129,7 +135,7 @@ export const Hero: React.FC = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-text-primary">AI Evaluation</p>
-                        <p className="text-xs text-text-secondary">Criteria evaluation received from Gemini 3.7 Flash</p>
+                        <p className="text-xs text-text-secondary">Criteria evaluation received from Gemini</p>
                       </div>
                     </div>
 

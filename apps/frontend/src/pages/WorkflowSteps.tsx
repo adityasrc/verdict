@@ -1,5 +1,6 @@
 import React from "react";
 import { Sliders, ShieldCheck, Sparkles } from "lucide-react";
+import { useInView } from "../hooks/useInView";
 
 export interface WorkflowStepItem {
   step: string;
@@ -13,6 +14,8 @@ interface WorkflowStepsProps {
 }
 
 export const WorkflowSteps: React.FC<WorkflowStepsProps> = ({ steps }) => {
+  const { ref, isInView } = useInView({ threshold: 0.1 });
+
   // Feature cards derived from 3 key workflow steps: 01 (Rubric), 02 (PIN), 04 (Gemini Evaluation)
   const featureHighlights = [
     {
@@ -33,9 +36,9 @@ export const WorkflowSteps: React.FC<WorkflowStepsProps> = ({ steps }) => {
   ];
 
   return (
-    <section id="workflow" className="border-b border-border py-28 md:py-40">
+    <section ref={ref} id="workflow" className="border-b border-border py-28 md:py-40">
       <div className="max-w-6xl mx-auto px-6 space-y-24">
-        <div>
+        <div className={`reveal ${isInView ? "revealed" : ""}`}>
           <div className="text-center max-w-2xl mx-auto mb-12">
             <p className="font-mono text-xs uppercase tracking-wider text-text-muted mb-2">
               Core Capabilities
@@ -73,7 +76,7 @@ export const WorkflowSteps: React.FC<WorkflowStepsProps> = ({ steps }) => {
           </div>
         </div>
 
-        <div>
+        <div className={`reveal ${isInView ? "revealed" : ""}`}>
           <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-8">
             <div>
               <p className="font-mono text-xs uppercase tracking-wider text-text-muted mb-1">

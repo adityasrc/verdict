@@ -62,10 +62,10 @@ const Navbar = () => {
 
   return (
     <header
-      className={`fixed top-0 z-50 w-full transition-colors duration-150 ${
+      className={`fixed top-0 z-50 w-full transition-all duration-200 ${
         isScrolled || isMobileMenuOpen
-          ? "bg-surface border-b border-border"
-          : "bg-surface/95 border-b border-border/40"
+          ? "bg-surface/90 backdrop-blur-md border-b border-border shadow-sm"
+          : "bg-surface/80 backdrop-blur-sm border-b border-border/40"
       }`}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-14">
