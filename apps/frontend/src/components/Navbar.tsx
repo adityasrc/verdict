@@ -124,7 +124,7 @@ const Navbar = () => {
 
       <div
         id="mobile-menu"
-        inert={!isMobileMenuOpen ? true : undefined}
+        aria-hidden={!isMobileMenuOpen}
         className={`md:hidden fixed inset-x-0 top-14 bottom-0 z-40 bg-surface border-t border-border overflow-y-auto transition-all duration-150 ${
           isMobileMenuOpen
             ? "opacity-100 pointer-events-auto"
