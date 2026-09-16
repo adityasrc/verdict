@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useSocket } from '../context/SocketContext';
@@ -314,7 +314,48 @@ const AssignmentUpload = () => {
         );
     }
 
-    if (isError || !assignmentData?.data) {
+    if (isError) {
+        const status = (error as any)?.status;
+
+        if (status === 401) {
+            return (
+                <div className="p-12 text-center max-w-md mx-auto space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-surface-raised border border-border flex items-center justify-center mx-auto text-text-muted">
+                        <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-text-primary">Login Required</h2>
+                    <p className="text-body-sm text-text-secondary">
+                        You need to be logged in to access this assignment. Sign up for free or log in to continue.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                        <Button asChild variant="default">
+                            <Link to={`/signup?redirect=/upload/${assignmentId}`}>Sign Up</Link>
+                        </Button>
+                        <Button asChild variant="outline">
+                            <Link to={`/login?redirect=/upload/${assignmentId}`}>Log In</Link>
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (status === 400 || !uuidMatch) {
+            return (
+                <div className="p-12 text-center max-w-md mx-auto space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-error-muted border border-error/20 flex items-center justify-center mx-auto text-error">
+                        <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-text-primary">Invalid Assignment Link</h2>
+                    <p className="text-body-sm text-text-secondary">
+                        This link doesn't look right. Please check the URL and try again, or ask your teacher for the correct link.
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
+                        Go to Dashboard
+                    </Button>
+                </div>
+            );
+        }
+
         return (
             <div className="p-12 text-center max-w-md mx-auto space-y-4">
                 <div className="w-12 h-12 rounded-full bg-error-muted border border-error/20 flex items-center justify-center mx-auto text-error">
@@ -322,11 +363,18 @@ const AssignmentUpload = () => {
                 </div>
                 <h2 className="text-lg font-semibold text-text-primary">Assignment Not Found</h2>
                 <p className="text-body-sm text-text-secondary">
-                    {parseApiError(error, 'Could not load this assignment. Please check the link and try again.')}
+                    This assignment may have been deleted or the link has expired. Contact your teacher for a new link.
                 </p>
                 <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
                     Go to Dashboard
                 </Button>
+            </div>
+        );
+    }
+    if (!assignmentData?.data) {
+        return (
+            <div className="p-12 text-center">
+                <p className="font-mono text-mono-sm text-text-muted uppercase tracking-wider animate-pulse">Loading assignment…</p>
             </div>
         );
     }

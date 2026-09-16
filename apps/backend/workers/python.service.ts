@@ -37,10 +37,20 @@ export class PythonService {
             let extractedData: ParsedPage[] = [];
             let stderrOutput = "";
             let pythonError = "";
+            let settled = false;
 
             const proc = spawn(PYTHON_BIN, [script, filePath, submissionId], {
                 cwd: path.join(__dirname, "python"),
             });
+
+            // Kill the process if it takes longer than 3 minutes (e.g. corrupt PDF)
+            const timeout = setTimeout(() => {
+                if (!settled) {
+                    settled = true;
+                    proc.kill();
+                    reject(new Error("PDF parsing timed out after 3 minutes."));
+                }
+            }, 3 * 60 * 1000);
 
             const rl = readline.createInterface({ input: proc.stdout });
 
@@ -65,9 +75,14 @@ export class PythonService {
                 stderrOutput += chunk.toString();
             });
 
-            proc.on("error", reject);
+            proc.on("error", (err) => {
+                if (!settled) { settled = true; clearTimeout(timeout); reject(err); }
+            });
 
             proc.on("close", (code) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeout);
                 if (code === 0) {
                     resolve(extractedData);
                 } else {
@@ -90,6 +105,7 @@ export class PythonService {
             let evaluation: GeminiEvaluation | null = null;
             let pythonError = "";
             let stderrOutput = "";
+            let settled = false;
             const backendDir = path.join(__dirname, "..");
 
             // stream payload via stdin to avoid cli argument length limits
@@ -101,6 +117,15 @@ export class PythonService {
                     cwd: path.join(__dirname, "python"),
                 }
             );
+
+            // Kill the process if Gemini API hangs for more than 5 minutes
+            const timeout = setTimeout(() => {
+                if (!settled) {
+                    settled = true;
+                    proc.kill();
+                    reject(new Error("AI grading timed out after 5 minutes."));
+                }
+            }, 5 * 60 * 1000);
 
             proc.stdin.on("error", () => {});
 
@@ -123,7 +148,7 @@ export class PythonService {
                         pythonError = msg.error;
                     }
                     publishEvent(submissionId, { ...msg, assignmentId, studentId });
-                } catch (e) {
+                } catch {
                     // ignore JSON parsing errors
                 }
             });
@@ -132,9 +157,14 @@ export class PythonService {
                 stderrOutput += chunk.toString();
             });
 
-            proc.on("error", reject);
+            proc.on("error", (err) => {
+                if (!settled) { settled = true; clearTimeout(timeout); reject(err); }
+            });
 
             proc.on("close", (code) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeout);
                 if (code === 0 && evaluation) {
                     resolve(evaluation);
                 } else {

@@ -23,6 +23,11 @@ export const initSocket = (httpServer: HTTPServer) => {
     // Dedicated redis client for listening to pub/sub messages
     const sub = redis.duplicate();
 
+    // Prevent unhandled error events from crashing the process.
+    sub.on("error", (err: Error) => {
+        console.warn("[Redis Sub] Connection error:", err.message);
+    });
+
     sub.psubscribe("submission:*").catch((err: Error) => {
         console.error("Failed to subscribe to submission updates:", err.message);
     });

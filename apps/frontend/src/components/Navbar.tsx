@@ -131,55 +131,53 @@ const Navbar = () => {
             : "opacity-0 pointer-events-none"
         }`}
       >
-        {isMobileMenuOpen && (
-          <nav className="flex flex-col p-6 gap-3">
-            {user ? (
-              <>
-                <div className="pb-4 border-b border-border">
-                  <p className="text-sm font-medium text-text-primary">{displayName}</p>
-                  <p className="font-mono text-xs text-text-muted mt-0.5">{user.email}</p>
-                  <p className="font-mono text-xs text-text-muted mt-1 capitalize">
-                    {roleLabel}
-                  </p>
-                </div>
-
-                <Link
-                  to="/dashboard"
-                  className={`py-2 ${activeLinkClass}`}
-                >
-                  Dashboard
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors py-2 text-left"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Log out</span>
-                </button>
-              </>
-            ) : (
-              <div className="flex flex-col gap-4 pt-1">
-                <div className="flex flex-col gap-4 pb-4 border-b border-border">
-                  <Link to="/#pipeline" onClick={() => setIsMobileMenuOpen(false)} className="text-sm text-text-secondary hover:text-text-primary transition-colors">Grading Pipeline</Link>
-                  <Link to="/#workflow" onClick={() => setIsMobileMenuOpen(false)} className="text-sm text-text-secondary hover:text-text-primary transition-colors">Evaluation Workflow</Link>
-                  <Link to="/#stack" onClick={() => setIsMobileMenuOpen(false)} className="text-sm text-text-secondary hover:text-text-primary transition-colors">Tech Stack</Link>
-                </div>
-                <Link
-                  to="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-sm text-text-secondary hover:text-text-primary py-2 transition-colors"
-                >
-                  Log In
-                </Link>
-                <Button asChild variant="default" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Link to="/signup">Get Started</Link>
-                </Button>
+        <nav className="flex flex-col p-6 gap-3">
+          {user ? (
+            <>
+              <div className="pb-4 border-b border-border">
+                <p className="text-sm font-medium text-text-primary">{displayName}</p>
+                <p className="font-mono text-xs text-text-muted mt-0.5">{user.email}</p>
+                <p className="font-mono text-xs text-text-muted mt-1 capitalize">
+                  {roleLabel}
+                </p>
               </div>
-            )}
-          </nav>
-        )}
+
+              <Link
+                to="/dashboard"
+                className={`py-2 ${activeLinkClass}`}
+              >
+                Dashboard
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors py-2 text-left"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Log out</span>
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col gap-4 pt-1">
+              <div className="flex flex-col gap-4 pb-4 border-b border-border">
+                <Link to="/#pipeline" onClick={() => setIsMobileMenuOpen(false)} className="text-sm text-text-secondary hover:text-text-primary transition-colors">Grading Pipeline</Link>
+                <Link to="/#workflow" onClick={() => setIsMobileMenuOpen(false)} className="text-sm text-text-secondary hover:text-text-primary transition-colors">Evaluation Workflow</Link>
+                <Link to="/#stack" onClick={() => setIsMobileMenuOpen(false)} className="text-sm text-text-secondary hover:text-text-primary transition-colors">Tech Stack</Link>
+              </div>
+              <Link
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-sm text-text-secondary hover:text-text-primary py-2 transition-colors"
+              >
+                Log In
+              </Link>
+              <Button asChild variant="default" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                <Link to="/signup">Get Started</Link>
+              </Button>
+            </div>
+          )}
+        </nav>
       </div>
     </header>
   );

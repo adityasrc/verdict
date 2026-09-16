@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Eye,
   EyeOff,
@@ -42,6 +42,8 @@ const Signup = () => {
   const [signup, { isLoading }] = useSignupMutation();
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -52,7 +54,7 @@ const Signup = () => {
         accessToken: response.data.accessToken,
         refreshToken: response.data.refreshToken,
       });
-      navigate("/dashboard");
+      navigate(redirectTo);
     } catch (err: unknown) {
       toast.error(parseApiError(err, "Signup failed. Please try again."));
     }

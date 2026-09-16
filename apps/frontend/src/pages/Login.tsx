@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useLoginMutation } from "../features/auth/authApi";
 import { useAuth } from "../hooks/useAuth";
@@ -17,6 +17,8 @@ const Login = () => {
   const [loginMutation, { isLoading }] = useLoginMutation();
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -27,7 +29,7 @@ const Login = () => {
         accessToken: response.data.accessToken,
         refreshToken: response.data.refreshToken,
       });
-      navigate("/dashboard");
+      navigate(redirectTo);
     } catch (err) {
       toast.error(parseApiError(err, "Login failed. Please check your credentials."));
     }

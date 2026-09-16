@@ -63,7 +63,7 @@ export const STACK = [
   "Express + TypeScript",
   "PostgreSQL + Prisma",
   "BullMQ + Redis",
-  "Gemini 3.7 Flash",
+  "Gemini Flash",
   "Cloudflare R2",
   "Socket.io",
   "Python (PyMuPDF)",

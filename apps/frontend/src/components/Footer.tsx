@@ -69,7 +69,7 @@ export const Footer = () => {
               System
             </p>
             <ul className="space-y-2 text-xs text-text-muted font-mono">
-              <li>Engine: Gemini 3.7 Flash</li>
+              <li>Engine: Gemini Flash</li>
               <li>Parser: Python · PyMuPDF</li>
               <li>Queue: BullMQ + Redis</li>
             </ul>
