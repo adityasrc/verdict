@@ -1,15 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import {
-    useCreateRubricMutation,
-    useDeleteRubricMutation,
-    useGetRubricsQuery,
-    useUpdateRubricMutation,
-} from '../features/rubrics/rubricApi';
-import type { RubricCriterion } from '../types';
-import { parseApiError } from '../lib/errors';
+import { rubricApi } from '../features/rubrics/rubricApi';
+import type { Rubric, RubricCriterion } from '../types';
+import { parseApiError } from '../lib/utils';
 import { toast } from 'sonner';
 import {
     X,
@@ -21,12 +16,9 @@ import {
 } from 'lucide-react';
 
 const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-    const { data: rubricsData, isLoading } = useGetRubricsQuery();
-    const [createRubric, { isLoading: isCreating }] = useCreateRubricMutation();
-    const [updateRubric, { isLoading: isUpdating }] = useUpdateRubricMutation();
-    const [deleteRubric] = useDeleteRubricMutation();
-
-    const isSubmitting = isCreating || isUpdating;
+    const [rubrics, setRubrics] = useState<Rubric[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -36,6 +28,22 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [criteria, setCriteria] = useState<RubricCriterion[]>([
         { name: '', description: '', points: 10 },
     ]);
+
+    const fetchRubrics = async () => {
+        try {
+            setIsLoading(true);
+            const res = await rubricApi.getRubrics();
+            setRubrics(res.data || []);
+        } catch (error) {
+            toast.error(parseApiError(error, 'Failed to load rubrics.'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRubrics();
+    }, []);
 
     const handleAddCriterion = () => {
         setCriteria([...criteria, { name: '', description: '', points: 10 }]);
@@ -58,16 +66,20 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            setIsSubmitting(true);
             if (editingId) {
-                await updateRubric({ id: editingId, name, criteria }).unwrap();
+                await rubricApi.updateRubric(editingId, { name, criteria });
                 toast.success('Rubric updated.');
             } else {
-                await createRubric({ name, criteria }).unwrap();
+                await rubricApi.createRubric({ name, criteria });
                 toast.success('Rubric created.');
             }
+            await fetchRubrics();
             resetForm();
         } catch (error) {
             toast.error(parseApiError(error, 'Operation failed.'));
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -93,8 +105,9 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const handleDelete = async (id: string) => {
         try {
             setDeletingId(id);
-            await deleteRubric(id).unwrap();
+            await rubricApi.deleteRubric(id);
             if (editingId === id) resetForm();
+            await fetchRubrics();
             toast.success('Rubric deleted.');
         } catch (error) {
             toast.error(parseApiError(error, 'Delete failed.'));
@@ -135,7 +148,7 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             <p className="text-center font-mono text-mono-sm uppercase tracking-wider text-text-muted animate-pulse">
                                 Loading...
                             </p>
-                        ) : rubricsData?.data.length === 0 ? (
+                        ) : rubrics.length === 0 ? (
                             <div className="text-center py-8 border border-dashed border-border rounded-lg">
                                 <p className="text-heading-sm font-medium text-text-muted">No rubrics</p>
                                 <p className="text-body-sm text-text-muted mt-2">
@@ -144,7 +157,7 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             </div>
                         ) : (
                             <div className="flex flex-col gap-3">
-                                {rubricsData?.data.map((rubric) => (
+                                {rubrics.map((rubric) => (
                                     <div
                                         key={rubric.id}
                                         className={`p-4 border rounded-lg flex flex-col gap-3 transition-colors ${

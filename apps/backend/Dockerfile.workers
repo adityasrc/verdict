@@ -60,4 +60,4 @@ RUN chown -R node:node /app
 USER node
 
 # Start the worker
-CMD ["node", "dist/workers/SubmissionWorker.js"]
+CMD ["node", "dist/workers/submissionWorker.js"]

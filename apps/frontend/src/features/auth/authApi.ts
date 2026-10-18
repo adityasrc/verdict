@@ -1,29 +1,23 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQueryWithReauth } from "../../app/baseQuery";
-import type { AuthResponse, LoginCredentials, RegisterData } from "../../types";
+import { apiClient } from '../../lib/apiClient';
+import type { AuthResponse, LoginCredentials, RegisterData } from '../../types';
 
-export const authApi = createApi({
-  reducerPath: "authApi",
-  baseQuery: baseQueryWithReauth,
-  endpoints: (builder) => ({
-    login: builder.mutation<AuthResponse, LoginCredentials>({
-      query: (credentials) => ({
-        url: "/auth/login",
-        method: "POST",
+export const login = (credentials: LoginCredentials) =>
+    apiClient<AuthResponse>('/auth/login', {
+        method: 'POST',
         body: credentials,
-      }),
-    }),
-    signup: builder.mutation<AuthResponse, RegisterData>({
-      query: (userData) => ({
-        url: "/auth/register",
-        method: "POST",
-        body: userData,
-      }),
-    }),
-    getCurrentUser: builder.query<AuthResponse, void>({
-      query: () => "/auth/me",
-    }),
-  }),
-});
+    });
 
-export const { useLoginMutation, useSignupMutation, useGetCurrentUserQuery } = authApi;
+export const signup = (data: RegisterData) =>
+    apiClient<AuthResponse>('/auth/register', {
+        method: 'POST',
+        body: data,
+    });
+
+export const getCurrentUser = () =>
+    apiClient<AuthResponse>('/auth/me');
+
+export const authApi = {
+    login,
+    signup,
+    getCurrentUser,
+};

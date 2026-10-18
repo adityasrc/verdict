@@ -1,20 +1,20 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
-import { useLoginMutation } from "../features/auth/authApi";
+import { authApi } from "../features/auth/authApi";
 import { useAuth } from "../hooks/useAuth";
 import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { parseApiError } from "../lib/errors";
+import { parseApiError } from "../lib/utils";
 import { toast } from "sonner";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loginMutation, { isLoading }] = useLoginMutation();
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -22,8 +22,9 @@ const Login = () => {
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
-      const response = await loginMutation({ email, password }).unwrap();
+      const response = await authApi.login({ email, password });
       login({
         user: response.data.user,
         accessToken: response.data.accessToken,
@@ -32,6 +33,8 @@ const Login = () => {
       navigate(redirectTo);
     } catch (err) {
       toast.error(parseApiError(err, "Login failed. Please check your credentials."));
+    } finally {
+      setIsLoading(false);
     }
   };
 

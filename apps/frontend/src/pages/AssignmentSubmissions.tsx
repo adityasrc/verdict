@@ -11,14 +11,9 @@ import {
     DialogTitle,
 } from '../components/ui/dialog';
 import { useSocket } from '../context/SocketContext';
-import {
-    useDeleteSubmissionMutation,
-    useGetAssignmentQuery,
-    useGetAssignmentSubmissionsQuery,
-    useReEvaluateSubmissionMutation,
-} from '../features/assignments/assignmentApi';
-import { parseApiError } from '../lib/errors';
-import type { Submission } from '../types';
+import { assignmentApi } from '../features/assignments/assignmentApi';
+import { parseApiError } from '../lib/utils';
+import type { Assignment, Submission } from '../types';
 import { toast } from 'sonner';
 import {
     FileCheck,
@@ -65,18 +60,41 @@ const AssignmentSubmissions: React.FC = () => {
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-    const { data: assignmentData } = useGetAssignmentQuery(assignmentId || '', { skip: !assignmentId });
-    const {
-        data: submissionsData,
-        isLoading,
-        refetch: refetchSubmissions,
-    } = useGetAssignmentSubmissionsQuery(assignmentId || '', { skip: !assignmentId });
+    const [assignment, setAssignment] = useState<Assignment | null>(null);
+    const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isReEvaluating, setIsReEvaluating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const assignment = assignmentData?.data;
-    const submissions = submissionsData?.data || [];
+    const fetchSubmissions = React.useCallback(async () => {
+        if (!assignmentId) return;
+        try {
+            const res = await assignmentApi.getAssignmentSubmissions(assignmentId);
+            setSubmissions(res.data || []);
+        } catch (err) {
+            console.error('Failed to fetch submissions:', err);
+        }
+    }, [assignmentId]);
 
-    const [reEvaluateSubmission, { isLoading: isReEvaluating }] = useReEvaluateSubmissionMutation();
-    const [deleteSubmission, { isLoading: isDeleting }] = useDeleteSubmissionMutation();
+    const fetchAssignment = React.useCallback(async () => {
+        if (!assignmentId) return;
+        try {
+            const res = await assignmentApi.getAssignment(assignmentId);
+            setAssignment(res.data);
+        } catch (err) {
+            console.error('Failed to fetch assignment:', err);
+        }
+    }, [assignmentId]);
+
+    useEffect(() => {
+        if (!assignmentId) return;
+        const loadData = async () => {
+            setIsLoading(true);
+            await Promise.all([fetchAssignment(), fetchSubmissions()]);
+            setIsLoading(false);
+        };
+        loadData();
+    }, [assignmentId, fetchAssignment, fetchSubmissions]);
 
     const handleExportToExcel = () => {
         if (!submissions.length) return;
@@ -99,21 +117,29 @@ const AssignmentSubmissions: React.FC = () => {
 
     const handleReEvaluate = async (submissionId: string) => {
         try {
-            await reEvaluateSubmission({ submissionId }).unwrap();
+            setIsReEvaluating(true);
+            await assignmentApi.reEvaluateSubmission({ submissionId });
             toast.success('Re-evaluation queued.');
+            await fetchSubmissions();
         } catch (err) {
             toast.error(parseApiError(err, 'Failed to trigger re-evaluation.'));
+        } finally {
+            setIsReEvaluating(false);
         }
     };
 
     const handleDeleteSubmission = async (submissionId: string) => {
         try {
-            await deleteSubmission({ submissionId }).unwrap();
+            setIsDeleting(true);
+            await assignmentApi.deleteSubmission({ submissionId });
             toast.success('Submission deleted. Student can now resubmit.');
             setSelectedSubmission(null);
             setConfirmDeleteId(null);
+            await fetchSubmissions();
         } catch (err) {
             toast.error(parseApiError(err, 'Failed to delete submission.'));
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -125,7 +151,7 @@ const AssignmentSubmissions: React.FC = () => {
 
         const handleGradingProgress = (event: GradingProgressEvent) => {
             if (event.step === 'grading_completed') {
-                refetchSubmissions();
+                fetchSubmissions();
             }
             const computed = computeProgress(event);
             setGradingProgress((prev) => ({
@@ -138,7 +164,7 @@ const AssignmentSubmissions: React.FC = () => {
         socket.on('assignment-grading-progress', handleGradingProgress);
 
         const handleNewSubmission = (event: { assignmentId?: string }) => {
-            if (event.assignmentId === assignmentId) refetchSubmissions();
+            if (event.assignmentId === assignmentId) fetchSubmissions();
         };
         socket.on('new-submission', handleNewSubmission);
 
@@ -147,7 +173,7 @@ const AssignmentSubmissions: React.FC = () => {
             socket.off('assignment-grading-progress', handleGradingProgress);
             socket.off('new-submission', handleNewSubmission);
         };
-    }, [socket, assignmentId, refetchSubmissions]);
+    }, [socket, assignmentId, fetchSubmissions]);
 
     return (
         <div className="w-full">

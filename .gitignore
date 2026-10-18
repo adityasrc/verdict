@@ -47,4 +47,8 @@ values-*
 venv/
 __pycache__/
 *.py[cod]
-*$py.class
+*$py.class
+
+# Temp directories
+temp/
+tmp/

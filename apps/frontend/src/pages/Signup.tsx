@@ -9,14 +9,14 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
-import { useSignupMutation } from "../features/auth/authApi";
+import { authApi } from "../features/auth/authApi";
 import { useAuth } from "../hooks/useAuth";
 import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { toast } from "sonner";
-import { parseApiError } from "../lib/errors";
+import { parseApiError } from "../lib/utils";
 
 const ROLES = [
   {
@@ -39,7 +39,7 @@ const Signup = () => {
   const [name, setName] = useState("");
   const [role, setRole] = useState<"STUDENT" | "TEACHER">("STUDENT");
   const [showPassword, setShowPassword] = useState(false);
-  const [signup, { isLoading }] = useSignupMutation();
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -47,8 +47,9 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
-      const response = await signup({ email, password, name, role }).unwrap();
+      const response = await authApi.signup({ email, password, name, role });
       login({
         user: response.data.user,
         accessToken: response.data.accessToken,
@@ -57,6 +58,8 @@ const Signup = () => {
       navigate(redirectTo);
     } catch (err: unknown) {
       toast.error(parseApiError(err, "Signup failed. Please try again."));
+    } finally {
+      setIsLoading(false);
     }
   };
 

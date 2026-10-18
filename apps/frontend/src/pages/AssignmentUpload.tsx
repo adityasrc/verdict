@@ -3,11 +3,8 @@ import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useSocket } from '../context/SocketContext';
-import {
-    useGetAssignmentQuery,
-    useGetUploadUrlMutation,
-    useSubmitAssignmentMutation,
-} from '../features/assignments/assignmentApi';
+import { assignmentApi } from '../features/assignments/assignmentApi';
+import type { Assignment } from '../types';
 import {
     Clock,
     Upload,
@@ -17,7 +14,7 @@ import {
     Loader2,
     FileText,
 } from 'lucide-react';
-import { parseApiError } from '../lib/errors';
+import { parseApiError } from '../lib/utils';
 
 type GradingStatus = 'idle' | 'processing' | 'completed' | 'failed';
 type StageKey = 'upload' | 'parsing' | 'evaluating' | 'graded';
@@ -75,18 +72,13 @@ const STEP_TO_STAGE: Record<string, StageKey> = {
 };
 
 const AssignmentUpload = () => {
-    const { assignmentId: rawAssignmentId } = useParams<{ assignmentId: string }>();
+    const { assignmentId } = useParams<{ assignmentId: string }>();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
 
-    // Sanitize assignmentId: Extract clean UUID in case URL has extra text, spaces, or encoded PIN info
-    const decodedRawId = decodeURIComponent(rawAssignmentId ?? '').trim();
-    const uuidMatch = decodedRawId.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-    const assignmentId = uuidMatch ? uuidMatch[0] : decodedRawId;
-
     const [file, setFile] = useState<File | null>(null);
     const [fileError, setFileError] = useState('');
-    const [pin, setPin] = useState('');
+    const [pin, setPin] = useState(searchParams.get('pin') || '');
     const [errorMessage, setErrorMessage] = useState('');
     const [isUploading, setIsUploading] = useState(false);
 
@@ -97,25 +89,46 @@ const AssignmentUpload = () => {
     const [completedScore, setCompletedScore] = useState<number | null>(null);
     const [watchingSubmissionId, setWatchingSubmissionId] = useState<string | null>(null);
 
-    const [getUploadUrl] = useGetUploadUrlMutation();
-    const { data: assignmentData, isLoading, isError, error } = useGetAssignmentQuery(assignmentId, { skip: !assignmentId });
-    const [markSubmission] = useSubmitAssignmentMutation();
+    const [assignment, setAssignment] = useState<Assignment | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isError, setIsError] = useState(false);
+    const [error, setError] = useState<any>(null);
+
     const { socket } = useSocket();
 
-    // Auto-prefill PIN if present in query parameter (?pin=1234) or from pasted URL text ("Access PIN: 1234")
     useEffect(() => {
-        if (!pin) {
-            const queryPin = searchParams.get('pin');
-            if (queryPin) {
-                setPin(queryPin);
-            } else if (decodedRawId) {
-                const pinMatch = decodedRawId.match(/(?:pin[:=\s]+)(\d{4})/i);
-                if (pinMatch) {
-                    setPin(pinMatch[1]);
-                }
-            }
+        if (!assignmentId) {
+            setIsLoading(false);
+            return;
         }
-    }, [decodedRawId, searchParams, pin]);
+
+        let mounted = true;
+        setIsLoading(true);
+        setIsError(false);
+        setError(null);
+
+        assignmentApi.getAssignment(assignmentId)
+            .then((res) => {
+                if (mounted) {
+                    setAssignment(res.data);
+                }
+            })
+            .catch((err) => {
+                if (mounted) {
+                    setIsError(true);
+                    setError(err);
+                }
+            })
+            .finally(() => {
+                if (mounted) {
+                    setIsLoading(false);
+                }
+            });
+
+        return () => {
+            mounted = false;
+        };
+    }, [assignmentId]);
 
     useEffect(() => {
         if (!socket) return;
@@ -200,12 +213,12 @@ const AssignmentUpload = () => {
         setErrorMessage('');
 
         try {
-            const urlResult = await getUploadUrl({
+            const urlResult = await assignmentApi.getUploadUrl({
                 fileName: file.name,
                 type: file.type,
                 assignmentId: assignmentId!,
                 pin,
-            }).unwrap();
+            });
 
             setGradingStatus('processing');
             setCurrentStage('upload');
@@ -238,11 +251,11 @@ const AssignmentUpload = () => {
 
             setStageMessage('Registering submission…');
 
-            const res = await markSubmission({
+            const res = await assignmentApi.submitAssignment({
                 assignmentId: assignmentId!,
                 fileKey: uploadData.key,
                 pin: pin || undefined,
-            }).unwrap();
+            });
 
             const submissionId = res.data?.id;
             if (submissionId) {
@@ -284,7 +297,7 @@ const AssignmentUpload = () => {
         if (status === 'pending') {
             if (stage === 'upload') return 'PDF file and PIN verification';
             if (stage === 'parsing') return 'PyMuPDF text and figure extraction';
-            if (stage === 'evaluating') return 'Gemini 3.7 Flash analysis against criteria';
+            if (stage === 'evaluating') return 'Gemini 3.8 Flash analysis against criteria';
             if (stage === 'graded') return 'Final score and recorded feedback';
         }
         if (status === 'active') {
@@ -315,9 +328,10 @@ const AssignmentUpload = () => {
     }
 
     if (isError) {
-        const status = (error as any)?.status;
+        const errorMsg = error?.message?.toLowerCase() || '';
+        const isAuthError = (error as any)?.status === 401 || errorMsg.includes('unauthorized') || errorMsg.includes('jwt') || errorMsg.includes('token');
 
-        if (status === 401) {
+        if (isAuthError) {
             return (
                 <div className="p-12 text-center max-w-md mx-auto space-y-4">
                     <div className="w-12 h-12 rounded-full bg-surface-raised border border-border flex items-center justify-center mx-auto text-text-muted">
@@ -339,7 +353,7 @@ const AssignmentUpload = () => {
             );
         }
 
-        if (status === 400 || !uuidMatch) {
+        if ((error as any)?.status === 400 || !assignmentId) {
             return (
                 <div className="p-12 text-center max-w-md mx-auto space-y-4">
                     <div className="w-12 h-12 rounded-full bg-error-muted border border-error/20 flex items-center justify-center mx-auto text-error">
@@ -371,15 +385,13 @@ const AssignmentUpload = () => {
             </div>
         );
     }
-    if (!assignmentData?.data) {
+    if (!assignment) {
         return (
             <div className="p-12 text-center">
                 <p className="font-mono text-mono-sm text-text-muted uppercase tracking-wider animate-pulse">Loading assignment…</p>
             </div>
         );
     }
-
-    const assignment = assignmentData.data;
 
     return (
         <div className="w-full max-w-6xl mx-auto space-y-8">

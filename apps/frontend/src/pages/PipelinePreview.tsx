@@ -82,7 +82,7 @@ export const PipelinePreview: React.FC<PipelinePreviewProps> = ({ events, stack 
                   </div>
                   <div className="flex justify-between">
                     <span className="text-text-muted">AI Model</span>
-                    <span className="text-text-secondary font-mono">gemini-3.7-flash</span>
+                    <span className="text-text-secondary font-mono">gemini-3.8-flash</span>
                   </div>
                 </div>
 

@@ -5,7 +5,7 @@ import { WorkflowSteps } from "./WorkflowSteps";
 import { PipelinePreview } from "./PipelinePreview";
 import { Cta } from "./Cta";
 
-// Pipeline steps derived directly from SubmissionWorker.ts and python.service.ts
+// Pipeline steps derived directly from submissionWorker.ts and python.service.ts
 export const WORKFLOW_STEPS = [
   {
     step: "01",
@@ -32,8 +32,8 @@ export const WORKFLOW_STEPS = [
     step: "04",
     title: "Gemini evaluation",
     description:
-      "The extracted content and rubric are sent to geminiGrader.py, which calls Gemini 3.7 Flash and returns a structured result: score, per-criterion feedback, strengths, and weaknesses.",
-    detail: "Gemini 3.7 Flash · structured JSON output",
+      "The extracted content and rubric are sent to geminiGrader.py, which calls Gemini 3.8 Flash and returns a structured result: score, per-criterion feedback, strengths, and weaknesses.",
+    detail: "Gemini 3.8 Flash · structured JSON output",
   },
   {
     step: "05",
@@ -44,15 +44,15 @@ export const WORKFLOW_STEPS = [
   },
 ] as const;
 
-// Representative preview of the real event stream from SubmissionWorker.ts & python scripts
+// Representative preview of the real event stream from submissionWorker.ts & python scripts
 export const PREVIEW_EVENTS = [
   { step: "submission_started", label: "Job queued · status set to EVALUATING", status: "info" as const },
   { step: "downloading_pdf", label: "Downloading PDF from Cloudflare R2…", status: "info" as const },
   { step: "pdf_downloaded", label: "PDF saved to worker disk", status: "ok" as const },
   { step: "parsing_started", label: "Opening PDF with PyMuPDF…", status: "info" as const },
   { step: "page_parsed", label: "Pages extracted (text + images)", status: "ok" as const },
-  { step: "parsing_completed", label: "Extraction done · passing to Gemini 3.7 Flash", status: "ok" as const },
-  { step: "gemini_started", label: "Calling Gemini 3.7 Flash with rubric context…", status: "info" as const },
+  { step: "parsing_completed", label: "Extraction done · passing to Gemini 3.8 Flash", status: "ok" as const },
+  { step: "gemini_started", label: "Calling Gemini 3.8 Flash with rubric context…", status: "info" as const },
   { step: "gemini_processing", label: "Waiting for structured response…", status: "info" as const },
   { step: "gemini_completed", label: "Evaluation received", status: "ok" as const },
   { step: "grading_completed", label: "Score saved · status set to GRADED", status: "done" as const },

@@ -153,7 +153,7 @@ export const Hero: React.FC = () => {
 
                 <div className="mt-6 pt-3 border-t border-border flex items-center justify-between text-xs text-text-muted font-mono">
                   <span>Fast, streamed evaluation</span>
-                  <span>Model: gemini-3.7-flash</span>
+                  <span>Model: gemini-3.8-flash</span>
                 </div>
               </div>
             </div>

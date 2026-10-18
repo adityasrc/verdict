@@ -1,56 +1,33 @@
-import { createApi } from '@reduxjs/toolkit/query/react';
-import { baseQueryWithReauth } from '../../app/baseQuery';
+import { apiClient } from '../../lib/apiClient';
 import type { Rubric, RubricCriterion } from '../../types';
 
-export const rubricApi = createApi({
-    reducerPath: 'rubricApi',
-    baseQuery: baseQueryWithReauth,
-    tagTypes: ['Rubric'],
-    endpoints: (builder) => ({
-        getRubrics: builder.query<{ success: boolean; data: Rubric[] }, void>({
-            query: () => '/rubrics',
-            providesTags: ['Rubric'],
-        }),
-        getRubric: builder.query<{ success: boolean; data: Rubric }, string>({
-            query: (id) => `/rubrics/${id}`,
-            providesTags: (_result, _error, id) => [{ type: 'Rubric', id }],
-        }),
-        createRubric: builder.mutation<
-            { success: boolean; data: Rubric },
-            { name: string; criteria: RubricCriterion[] }
-        >({
-            query: (data) => ({
-                url: '/rubrics',
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['Rubric'],
-        }),
-        updateRubric: builder.mutation<
-            { success: boolean; data: Rubric },
-            { id: string; name: string; criteria: RubricCriterion[] }
-        >({
-            query: ({ id, ...data }) => ({
-                url: `/rubrics/${id}`,
-                method: 'PUT',
-                body: data,
-            }),
-            invalidatesTags: (_result, _error, { id }) => [{ type: 'Rubric', id }, 'Rubric'],
-        }),
-        deleteRubric: builder.mutation<{ success: boolean }, string>({
-            query: (id) => ({
-                url: `/rubrics/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: ['Rubric'],
-        }),
-    }),
-});
+export const getRubrics = () =>
+    apiClient<{ success: boolean; data: Rubric[] }>('/rubrics');
 
-export const {
-    useGetRubricsQuery,
-    useGetRubricQuery,
-    useCreateRubricMutation,
-    useUpdateRubricMutation,
-    useDeleteRubricMutation,
-} = rubricApi;
+export const getRubric = (id: string) =>
+    apiClient<{ success: boolean; data: Rubric }>(`/rubrics/${id}`);
+
+export const createRubric = (data: { name: string; criteria: RubricCriterion[] }) =>
+    apiClient<{ success: boolean; data: Rubric }>('/rubrics', {
+        method: 'POST',
+        body: data,
+    });
+
+export const updateRubric = (id: string, data: { name?: string; criteria?: RubricCriterion[] }) =>
+    apiClient<{ success: boolean; data: Rubric }>(`/rubrics/${id}`, {
+        method: 'PUT',
+        body: data,
+    });
+
+export const deleteRubric = (id: string) =>
+    apiClient<{ success: boolean }>(`/rubrics/${id}`, {
+        method: 'DELETE',
+    });
+
+export const rubricApi = {
+    getRubrics,
+    getRubric,
+    createRubric,
+    updateRubric,
+    deleteRubric,
+};

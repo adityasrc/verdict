@@ -6,8 +6,5 @@ export class AppError extends Error {
         super(message);
         this.statusCode = statusCode;
         this.details = details;
-        
-        // Restore prototype chain for instanceof checks to work properly
-        Object.setPrototypeOf(this, AppError.prototype);
     }
 }

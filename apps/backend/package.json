@@ -5,10 +5,10 @@
     "private": true,
     "scripts": {
         "dev": "tsx watch index.ts",
-        "dev:worker": "tsx workers/SubmissionWorker.ts",
-        "build": "tsup index.ts workers/SubmissionWorker.ts --outDir dist --format esm --target node20 --sourcemap",
+        "dev:worker": "tsx workers/submissionWorker.ts",
+        "build": "tsup index.ts workers/submissionWorker.ts --outDir dist --format esm --target node20 --sourcemap",
         "start": "node dist/index.js",
-        "start:worker": "node dist/workers/SubmissionWorker.js",
+        "start:worker": "node dist/workers/submissionWorker.js",
         "clean": "rm -rf dist",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit"

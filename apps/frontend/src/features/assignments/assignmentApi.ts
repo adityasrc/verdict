@@ -1,5 +1,4 @@
-import { createApi } from '@reduxjs/toolkit/query/react';
-import { baseQueryWithReauth } from '../../app/baseQuery';
+import { apiClient } from '../../lib/apiClient';
 import type {
     Assignment,
     CreateAssignmentRequest,
@@ -7,113 +6,81 @@ import type {
     SubmitAssignmentRequest,
 } from '../../types';
 
-export const assignmentApi = createApi({
-    reducerPath: 'assignmentApi',
-    baseQuery: baseQueryWithReauth,
-    tagTypes: ['Assignment', 'Submission'],
-    endpoints: (builder) => ({
-        createAssignment: builder.mutation<
-            { success: boolean; data: Assignment },
-            CreateAssignmentRequest
-        >({
-            query: (data) => ({
-                url: '/assignments',
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['Assignment'],
-        }),
-        getTeacherAssignments: builder.query<{ success: boolean; data: Assignment[] }, void>({
-            query: () => '/assignments/teacher/my-assignments',
-            providesTags: ['Assignment'],
-        }),
-        getStudentAssignments: builder.query<{ success: boolean; data: Assignment[] }, void>({
-            query: () => '/assignments/student/all',
-            providesTags: ['Assignment'],
-        }),
-        getAssignment: builder.query<{ success: boolean; data: Assignment }, string>({
-            query: (id) => `/assignments/${id}`,
-            providesTags: (_result, _error, id) => [{ type: 'Assignment', id }],
-        }),
-        getMySubmissions: builder.query<{ success: boolean; data: Submission[] }, void>({
-            query: () => '/submissions/my-submissions',
-            providesTags: ['Submission'],
-        }),
-        getRecentSubmissions: builder.query<{ success: boolean; data: Submission[] }, void>({
-            query: () => '/submissions/recent',
-            providesTags: ['Submission'],
-        }),
-        getAssignmentSubmissions: builder.query<{ success: boolean; data: Submission[] }, string>({
-            query: (assignmentId) => `/submissions/assignment/${assignmentId}`,
-            providesTags: ['Submission'],
-        }),
-        getUploadUrl: builder.mutation<
-            { success: boolean; data: { url: string; key: string } },
-            { fileName: string; type: string; assignmentId: string; pin?: string }
-        >({
-            query: (body) => ({
-                url: '/submissions/uploadUrl',
-                method: 'POST',
-                body,
-            }),
-        }),
-        submitAssignment: builder.mutation<
-            { success: boolean; data: Submission },
-            SubmitAssignmentRequest
-        >({
-            query: (body) => ({
-                url: '/submissions/',
-                method: 'POST',
-                body: body,
-            }),
-            invalidatesTags: ['Submission'],
-        }),
-        reEvaluateSubmission: builder.mutation<{ success: boolean }, { submissionId: string }>({
-            query: (body) => ({
-                url: '/submissions/reEvaluate',
-                method: 'POST',
-                body: body,
-            }),
-            invalidatesTags: ['Submission'],
-        }),
-        deleteSubmission: builder.mutation<{ success: boolean }, { submissionId: string }>({
-            query: (body) => ({
-                url: '/submissions/deleteSubmission',
-                method: 'POST',
-                body: body,
-            }),
-            invalidatesTags: ['Submission'],
-        }),
-        allowResubmission: builder.mutation<{ success: boolean }, { submissionId: string }>({
-            query: (body) => ({
-                url: '/submissions/deleteSubmission',
-                method: 'POST',
-                body: body,
-            }),
-            invalidatesTags: ['Submission'],
-        }),
-        deleteAssignment: builder.mutation<{ success: boolean; message: string }, string>({
-            query: (id) => ({
-                url: `/assignments/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: ['Assignment', 'Submission'],
-        }),
-    }),
-});
+export const createAssignment = (data: CreateAssignmentRequest) =>
+    apiClient<{ success: boolean; data: Assignment }>('/assignments', {
+        method: 'POST',
+        body: data,
+    });
 
-export const {
-    useCreateAssignmentMutation,
-    useGetTeacherAssignmentsQuery,
-    useGetStudentAssignmentsQuery,
-    useGetAssignmentQuery,
-    useGetMySubmissionsQuery,
-    useGetRecentSubmissionsQuery,
-    useGetAssignmentSubmissionsQuery,
-    useGetUploadUrlMutation,
-    useSubmitAssignmentMutation,
-    useReEvaluateSubmissionMutation,
-    useDeleteSubmissionMutation,
-    useAllowResubmissionMutation,
-    useDeleteAssignmentMutation,
-} = assignmentApi;
+export const getTeacherAssignments = () =>
+    apiClient<{ success: boolean; data: Assignment[] }>('/assignments/teacher/my-assignments');
+
+export const getStudentAssignments = () =>
+    apiClient<{ success: boolean; data: Assignment[] }>('/assignments/student/all');
+
+export const getAssignment = (id: string) =>
+    apiClient<{ success: boolean; data: Assignment }>(`/assignments/${id}`);
+
+export const deleteAssignment = (id: string) =>
+    apiClient<{ success: boolean; message: string }>(`/assignments/${id}`, {
+        method: 'DELETE',
+    });
+
+export const getMySubmissions = () =>
+    apiClient<{ success: boolean; data: Submission[] }>('/submissions/my-submissions');
+
+export const getRecentSubmissions = () =>
+    apiClient<{ success: boolean; data: Submission[] }>('/submissions/recent');
+
+export const getAssignmentSubmissions = (assignmentId: string) =>
+    apiClient<{ success: boolean; data: Submission[] }>(`/submissions/assignment/${assignmentId}`);
+
+export const getUploadUrl = (data: {
+    fileName: string;
+    type: string;
+    assignmentId: string;
+    pin?: string;
+}) =>
+    apiClient<{ success: boolean; data: { url: string; key: string } }>(
+        '/submissions/uploadUrl',
+        {
+            method: 'POST',
+            body: data,
+        }
+    );
+
+export const submitAssignment = (data: SubmitAssignmentRequest) =>
+    apiClient<{ success: boolean; data: Submission }>('/submissions', {
+        method: 'POST',
+        body: data,
+    });
+
+export const reEvaluateSubmission = (data: { submissionId: string }) =>
+    apiClient<{ success: boolean }>('/submissions/reEvaluate', {
+        method: 'POST',
+        body: data,
+    });
+
+export const deleteSubmission = (data: { submissionId: string }) =>
+    apiClient<{ success: boolean }>('/submissions/deleteSubmission', {
+        method: 'POST',
+        body: data,
+    });
+
+export const allowResubmission = deleteSubmission;
+
+export const assignmentApi = {
+    createAssignment,
+    getTeacherAssignments,
+    getStudentAssignments,
+    getAssignment,
+    deleteAssignment,
+    getMySubmissions,
+    getRecentSubmissions,
+    getAssignmentSubmissions,
+    getUploadUrl,
+    submitAssignment,
+    reEvaluateSubmission,
+    deleteSubmission,
+    allowResubmission,
+};

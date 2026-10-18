@@ -1,17 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, RefreshCw, Trophy, TrendingUp, Upload } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { StatCard } from './StatCard';
-import {
-    useGetRecentSubmissionsQuery,
-    useGetStudentAssignmentsQuery,
-} from '../features/assignments/assignmentApi';
+import { assignmentApi } from '../features/assignments/assignmentApi';
 import { SubmissionFeedbackModal } from './modals/SubmissionFeedbackModal';
 import { useAuth } from '../hooks/useAuth';
-import type { Submission } from '../types';
+import type { Assignment, Submission } from '../types';
 
 function getGreeting(): string {
     const hour = new Date().getHours();
@@ -42,12 +39,36 @@ export const StudentDashboard = () => {
     const [showAllPending, setShowAllPending] = useState(false);
     const [showAllSubmissions, setShowAllSubmissions] = useState(false);
 
-    const { data: assignmentsData, isLoading: isAssignmentsLoading } = useGetStudentAssignmentsQuery();
-    const { data: submissionsData, isLoading: isSubmissionsLoading } = useGetRecentSubmissionsQuery();
+    const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
+    const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const isLoading = isAssignmentsLoading || isSubmissionsLoading;
-    const allAssignments = assignmentsData?.data || [];
-    const recentSubmissions = submissionsData?.data || [];
+    useEffect(() => {
+        let mounted = true;
+        const fetchData = async () => {
+            try {
+                setIsLoading(true);
+                const [assignmentsRes, submissionsRes] = await Promise.all([
+                    assignmentApi.getStudentAssignments(),
+                    assignmentApi.getRecentSubmissions(),
+                ]);
+                if (mounted) {
+                    setAllAssignments(assignmentsRes.data || []);
+                    setRecentSubmissions(submissionsRes.data || []);
+                }
+            } catch (error) {
+                console.error('Failed to load student dashboard data:', error);
+            } finally {
+                if (mounted) {
+                    setIsLoading(false);
+                }
+            }
+        };
+        fetchData();
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     const submittedAssignmentIds = new Set(recentSubmissions.map((s) => s.assignmentId));
     const pendingAssignments = allAssignments.filter((a) => !submittedAssignmentIds.has(a.id));

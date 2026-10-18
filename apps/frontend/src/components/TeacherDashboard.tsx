@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import RubricManager from './RubricManager';
 import { Button } from './ui/button';
@@ -6,17 +6,14 @@ import { StatCard } from './StatCard';
 import { AssignmentCard } from './AssignmentCard';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useSocket } from '../context/SocketContext';
-import {
-    useDeleteAssignmentMutation,
-    useGetRecentSubmissionsQuery,
-    useGetTeacherAssignmentsQuery,
-} from '../features/assignments/assignmentApi';
+import { assignmentApi } from '../features/assignments/assignmentApi';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from 'sonner';
 import { CreateAssignmentModal } from './modals/CreateAssignmentModal';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { CheckCheck, Clock, FileSpreadsheet, Plus, Sliders, TrendingUp } from 'lucide-react';
-import { parseApiError } from '../lib/errors';
+import { parseApiError } from '../lib/utils';
+import type { Assignment, Submission } from '../types';
 
 interface GradingProgressEvent {
     submissionId: string;
@@ -53,25 +50,51 @@ export const TeacherDashboard: React.FC = () => {
     const { socket } = useSocket();
 
     const [gradingProgress, setGradingProgress] = useState<Record<string, SubmissionProgress>>({});
-
-    const { data: assignmentsData, isLoading: isAssignmentsLoading, refetch: refetchAssignments } = useGetTeacherAssignmentsQuery();
-    const { data: submissionsData, refetch: refetchSubmissions } = useGetRecentSubmissionsQuery();
-
-    const activeAssignments = useMemo(() => assignmentsData?.data || [], [assignmentsData?.data]);
-    const recentSubmissions = submissionsData?.data || [];
+    const [activeAssignments, setActiveAssignments] = useState<Assignment[]>([]);
+    const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
+    const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(true);
+    const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const ASSIGNMENTS_PER_PAGE = 5;
     const visibleAssignments = showAllAssignments
         ? activeAssignments
         : activeAssignments.slice(0, ASSIGNMENTS_PER_PAGE);
 
+    const fetchAssignments = async () => {
+        try {
+            const res = await assignmentApi.getTeacherAssignments();
+            setActiveAssignments(res.data || []);
+        } catch (err) {
+            console.error('Failed to load assignments:', err);
+        }
+    };
+
+    const fetchSubmissions = async () => {
+        try {
+            const res = await assignmentApi.getRecentSubmissions();
+            setRecentSubmissions(res.data || []);
+        } catch (err) {
+            console.error('Failed to load recent submissions:', err);
+        }
+    };
+
+    useEffect(() => {
+        const loadInitialData = async () => {
+            setIsAssignmentsLoading(true);
+            await Promise.all([fetchAssignments(), fetchSubmissions()]);
+            setIsAssignmentsLoading(false);
+        };
+        loadInitialData();
+    }, []);
+
     useEffect(() => {
         if (!socket) return;
 
         const handleGradingProgress = (event: GradingProgressEvent) => {
             if (event.step === 'grading_completed') {
-                refetchSubmissions();
-                refetchAssignments();
+                fetchSubmissions();
+                fetchAssignments();
             }
 
             const computed = computeProgress(event);
@@ -82,8 +105,8 @@ export const TeacherDashboard: React.FC = () => {
         };
 
         const handleNewSubmission = () => {
-            refetchAssignments();
-            refetchSubmissions();
+            fetchAssignments();
+            fetchSubmissions();
         };
 
         socket.on('assignment-grading-progress', handleGradingProgress);
@@ -93,16 +116,13 @@ export const TeacherDashboard: React.FC = () => {
             socket.off('assignment-grading-progress', handleGradingProgress);
             socket.off('new-submission', handleNewSubmission);
         };
-    }, [socket, refetchAssignments, refetchSubmissions]);
+    }, [socket]);
 
     useEffect(() => {
         if (!socket || !activeAssignments.length) return;
         activeAssignments.forEach((a) => socket.emit('watch-assignment', a.id));
         return () => activeAssignments.forEach((a) => socket.emit('unwatch-assignment', a.id));
     }, [socket, activeAssignments]);
-
-    const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
-    const [deleteAssignment, { isLoading: isDeleting }] = useDeleteAssignmentMutation();
 
     const handleShareLink = async (assignmentId: string, accessPin?: string | null) => {
         const link = accessPin
@@ -123,11 +143,15 @@ export const TeacherDashboard: React.FC = () => {
     const handleDeleteAssignment = async () => {
         if (!deleteAssignmentId) return;
         try {
-            await deleteAssignment(deleteAssignmentId).unwrap();
+            setIsDeleting(true);
+            await assignmentApi.deleteAssignment(deleteAssignmentId);
             toast.success('Assignment deleted successfully');
             setDeleteAssignmentId(null);
+            await fetchAssignments();
         } catch (err) {
             toast.error(parseApiError(err, 'Failed to delete assignment'));
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -148,7 +172,10 @@ export const TeacherDashboard: React.FC = () => {
         <div className="w-full space-y-8">
             <CreateAssignmentModal
                 isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
+                onClose={() => {
+                    setIsCreateModalOpen(false);
+                    fetchAssignments();
+                }}
                 onOpenRubricManager={() => setIsRubricManagerOpen(true)}
             />
 

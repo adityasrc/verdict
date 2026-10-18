@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { useCreateAssignmentMutation } from '../../features/assignments/assignmentApi';
-import { useGetRubricsQuery } from '../../features/rubrics/rubricApi';
+import React, { useEffect, useState } from 'react';
+import { assignmentApi } from '../../features/assignments/assignmentApi';
+import { rubricApi } from '../../features/rubrics/rubricApi';
+import type { Rubric } from '../../types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -14,7 +15,7 @@ import {
 } from '../ui/select';
 import { DatePicker } from '../ui/date-picker';
 import { toast } from 'sonner';
-import { parseApiError } from '../../lib/errors';
+import { parseApiError } from '../../lib/utils';
 
 interface Props {
   isOpen: boolean;
@@ -23,8 +24,8 @@ interface Props {
 }
 
 export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpenRubricManager }) => {
-  const [createAssignment, { isLoading }] = useCreateAssignmentMutation();
-  const { data: rubricsData } = useGetRubricsQuery();
+  const [rubrics, setRubrics] = useState<Rubric[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -32,6 +33,14 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
   const [dueDate, setDueDate] = useState('');
   const [maxScore, setMaxScore] = useState('100');
   const [selectedRubricId, setSelectedRubricId] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      rubricApi.getRubrics()
+        .then((res) => setRubrics(res.data || []))
+        .catch((err) => console.error('Failed to fetch rubrics:', err));
+    }
+  }, [isOpen]);
 
   const handleClose = () => {
     setTitle(''); setDescription(''); setDueDate('');
@@ -47,17 +56,20 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
       return;
     }
     try {
-      await createAssignment({
+      setIsLoading(true);
+      await assignmentApi.createAssignment({
         title,
         description,
         dueDate: dueDate || undefined,
         maxScore: parsedScore,
         rubricId: selectedRubricId && selectedRubricId !== 'none' ? selectedRubricId : undefined,
-      }).unwrap();
+      });
       toast.success('Assignment created!');
       handleClose();
     } catch (error) {
       toast.error(parseApiError(error, 'Failed to create assignment.'));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -144,7 +156,7 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No Rubric</SelectItem>
-                {rubricsData?.data.map((r) => (
+                {rubrics.map((r) => (
                   <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                 ))}
               </SelectContent>
