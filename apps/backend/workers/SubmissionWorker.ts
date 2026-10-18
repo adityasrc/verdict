@@ -11,7 +11,6 @@ import { PythonService } from "./python.service.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const submissionManager = new SubmissionManager();
 const pythonService = new PythonService();
 
 async function publishEvent(submissionId: string, event: object): Promise<void> {
@@ -65,7 +64,7 @@ export const submissionWorker = new Worker<SubmissionJobData>(
 
             const evaluation = await pythonService.gradeWithGemini(extractedData, assignmentId, id, studentId, context, publishEvent);
 
-            await submissionManager.updateSubmissionGrade(id, {
+            await SubmissionManager.updateSubmissionGrade(id, {
                 score: evaluation.score,
                 feedback: evaluation as any,
                 status: "GRADED",

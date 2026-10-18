@@ -1,8 +1,8 @@
 import { prisma } from "../../utils/db.js";
-import { AppError } from "../../utils/apiResponseHandler.js";
+import { AppError } from "../../utils/AppError.js";
 
 export class RubricManager {
-    async createRubric(data: {
+    static async createRubric(data: {
         name: string;
         criteria: { name: string; points: number; description: string }[];
         teacherId: string;
@@ -12,20 +12,20 @@ export class RubricManager {
         });
     }
 
-    async getRubricsByTeacher(teacherId: string) {
+    static async getRubricsByTeacher(teacherId: string) {
         return prisma.rubric.findMany({
             where: { teacherId },
             orderBy: { createdAt: "desc" },
         });
     }
 
-    async getRubricById(id: string, teacherId: string) {
+    static async getRubricById(id: string, teacherId: string) {
         return prisma.rubric.findFirst({
             where: { id, teacherId },
         });
     }
 
-    async updateRubric(
+    static async updateRubric(
         id: string,
         teacherId: string,
         data: {
@@ -45,7 +45,7 @@ export class RubricManager {
         return prisma.rubric.findUniqueOrThrow({ where: { id } });
     }
 
-    async deleteRubric(id: string, teacherId: string) {
+    static async deleteRubric(id: string, teacherId: string) {
         const result = await prisma.rubric.deleteMany({
             where: { id, teacherId },
         });

@@ -1,35 +1,17 @@
-import { Router, type Request, type Response } from "express";
-import { authMiddleware, requireRole } from "../middleware/auth.middleware.js";
-import { catchAsync } from "../middleware/catchAsync.js";
-import { AppError } from "../../utils/apiResponseHandler.js";
+import type { Request, Response } from "express";
+import { AppError } from "../../utils/AppError.js";
 import { RubricManager } from "./rubric.manager.js";
 import { createRubricSchema, updateRubricSchema } from "../../validators/zod.js";
 
 export class RubricController {
-    public router = Router();
-    private _rubricManager = new RubricManager();
-
-    constructor() {
-        this.initializeRoutes();
-    }
-
-    private initializeRoutes() {
-        this.router.use(authMiddleware, requireRole("TEACHER"));
-
-        this.router.post("/", catchAsync(this.createRubric.bind(this)));
-        this.router.get("/", catchAsync(this.getRubrics.bind(this)));
-        this.router.get("/:id", catchAsync(this.getRubric.bind(this)));
-        this.router.put("/:id", catchAsync(this.updateRubric.bind(this)));
-        this.router.delete("/:id", catchAsync(this.deleteRubric.bind(this)));
-    }
-
-    private async createRubric(req: Request, res: Response) {
+    static async createRubric(req: Request, res: Response) {
         const parsed = createRubricSchema.safeParse(req.body);
         if (!parsed.success) {
-            throw new AppError("Validation failed", 400, parsed.error.format());
+            const message = parsed.error.issues[0]?.message || "Validation failed";
+            throw new AppError(message, 400);
         }
 
-        const rubric = await this._rubricManager.createRubric({
+        const rubric = await RubricManager.createRubric({
             ...parsed.data,
             teacherId: req.user!.id,
         });
@@ -37,14 +19,14 @@ export class RubricController {
         return res.status(201).json({ success: true, data: rubric });
     }
 
-    private async getRubrics(req: Request, res: Response) {
-        const rubrics = await this._rubricManager.getRubricsByTeacher(req.user!.id);
+    static async getRubrics(req: Request, res: Response) {
+        const rubrics = await RubricManager.getRubricsByTeacher(req.user!.id);
         return res.status(200).json({ success: true, data: rubrics });
     }
 
-    private async getRubric(req: Request, res: Response) {
+    static async getRubric(req: Request, res: Response) {
         const id = req.params.id as string;
-        const rubric = await this._rubricManager.getRubricById(id, req.user!.id);
+        const rubric = await RubricManager.getRubricById(id, req.user!.id);
 
         if (!rubric) {
             throw new AppError("Rubric not found", 404);
@@ -53,21 +35,22 @@ export class RubricController {
         return res.status(200).json({ success: true, data: rubric });
     }
 
-    private async updateRubric(req: Request, res: Response) {
+    static async updateRubric(req: Request, res: Response) {
         const id = req.params.id as string;
         const parsed = updateRubricSchema.safeParse(req.body);
 
         if (!parsed.success) {
-            throw new AppError("Validation failed", 400, parsed.error.format());
+            const message = parsed.error.issues[0]?.message || "Validation failed";
+            throw new AppError(message, 400);
         }
 
-        const rubric = await this._rubricManager.updateRubric(id, req.user!.id, parsed.data);
+        const rubric = await RubricManager.updateRubric(id, req.user!.id, parsed.data);
         return res.status(200).json({ success: true, data: rubric });
     }
 
-    private async deleteRubric(req: Request, res: Response) {
+    static async deleteRubric(req: Request, res: Response) {
         const id = req.params.id as string;
-        await this._rubricManager.deleteRubric(id, req.user!.id);
+        await RubricManager.deleteRubric(id, req.user!.id);
 
         return res.status(200).json({ success: true, data: null });
     }

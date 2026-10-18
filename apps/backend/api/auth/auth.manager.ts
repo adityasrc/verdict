@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../utils/db.js";
-import { AppError } from "../../utils/apiResponseHandler.js";
+import { AppError } from "../../utils/AppError.js";
 import type { RegisterInput } from "../../validators/zod.js";
 
 export interface TokenPayload {
@@ -11,21 +11,31 @@ export interface TokenPayload {
 }
 
 export class AuthManager {
-    private JWT_SECRET: string;
-    private JWT_REFRESH_SECRET: string;
-    private JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "15m";
-    private JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
-
-    constructor() {
-        // Fail loud on startup if secrets are missing - never use insecure fallbacks
-        if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
-            throw new Error("JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables");
+    private static get JWT_SECRET(): string {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            throw new Error("JWT_SECRET must be set in environment variables");
         }
-        this.JWT_SECRET = process.env.JWT_SECRET;
-        this.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+        return secret;
     }
 
-    async register(input: RegisterInput) {
+    private static get JWT_REFRESH_SECRET(): string {
+        const secret = process.env.JWT_REFRESH_SECRET;
+        if (!secret) {
+            throw new Error("JWT_REFRESH_SECRET must be set in environment variables");
+        }
+        return secret;
+    }
+
+    private static get JWT_EXPIRES_IN(): string {
+        return process.env.JWT_EXPIRES_IN || "7d";
+    }
+
+    private static get JWT_REFRESH_EXPIRES_IN(): string {
+        return process.env.JWT_REFRESH_EXPIRES_IN || "7d";
+    }
+
+    static async register(input: RegisterInput) {
         const existingUser = await prisma.user.findUnique({
             where: { email: input.email },
         });
@@ -61,7 +71,7 @@ export class AuthManager {
         return { user, accessToken, refreshToken };
     }
 
-    async login(email: string, password: string) {
+    static async login(email: string, password: string) {
         const user = await prisma.user.findUnique({
             where: { email },
         });
@@ -82,7 +92,7 @@ export class AuthManager {
             role: user.role,
         });
 
-        const { password: _, ...userWithoutPassword } = user;
+        const { password: userPassword, ...userWithoutPassword } = user;
 
         return {
             user: userWithoutPassword,
@@ -91,7 +101,7 @@ export class AuthManager {
         };
     }
 
-    async getCurrentUser(userId: string) {
+    static async getCurrentUser(userId: string) {
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: {
@@ -111,7 +121,7 @@ export class AuthManager {
         return { user };
     }
 
-    async refreshToken(refreshToken: string) {
+    static async refreshToken(refreshToken: string) {
         try {
             const decoded = jwt.verify(
                 refreshToken,
@@ -123,12 +133,12 @@ export class AuthManager {
                 email: decoded.email,
                 role: decoded.role,
             });
-        } catch (_error) {
+        } catch {
             throw new AppError("Invalid or expired refresh token", 401);
         }
     }
 
-    private generateTokens(payload: TokenPayload) {
+    private static generateTokens(payload: TokenPayload) {
         const accessToken = jwt.sign(payload, this.JWT_SECRET, {
             expiresIn: this.JWT_EXPIRES_IN,
         } as jwt.SignOptions);
@@ -140,7 +150,7 @@ export class AuthManager {
         return { accessToken, refreshToken };
     }
 
-    verifyAccessToken(token: string): TokenPayload | null {
+    static verifyAccessToken(token: string): TokenPayload | null {
         try {
             return jwt.verify(token, this.JWT_SECRET) as TokenPayload;
         } catch {

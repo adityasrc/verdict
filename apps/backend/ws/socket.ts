@@ -2,7 +2,6 @@ import type { Server as HTTPServer } from "http";
 import { Server, type Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { redis } from "../utils/redis.js";
-import { submissionHandlers } from "./handlers.js";
 
 export interface AuthenticatedSocket extends Socket {
     userId: string;
@@ -11,7 +10,8 @@ export interface AuthenticatedSocket extends Socket {
 
 let io: Server;
 
-export const initSocket = (httpServer: HTTPServer) => {
+export const initSocket = (httpServer: HTTPServer): Server => {
+    // a. Server creation with CORS
     io = new Server(httpServer, {
         cors: {
             origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : true,
@@ -20,10 +20,64 @@ export const initSocket = (httpServer: HTTPServer) => {
         },
     });
 
-    // Dedicated redis client for listening to pub/sub messages
+    // b. Handshake auth middleware (verifying JWT)
+    io.use((rawSocket, next) => {
+        const socket = rawSocket as AuthenticatedSocket;
+        const token = socket.handshake.auth?.token as string | undefined;
+        if (!token) {
+            return next(new Error("Authentication required"));
+        }
+
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            return next(new Error("Server misconfiguration"));
+        }
+
+        try {
+            const decoded = jwt.verify(token, secret) as { userId: string; role: string };
+            socket.userId = decoded.userId;
+            socket.role = decoded.role;
+            next();
+        } catch {
+            next(new Error("Invalid or expired token"));
+        }
+    });
+
+    // c. Connection event listener (joining/leaving rooms & replaying cached events)
+    io.on("connection", (rawSocket) => {
+        const socket = rawSocket as AuthenticatedSocket;
+
+        socket.on("watch-submission", async (submissionId: string) => {
+            socket.join(submissionId);
+
+            try {
+                const cachedEvents = await redis.lrange(`submission_events:${submissionId}`, 0, -1);
+                for (const raw of cachedEvents) {
+                    try {
+                        const event = JSON.parse(raw);
+                        socket.emit("submission-progress", { ...event, submissionId });
+                    } catch {
+                        // Ignore JSON parsing errors
+                    }
+                }
+            } catch (err) {
+                console.error(`Failed to replay events for ${submissionId}:`, err);
+            }
+        });
+
+        socket.on("watch-assignment", (assignmentId: string) => {
+            if (socket.role !== "TEACHER") return;
+            socket.join(`assignment:${assignmentId}`);
+        });
+
+        socket.on("unwatch-assignment", (assignmentId: string) => {
+            socket.leave(`assignment:${assignmentId}`);
+        });
+    });
+
+    // d. Redis Pub/Sub subscriber broadcasting to rooms
     const sub = redis.duplicate();
 
-    // Prevent unhandled error events from crashing the process.
     sub.on("error", (err: Error) => {
         console.warn("[Redis Sub] Connection error:", err.message);
     });
@@ -32,7 +86,7 @@ export const initSocket = (httpServer: HTTPServer) => {
         console.error("Failed to subscribe to submission updates:", err.message);
     });
 
-    sub.on("pmessage", (_pattern: string, channel: string, message: string) => {
+    sub.on("pmessage", (pattern: string, channel: string, message: string) => {
         const submissionId = channel.replace(/^submission:/, "");
         if (!submissionId) return;
 
@@ -50,41 +104,13 @@ export const initSocket = (httpServer: HTTPServer) => {
         }
     });
 
-    // Verify JWT on initial connection
-    io.use((socket, next) => {
-        const token = socket.handshake.auth?.token as string | undefined;
-        if (!token) {
-            return next(new Error("Authentication required"));
-        }
-
-        const secret = process.env.JWT_SECRET;
-        if (!secret) {
-            return next(new Error("Server misconfiguration"));
-        }
-
-        try {
-            const decoded = jwt.verify(token, secret) as { userId: string; role: string };
-            (socket as AuthenticatedSocket).userId = decoded.userId;
-            (socket as AuthenticatedSocket).role = decoded.role;
-            next();
-        } catch {
-            next(new Error("Invalid or expired token"));
-        }
-    });
-
-    io.on("connection", (socket) => {
-        const authedSocket = socket as AuthenticatedSocket;
-        submissionHandlers(authedSocket);
-    });
-
     return io;
 };
 
-export const getIO = () => {
+// e. Export getIO
+export const getIO = (): Server => {
     if (!io) {
         throw new Error("Socket.IO not initialized. Call initSocket first.");
     }
     return io;
 };
-
-export default { initSocket, getIO };

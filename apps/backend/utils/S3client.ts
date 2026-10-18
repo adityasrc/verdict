@@ -1,13 +1,12 @@
-import { S3Client as AWSS3Client, HeadBucketCommand } from "@aws-sdk/client-s3";
+import { S3Client, HeadBucketCommand } from "@aws-sdk/client-s3";
 
-const { R2_ENDPOINT, ACCESSKEYID, SECRETACCESSKEY } = process.env;
+const { R2_ENDPOINT, ACCESSKEYID, SECRETACCESSKEY, BUCKET_NAME } = process.env;
 
 if (!R2_ENDPOINT || !ACCESSKEYID || !SECRETACCESSKEY) {
     throw new Error("Missing R2/S3 storage credentials in environment variables.");
 }
 
-
-const s3 = new AWSS3Client({
+export const s3 = new S3Client({
     region: "auto",
     endpoint: R2_ENDPOINT,
     credentials: {
@@ -17,15 +16,4 @@ const s3 = new AWSS3Client({
     forcePathStyle: true,
 });
 
-const S3Client = {
-    raw: s3,
-    checkHealth: async () => {
-        const command = new HeadBucketCommand({
-            Bucket: process.env.BUCKET_NAME
-        });
-        return await s3.send(command);
-    }
-};
-
-
-export default S3Client;
+export const checkS3Health = () => s3.send(new HeadBucketCommand({ Bucket: BUCKET_NAME }));

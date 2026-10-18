@@ -1,10 +1,10 @@
 import { randomInt } from "crypto";
 import { prisma } from "../../utils/db.js";
-import { AppError } from "../../utils/apiResponseHandler.js";
+import { AppError } from "../../utils/AppError.js";
 import type { CreateAssignmentInput } from "../../validators/zod.js";
 
 export class AssignmentManager {
-    async createAssignment(
+    static async createAssignment(
         data: CreateAssignmentInput & { teacherId: string }
     ) {
         if (data.rubricId) {
@@ -25,7 +25,7 @@ export class AssignmentManager {
         });
     }
 
-    async getAssignmentsByTeacher(teacherId: string) {
+    static async getAssignmentsByTeacher(teacherId: string) {
         return prisma.assignment.findMany({
             where: { teacherId },
             include: {
@@ -37,7 +37,7 @@ export class AssignmentManager {
         });
     }
 
-    async getAssignmentById(id: string) {
+    static async getAssignmentById(id: string) {
         return prisma.assignment.findUnique({
             where: { id },
             select: {
@@ -61,7 +61,7 @@ export class AssignmentManager {
         });
     }
 
-    async getAllStudentAssignments() {
+    static async getAllStudentAssignments() {
         return prisma.assignment.findMany({
             orderBy: { createdAt: "desc" },
             select: {
@@ -79,7 +79,7 @@ export class AssignmentManager {
         });
     }
 
-    async deleteAssignment(id: string, teacherId: string) {
+    static async deleteAssignment(id: string, teacherId: string) {
         const assignment = await prisma.assignment.findFirst({
             where: { id, teacherId },
         });

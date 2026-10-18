@@ -6,45 +6,39 @@ import time
 
 # Suppress noisy SDK automatic function calling warning
 logging.getLogger("google.genai").setLevel(logging.ERROR)
-try:
-    from google.genai.models import Models
-    Models._logged_afc_warning = True
-except Exception:
-    pass
 
 from google import genai
 from google.genai import types
 import PIL.Image
 
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 def publish(event):
     """Prints a single-line JSON event to stdout for the Node.js worker."""
     print(json.dumps(event), flush=True)
 
 def parse_inputs():
-    """Reads inputs from stdin (streaming) or falls back to sys.argv (CLI)."""
-    stdin_data = ""
-    if not sys.stdin.isatty():
-        stdin_data = sys.stdin.read().strip()
-
-    if stdin_data:
-        if len(sys.argv) < 3:
-            publish({"error": "Missing args. Usage: python geminiGrader.py <assignment_id> <submission_id>"})
-            sys.exit(1)
-        assignment_id = sys.argv[1]
-        submission_id = sys.argv[2]
-        payload = json.loads(stdin_data)
-        return assignment_id, submission_id, payload.get("extractedData", []), payload.get("context", {})
-
-    if len(sys.argv) < 4:
-        publish({"error": "Missing args. Usage: python geminiGrader.py <extracted_data_json> <assignment_id> <submission_id> [context_json]"})
+    """Reads assignment/submission IDs from sys.argv and streaming payload from sys.stdin."""
+    if len(sys.argv) < 3:
+        publish({"error": "Missing args. Usage: python geminiGrader.py <assignment_id> <submission_id>"})
         sys.exit(1)
 
-    extracted_data = json.loads(sys.argv[1])
-    assignment_id = sys.argv[2]
-    submission_id = sys.argv[3]
-    context = json.loads(sys.argv[4]) if len(sys.argv) > 4 else {}
+    assignment_id = sys.argv[1]
+    submission_id = sys.argv[2]
+
+    stdin_data = sys.stdin.read().strip()
+    if not stdin_data:
+        publish({"error": "No input payload received via stdin"})
+        sys.exit(1)
+
+    try:
+        payload = json.loads(stdin_data)
+    except json.JSONDecodeError as e:
+        publish({"error": f"Invalid JSON payload on stdin: {str(e)}"})
+        sys.exit(1)
+
+    extracted_data = payload.get("extractedData", [])
+    context = payload.get("context", {})
     return assignment_id, submission_id, extracted_data, context
 
 def format_rubric(context):

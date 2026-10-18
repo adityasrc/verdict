@@ -24,33 +24,65 @@ export interface GeminiEvaluation {
     raw_response?: string;
 }
 
+interface RunPythonOptions<T> {
+    scriptName: string;
+    args: string[];
+    submissionId: string;
+    assignmentId: string;
+    studentId: string;
+    publishEvent: (id: string, event: any) => void;
+    payload?: unknown;
+    timeoutMs: number;
+    timeoutMessage: string;
+    fallbackErrorMessage: string;
+    env?: NodeJS.ProcessEnv;
+    extractResult: (msg: any) => T | undefined;
+}
+
 export class PythonService {
-    async parsePDF(
-        submissionId: string,
-        filePath: string,
-        assignmentId: string,
-        studentId: string,
-        publishEvent: (id: string, event: any) => void
-    ): Promise<ParsedPage[]> {
-        return new Promise<ParsedPage[]>((resolve, reject) => {
-            const script = path.join(__dirname, "python", "pdfParser.py");
-            let extractedData: ParsedPage[] = [];
-            let stderrOutput = "";
+    private async runPythonProcess<T>(options: RunPythonOptions<T>): Promise<T> {
+        const {
+            scriptName,
+            args,
+            submissionId,
+            assignmentId,
+            studentId,
+            publishEvent,
+            payload,
+            timeoutMs,
+            timeoutMessage,
+            fallbackErrorMessage,
+            env,
+            extractResult,
+        } = options;
+
+        return new Promise<T>((resolve, reject) => {
+            const script = path.join(__dirname, "python", scriptName);
+            let result: T | undefined;
             let pythonError = "";
+            let stderrOutput = "";
             let settled = false;
 
-            const proc = spawn(PYTHON_BIN, [script, filePath, submissionId], {
+            const proc = spawn(PYTHON_BIN, [script, ...args], {
                 cwd: path.join(__dirname, "python"),
+                env: env ? { ...process.env, ...env } : process.env,
             });
 
-            // Kill the process if it takes longer than 3 minutes (e.g. corrupt PDF)
             const timeout = setTimeout(() => {
                 if (!settled) {
                     settled = true;
                     proc.kill();
-                    reject(new Error("PDF parsing timed out after 3 minutes."));
+                    reject(new Error(timeoutMessage));
                 }
-            }, 3 * 60 * 1000);
+            }, timeoutMs);
+
+            if (payload !== undefined) {
+                proc.stdin.on("error", () => {});
+                const data = typeof payload === "string" ? payload : JSON.stringify(payload);
+                proc.stdin.write(data, "utf-8", () => {
+                    proc.stdin.end();
+                });
+            }
 
             const rl = readline.createInterface({ input: proc.stdout });
 
@@ -59,15 +91,16 @@ export class PythonService {
                 if (!trimmed) return;
                 try {
                     const msg = JSON.parse(trimmed);
-                    if (msg.step === "parsing_completed" && msg.result) {
-                        extractedData = msg.result;
+                    const extracted = extractResult(msg);
+                    if (extracted !== undefined) {
+                        result = extracted;
                     }
                     if (msg.error) {
                         pythonError = msg.error;
                     }
                     publishEvent(submissionId, { ...msg, assignmentId, studentId });
                 } catch {
-                    /* ignore */
+                    /* ignore JSON parsing errors */
                 }
             });
 
@@ -76,19 +109,44 @@ export class PythonService {
             });
 
             proc.on("error", (err) => {
-                if (!settled) { settled = true; clearTimeout(timeout); reject(err); }
+                if (!settled) {
+                    settled = true;
+                    clearTimeout(timeout);
+                    reject(err);
+                }
             });
 
             proc.on("close", (code) => {
                 if (settled) return;
                 settled = true;
                 clearTimeout(timeout);
-                if (code === 0) {
-                    resolve(extractedData);
+                if (code === 0 && result !== undefined) {
+                    resolve(result);
                 } else {
-                    reject(new Error(pythonError || stderrOutput.trim() || `PDF parsing failed with code ${code}`));
+                    reject(new Error(pythonError || stderrOutput.trim() || `${fallbackErrorMessage} with code ${code}`));
                 }
             });
+        });
+    }
+
+    async parsePDF(
+        submissionId: string,
+        filePath: string,
+        assignmentId: string,
+        studentId: string,
+        publishEvent: (id: string, event: any) => void
+    ): Promise<ParsedPage[]> {
+        return this.runPythonProcess<ParsedPage[]>({
+            scriptName: "pdfParser.py",
+            args: [filePath, submissionId],
+            submissionId,
+            assignmentId,
+            studentId,
+            publishEvent,
+            timeoutMs: 3 * 60 * 1000,
+            timeoutMessage: "PDF parsing timed out after 3 minutes.",
+            fallbackErrorMessage: "PDF parsing failed",
+            extractResult: (msg) => (msg.step === "parsing_completed" ? (msg.result ?? []) : undefined),
         });
     }
 
@@ -100,77 +158,20 @@ export class PythonService {
         context: object,
         publishEvent: (id: string, event: any) => void
     ): Promise<GeminiEvaluation> {
-        return new Promise<GeminiEvaluation>((resolve, reject) => {
-            const script = path.join(__dirname, "python", "geminiGrader.py");
-            let evaluation: GeminiEvaluation | null = null;
-            let pythonError = "";
-            let stderrOutput = "";
-            let settled = false;
-            const backendDir = path.join(__dirname, "..");
-
-            // stream payload via stdin to avoid cli argument length limits
-            const proc = spawn(
-                PYTHON_BIN,
-                [script, assignmentId, submissionId],
-                {
-                    env: { ...process.env, DOTENV_PATH: path.join(backendDir, ".env") },
-                    cwd: path.join(__dirname, "python"),
-                }
-            );
-
-            // Kill the process if Gemini API hangs for more than 5 minutes
-            const timeout = setTimeout(() => {
-                if (!settled) {
-                    settled = true;
-                    proc.kill();
-                    reject(new Error("AI grading timed out after 5 minutes."));
-                }
-            }, 5 * 60 * 1000);
-
-            proc.stdin.on("error", () => {});
-
-            const payload = JSON.stringify({ extractedData, context });
-            proc.stdin.write(payload, "utf-8", () => {
-                proc.stdin.end();
-            });
-
-            const rl = readline.createInterface({ input: proc.stdout });
-
-            rl.on("line", (line) => {
-                const trimmed = line.trim();
-                if (!trimmed) return;
-                try {
-                    const msg = JSON.parse(trimmed);
-                    if (msg.step === "gemini_completed" && msg.evaluation) {
-                        evaluation = msg.evaluation;
-                    }
-                    if (msg.error) {
-                        pythonError = msg.error;
-                    }
-                    publishEvent(submissionId, { ...msg, assignmentId, studentId });
-                } catch {
-                    // ignore JSON parsing errors
-                }
-            });
-
-            proc.stderr.on("data", (chunk) => {
-                stderrOutput += chunk.toString();
-            });
-
-            proc.on("error", (err) => {
-                if (!settled) { settled = true; clearTimeout(timeout); reject(err); }
-            });
-
-            proc.on("close", (code) => {
-                if (settled) return;
-                settled = true;
-                clearTimeout(timeout);
-                if (code === 0 && evaluation) {
-                    resolve(evaluation);
-                } else {
-                    reject(new Error(pythonError || stderrOutput.trim() || `Grading process exited with code ${code}`));
-                }
-            });
+        const backendDir = path.join(__dirname, "..");
+        return this.runPythonProcess<GeminiEvaluation>({
+            scriptName: "geminiGrader.py",
+            args: [assignmentId, submissionId],
+            submissionId,
+            assignmentId,
+            studentId,
+            publishEvent,
+            payload: { extractedData, context },
+            env: { DOTENV_PATH: path.join(backendDir, ".env") },
+            timeoutMs: 5 * 60 * 1000,
+            timeoutMessage: "AI grading timed out after 5 minutes.",
+            fallbackErrorMessage: "Grading process exited",
+            extractResult: (msg) => (msg.step === "gemini_completed" ? msg.evaluation : undefined),
         });
     }
 }

@@ -60,8 +60,14 @@ def main():
 
     publish({"step": "parsing_started", "total_pages": total_pages})
 
-    # Output directory for diagrams: apps/backend/tmp/extracted_images/<submission_id>
-    output_dir = Path(__file__).resolve().parents[2] / "tmp" / "extracted_images" / submission_id
+    # Explicit path resolution pointing to backend's tmp/extracted_images/<submission_id>
+    pdf_parent = Path(pdf_path).resolve().parent
+    if pdf_parent.name == "tmp":
+        output_dir = pdf_parent / "extracted_images" / submission_id
+    else:
+        backend_dir = Path(__file__).resolve().parent.parent.parent
+        output_dir = backend_dir / "tmp" / "extracted_images" / submission_id
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     extracted_data = []

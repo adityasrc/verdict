@@ -13,8 +13,6 @@ services:
         value: production
       - key: HTTP_PORT
         value: 4000
-      - key: RUN_WORKER_IN_API
-        value: "true"
       - key: PYTHON_BIN
         value: python3
       - key: DATABASE_URL
@@ -28,7 +26,7 @@ services:
       - key: JWT_REFRESH_SECRET
         sync: false
       - key: JWT_EXPIRES_IN
-        value: 15m
+        value: 7d
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
       - key: R2_ENDPOINT
