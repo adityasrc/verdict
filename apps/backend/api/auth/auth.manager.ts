@@ -92,7 +92,7 @@ export class AuthManager {
             role: user.role,
         });
 
-        const { password: userPassword, ...userWithoutPassword } = user;
+        const { password: _userPassword, ...userWithoutPassword } = user;
 
         return {
             user: userWithoutPassword,

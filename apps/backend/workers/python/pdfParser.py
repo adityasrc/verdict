@@ -60,14 +60,7 @@ def main():
 
     publish({"step": "parsing_started", "total_pages": total_pages})
 
-    # Explicit path resolution pointing to backend's tmp/extracted_images/<submission_id>
-    pdf_parent = Path(pdf_path).resolve().parent
-    if pdf_parent.name == "tmp":
-        output_dir = pdf_parent / "extracted_images" / submission_id
-    else:
-        backend_dir = Path(__file__).resolve().parent.parent.parent
-        output_dir = backend_dir / "tmp" / "extracted_images" / submission_id
-
+    output_dir = Path(pdf_path).resolve().parent / "extracted_images" / submission_id
     output_dir.mkdir(parents=True, exist_ok=True)
 
     extracted_data = []

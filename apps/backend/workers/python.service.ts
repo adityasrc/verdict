@@ -2,12 +2,18 @@ import { spawn } from "child_process";
 import path from "path";
 import readline from "readline";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// directory where this service file is located
+const currentFolder = fileURLToPath(new URL(".", import.meta.url));
 
-const defaultPython = process.platform === "win32" ? "python" : "python3";
-const PYTHON_BIN = process.env.PYTHON_BIN || defaultPython;
+
+const venvPath = [
+    path.resolve(process.cwd(), ".venv/bin/python"),
+    path.resolve(currentFolder, "../../../.venv/bin/python"),
+].find((p) => fs.existsSync(p));
+
+const PYTHON_BIN = process.env.PYTHON_BIN || venvPath || "python3";
 
 export interface ParsedPage {
     page_number: number;
@@ -24,66 +30,69 @@ export interface GeminiEvaluation {
     raw_response?: string;
 }
 
+// structured event shape emitted by python scripts to stdout
+export interface PythonEvent {
+    step?: string;
+    warning?: string;
+    error?: string;
+    result?: ParsedPage[];
+    evaluation?: GeminiEvaluation;
+    [key: string]: unknown;
+}
+
 interface RunPythonOptions<T> {
     scriptName: string;
     args: string[];
-    submissionId: string;
-    assignmentId: string;
-    studentId: string;
-    publishEvent: (id: string, event: any) => void;
     payload?: unknown;
-    timeoutMs: number;
-    timeoutMessage: string;
-    fallbackErrorMessage: string;
+    timeoutMs?: number;
     env?: NodeJS.ProcessEnv;
-    extractResult: (msg: any) => T | undefined;
+    onProgress?: (event: PythonEvent) => void;
+    extractResult: (msg: PythonEvent) => T | undefined;
 }
 
 export class PythonService {
-    private async runPythonProcess<T>(options: RunPythonOptions<T>): Promise<T> {
+    // executes a python script in a child process and streams its json output
+    private static async runPythonProcess<T>(options: RunPythonOptions<T>): Promise<T> {
         const {
             scriptName,
             args,
-            submissionId,
-            assignmentId,
-            studentId,
-            publishEvent,
             payload,
-            timeoutMs,
-            timeoutMessage,
-            fallbackErrorMessage,
+            timeoutMs = 5 * 60 * 1000,
             env,
+            onProgress,
             extractResult,
         } = options;
 
         return new Promise<T>((resolve, reject) => {
-            const script = path.join(__dirname, "python", scriptName);
+            const scriptPath = path.join(currentFolder, "python", scriptName);
             let result: T | undefined;
             let pythonError = "";
             let stderrOutput = "";
             let settled = false;
 
-            const proc = spawn(PYTHON_BIN, [script, ...args], {
-                cwd: path.join(__dirname, "python"),
+            // spawn the python process in the background
+            const proc = spawn(PYTHON_BIN, [scriptPath, ...args], {
+                cwd: path.join(currentFolder, "python"),
                 env: env ? { ...process.env, ...env } : process.env,
             });
 
-            const timeout = setTimeout(() => {
+            // kill the process if it runs longer than the timeout limit
+            const timer = setTimeout(() => {
                 if (!settled) {
                     settled = true;
                     proc.kill();
-                    reject(new Error(timeoutMessage));
+                    reject(new Error(`${scriptName} timed out after ${timeoutMs / 1000}s`));
                 }
             }, timeoutMs);
 
+            // send json data to python through standard input (stdin)
             if (payload !== undefined) {
-                proc.stdin.on("error", () => {});
+                proc.stdin.on("error", () => { });
                 const data = typeof payload === "string" ? payload : JSON.stringify(payload);
-                proc.stdin.write(data, "utf-8", () => {
-                    proc.stdin.end();
-                });
+                proc.stdin.write(data, "utf-8", () => proc.stdin.end());
             }
 
+            // read line-by-line output printed by python to stdout
             const rl = readline.createInterface({ input: proc.stdout });
 
             rl.on("line", (line) => {
@@ -92,85 +101,71 @@ export class PythonService {
                 try {
                     const msg = JSON.parse(trimmed);
                     const extracted = extractResult(msg);
-                    if (extracted !== undefined) {
-                        result = extracted;
-                    }
-                    if (msg.error) {
-                        pythonError = msg.error;
-                    }
-                    publishEvent(submissionId, { ...msg, assignmentId, studentId });
+                    if (extracted !== undefined) result = extracted;
+                    if (msg.error) pythonError = msg.error;
+                    if (onProgress) onProgress(msg);
                 } catch {
-                    /* ignore JSON parsing errors */
+                    // ignore non-json log lines from python
                 }
             });
 
+            // collect any error logs sent by python to stderr
             proc.stderr.on("data", (chunk) => {
                 stderrOutput += chunk.toString();
             });
 
+            // handle process spawn errors (e.g. python not found)
             proc.on("error", (err) => {
                 if (!settled) {
                     settled = true;
-                    clearTimeout(timeout);
+                    clearTimeout(timer);
                     reject(err);
                 }
             });
 
+            // resolve result or reject when the python script finishes
             proc.on("close", (code) => {
                 if (settled) return;
                 settled = true;
-                clearTimeout(timeout);
+                clearTimeout(timer);
                 if (code === 0 && result !== undefined) {
                     resolve(result);
                 } else {
-                    reject(new Error(pythonError || stderrOutput.trim() || `${fallbackErrorMessage} with code ${code}`));
+                    reject(new Error(pythonError || stderrOutput.trim() || `${scriptName} failed with exit code ${code}`));
                 }
             });
         });
     }
 
-    async parsePDF(
-        submissionId: string,
+    // runs pdfParser.py to extract text and images from a pdf
+    static async parsePDF(
         filePath: string,
-        assignmentId: string,
-        studentId: string,
-        publishEvent: (id: string, event: any) => void
+        submissionId: string,
+        onProgress?: (event: PythonEvent) => void
     ): Promise<ParsedPage[]> {
         return this.runPythonProcess<ParsedPage[]>({
             scriptName: "pdfParser.py",
             args: [filePath, submissionId],
-            submissionId,
-            assignmentId,
-            studentId,
-            publishEvent,
             timeoutMs: 3 * 60 * 1000,
-            timeoutMessage: "PDF parsing timed out after 3 minutes.",
-            fallbackErrorMessage: "PDF parsing failed",
+            onProgress,
             extractResult: (msg) => (msg.step === "parsing_completed" ? (msg.result ?? []) : undefined),
         });
     }
 
-    async gradeWithGemini(
+    // runs geminiGrader.py to evaluate extracted student answers against rubric
+    static async gradeWithAI(
         extractedData: ParsedPage[],
-        assignmentId: string,
-        submissionId: string,
-        studentId: string,
         context: object,
-        publishEvent: (id: string, event: any) => void
+        onProgress?: (event: PythonEvent) => void
     ): Promise<GeminiEvaluation> {
-        const backendDir = path.join(__dirname, "..");
+        const backendDir = path.join(currentFolder, "..");
         return this.runPythonProcess<GeminiEvaluation>({
             scriptName: "geminiGrader.py",
-            args: [assignmentId, submissionId],
-            submissionId,
-            assignmentId,
-            studentId,
-            publishEvent,
+            args: [],
             payload: { extractedData, context },
             env: { DOTENV_PATH: path.join(backendDir, ".env") },
             timeoutMs: 5 * 60 * 1000,
-            timeoutMessage: "AI grading timed out after 5 minutes.",
-            fallbackErrorMessage: "Grading process exited",
+            onProgress,
             extractResult: (msg) => (msg.step === "gemini_completed" ? msg.evaluation : undefined),
         });
     }

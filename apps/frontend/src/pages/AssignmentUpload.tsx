@@ -174,6 +174,7 @@ const AssignmentUpload = () => {
     useEffect(() => {
         if (!socket || !watchingSubmissionId) return;
 
+        // ask backend to put this socket in submission room
         const rejoin = () => socket.emit('watch-submission', watchingSubmissionId);
         if (socket.connected) rejoin();
 
@@ -589,15 +590,14 @@ const AssignmentUpload = () => {
                                                 <div className="min-w-0 flex-1 pt-1">
                                                     <div className="flex items-center justify-between gap-2">
                                                         <p
-                                                            className={`text-sm font-semibold ${
-                                                                status === 'active'
+                                                            className={`text-sm font-semibold ${status === 'active'
                                                                     ? 'text-text-primary'
                                                                     : status === 'failed'
                                                                         ? 'text-error'
                                                                         : status === 'completed'
                                                                             ? 'text-text-primary'
                                                                             : 'text-text-muted'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {stage.title}
                                                         </p>

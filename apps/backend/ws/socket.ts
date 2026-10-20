@@ -11,7 +11,7 @@ export interface AuthenticatedSocket extends Socket {
 let io: Server;
 
 export const initSocket = (httpServer: HTTPServer): Server => {
-    // a. Server creation with CORS
+    // setup socket.io server with cors
     io = new Server(httpServer, {
         cors: {
             origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : true,
@@ -20,7 +20,7 @@ export const initSocket = (httpServer: HTTPServer): Server => {
         },
     });
 
-    // b. Handshake auth middleware (verifying JWT)
+    // verify jwt token on initial connection
     io.use((rawSocket, next) => {
         const socket = rawSocket as AuthenticatedSocket;
         const token = socket.handshake.auth?.token as string | undefined;
@@ -43,7 +43,7 @@ export const initSocket = (httpServer: HTTPServer): Server => {
         }
     });
 
-    // c. Connection event listener (joining/leaving rooms & replaying cached events)
+    // handle client connection, room join and replay cached events
     io.on("connection", (rawSocket) => {
         const socket = rawSocket as AuthenticatedSocket;
 
@@ -75,7 +75,7 @@ export const initSocket = (httpServer: HTTPServer): Server => {
         });
     });
 
-    // d. Redis Pub/Sub subscriber broadcasting to rooms
+    // listen to redis channels and forward events to matching rooms
     const sub = redis.duplicate();
 
     sub.on("error", (err: Error) => {
@@ -107,7 +107,7 @@ export const initSocket = (httpServer: HTTPServer): Server => {
     return io;
 };
 
-// e. Export getIO
+// export socket instance helper
 export const getIO = (): Server => {
     if (!io) {
         throw new Error("Socket.IO not initialized. Call initSocket first.");

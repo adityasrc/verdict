@@ -2,7 +2,6 @@ import sys
 import json
 import os
 import logging
-import time
 
 # Suppress noisy SDK automatic function calling warning
 logging.getLogger("google.genai").setLevel(logging.ERROR)
@@ -18,14 +17,7 @@ def publish(event):
     print(json.dumps(event), flush=True)
 
 def parse_inputs():
-    """Reads assignment/submission IDs from sys.argv and streaming payload from sys.stdin."""
-    if len(sys.argv) < 3:
-        publish({"error": "Missing args. Usage: python geminiGrader.py <assignment_id> <submission_id>"})
-        sys.exit(1)
-
-    assignment_id = sys.argv[1]
-    submission_id = sys.argv[2]
-
+    """Reads streaming JSON payload directly from sys.stdin."""
     stdin_data = sys.stdin.read().strip()
     if not stdin_data:
         publish({"error": "No input payload received via stdin"})
@@ -37,46 +29,28 @@ def parse_inputs():
         publish({"error": f"Invalid JSON payload on stdin: {str(e)}"})
         sys.exit(1)
 
-    extracted_data = payload.get("extractedData", [])
-    context = payload.get("context", {})
-    return assignment_id, submission_id, extracted_data, context
+    return payload.get("extractedData", []), payload.get("context", {})
 
 def format_rubric(context):
-    """Builds formatted rubric text and calculates max_score from rubric criteria."""
-    rubric = context.get("rubric")
-    context_max_score = context.get("maxScore")
+    """Builds formatted rubric text and gets max score."""
+    rubric = context.get("rubric") or []
+    max_score = int(context.get("maxScore") or 100)
 
-    try:
-        max_score = int(context_max_score) if context_max_score else 100
-    except (ValueError, TypeError):
-        max_score = 100
+    if not rubric:
+        return "", max_score
 
-    rubric_text = ""
-    if rubric:
-        criteria_list = rubric if isinstance(rubric, list) else rubric.get("criteria", [])
-        rubric_name = "Assignment Rubric" if isinstance(rubric, list) else rubric.get("name", "Rubric")
-
-        if not context_max_score:
-            rubric_total = sum(int(c.get("points", 0)) for c in criteria_list)
-            if rubric_total > 0:
-                max_score = rubric_total
-
-        rubric_text = f"""
+    rubric_text = f"""
 === RUBRIC ===
-Name: {rubric_name}
 Total Points: {max_score}
 Criteria:
-{json.dumps(criteria_list, indent=2)}
+{json.dumps(rubric, indent=2)}
 === END RUBRIC ===
 """
     return rubric_text, max_score
 
-def build_prompt(assignment_id, submission_id, title, description, rubric_text, extracted_data, max_score):
+def build_prompt(title, description, rubric_text, extracted_data, max_score):
     """Assembles prompt with title, description, rubric, page text, and evaluation schema."""
     prompt = f"""You are an expert academic evaluator. Grade rigorously, constructively, and objectively according to the rubric.
-
-Assignment ID: {assignment_id}
-Submission ID: {submission_id}
 
 === ASSIGNMENT TITLE ===
 {title}
@@ -150,12 +124,12 @@ def main():
         publish({"error": "GEMINI_API_KEY not found in environment"})
         sys.exit(1)
 
-    assignment_id, submission_id, extracted_data, context = parse_inputs()
+    extracted_data, context = parse_inputs()
     title = context.get("title", "Assignment")
     description = context.get("description", "")
 
     rubric_text, max_score = format_rubric(context)
-    prompt_text = build_prompt(assignment_id, submission_id, title, description, rubric_text, extracted_data, max_score)
+    prompt_text = build_prompt(title, description, rubric_text, extracted_data, max_score)
     images = load_images(extracted_data)
 
     publish({"step": "gemini_started"})
@@ -163,29 +137,18 @@ def main():
 
     try:
         client = genai.Client(api_key=api_key)
-        response = None
-        max_attempts = 3
-        for attempt in range(max_attempts):
-            try:
-                response = client.models.generate_content(
-                    model=MODEL_NAME,
-                    contents=[prompt_text, *images],
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        system_instruction=(
-                            "You are an expert academic evaluator. Evaluate assignments strictly and objectively against the provided rubric. "
-                            "Always return a single valid JSON object adhering precisely to the requested schema with detailed, actionable, and point-wise feedback. "
-                            "No markdown fences around the JSON."
-                        ),
-                    ),
-                )
-                break
-            except Exception as api_err:
-                err_str = str(api_err)
-                if ("503" in err_str or "UNAVAILABLE" in err_str or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str) and attempt < max_attempts - 1:
-                    time.sleep(2 * (attempt + 1))
-                    continue
-                raise
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=[prompt_text, *images],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                system_instruction=(
+                    "You are an expert academic evaluator. Evaluate assignments strictly and objectively against the provided rubric. "
+                    "Always return a single valid JSON object adhering precisely to the requested schema with detailed, actionable, and point-wise feedback. "
+                    "No markdown fences around the JSON."
+                ),
+            ),
+        )
 
         response_text = response.text if response else ""
         if not response_text:
