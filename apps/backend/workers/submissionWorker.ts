@@ -5,7 +5,8 @@ import { fileURLToPath } from "url";
 import { SubmissionManager } from "../api/submission/submission.manager.js";
 import { prisma } from "../utils/db.js";
 import { redis } from "../utils/redis.js";
-import { SubmissionJobData } from "../utils/queue.js";
+import type { SubmissionJobData } from "../utils/queue.js";
+import type { Prisma } from "@prisma/client";
 import { PythonService } from "./python.service.js";
 
 // path to local folder for temporary files
@@ -74,7 +75,7 @@ export const submissionWorker = new Worker<SubmissionJobData>(
             // save final score and feedback in the database
             await SubmissionManager.updateSubmissionGrade(id, {
                 score: evaluation.score,
-                feedback: evaluation as any,
+                feedback: evaluation as unknown as Prisma.InputJsonValue,
                 status: "GRADED",
             });
 
@@ -89,9 +90,9 @@ export const submissionWorker = new Worker<SubmissionJobData>(
             });
 
             return true;
-        } catch (error: any) {
+        } catch (error: unknown) {
             // mark submission as failed if any step throws an error
-            const message = error?.message || "Unknown grading error";
+            const message = error instanceof Error ? error.message : "Unknown grading error";
             await prisma.submission.update({ where: { id }, data: { status: "FAILED" } }).catch(() => { });
             await publishEvent(id, { step: "failed", status: "FAILED", error: message, assignmentId, studentId });
             throw error;

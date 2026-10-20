@@ -2,36 +2,18 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Prisma, type SubmissionStatus } from "@prisma/client";
 import { prisma } from "../../utils/db.js";
-import { redis } from "../../utils/redis.js";
 import { submissionQueue } from "../../utils/queue.js";
 import { getIO } from "../../ws/socket.js";
 import { AppError } from "../../utils/AppError.js";
 import { s3 } from "../../utils/S3client.js";
 
 export class SubmissionManager {
-    private static async verifyPinWithRateLimit(
-        assignmentId: string,
-        studentId: string,
-        expectedPin: string | null,
-        providedPin?: string | null
-    ) {
-        if (expectedPin === null) return;
-
-        const rateLimitKey = `pin-attempts:${assignmentId}:${studentId}`;
-        const attempts = await redis.get(rateLimitKey);
-        if (attempts !== null && parseInt(attempts, 10) >= 5) {
-            throw new AppError("Too many incorrect attempts. Try again later.", 429);
-        }
-
+    // check if the provided pin matches the assignment pin
+    private static verifyPin(expectedPin: string | null, providedPin?: string | null) {
+        if (!expectedPin) return;
         if (!providedPin || providedPin !== expectedPin) {
-            const newCount = await redis.incr(rateLimitKey);
-            if (newCount === 1) {
-                await redis.expire(rateLimitKey, 15 * 60);
-            }
             throw new AppError("Invalid PIN.", 403);
         }
-
-        await redis.del(rateLimitKey);
     }
 
     static async createSubmission(data: {
@@ -47,7 +29,7 @@ export class SubmissionManager {
             throw new AppError("Assignment not found", 404);
         }
 
-        await SubmissionManager.verifyPinWithRateLimit(assignment.id, studentId, assignment.accessPin, pin);
+        SubmissionManager.verifyPin(assignment.accessPin, pin);
 
         const exists = await prisma.submission.findUnique({
             where: {
@@ -104,8 +86,9 @@ export class SubmissionManager {
                 assignment: {
                     select: {
                         title: true,
-                        dueDate: true,
                         maxScore: true,
+                        description: true,
+                        dueDate: true,
                     },
                 },
             },
@@ -126,10 +109,7 @@ export class SubmissionManager {
             where: { assignmentId },
             include: {
                 student: {
-                    select: {
-                        name: true,
-                        email: true,
-                    },
+                    select: { id: true, name: true, email: true },
                 },
             },
             orderBy: { submittedAt: "desc" },
@@ -140,21 +120,18 @@ export class SubmissionManager {
         return prisma.submission.findMany({
             where: {
                 assignment: {
-                    teacherId: teacherId,
+                    teacherId,
                 },
             },
             include: {
-                student: {
-                    select: {
-                        name: true,
-                        email: true,
-                    },
-                },
                 assignment: {
                     select: {
                         title: true,
                         maxScore: true,
                     },
+                },
+                student: {
+                    select: { id: true, name: true, email: true },
                 },
             },
             orderBy: { submittedAt: "desc" },
@@ -175,7 +152,7 @@ export class SubmissionManager {
             throw new AppError("Assignment not found", 404);
         }
 
-        await SubmissionManager.verifyPinWithRateLimit(assignment.id, studentId, assignment.accessPin, pin);
+        SubmissionManager.verifyPin(assignment.accessPin, pin);
 
         const exists = await prisma.submission.findUnique({
             where: {

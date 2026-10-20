@@ -11,28 +11,16 @@ export interface TokenPayload {
 }
 
 export class AuthManager {
-    private static get JWT_SECRET(): string {
+    private static getJwtSecret() {
         const secret = process.env.JWT_SECRET;
-        if (!secret) {
-            throw new Error("JWT_SECRET must be set in environment variables");
-        }
+        if (!secret) throw new Error("JWT_SECRET must be set in environment variables");
         return secret;
     }
 
-    private static get JWT_REFRESH_SECRET(): string {
+    private static getJwtRefreshSecret() {
         const secret = process.env.JWT_REFRESH_SECRET;
-        if (!secret) {
-            throw new Error("JWT_REFRESH_SECRET must be set in environment variables");
-        }
+        if (!secret) throw new Error("JWT_REFRESH_SECRET must be set in environment variables");
         return secret;
-    }
-
-    private static get JWT_EXPIRES_IN(): string {
-        return process.env.JWT_EXPIRES_IN || "7d";
-    }
-
-    private static get JWT_REFRESH_EXPIRES_IN(): string {
-        return process.env.JWT_REFRESH_EXPIRES_IN || "7d";
     }
 
     static async register(input: RegisterInput) {
@@ -125,7 +113,7 @@ export class AuthManager {
         try {
             const decoded = jwt.verify(
                 refreshToken,
-                this.JWT_REFRESH_SECRET,
+                this.getJwtRefreshSecret(),
             ) as TokenPayload;
 
             return this.generateTokens({
@@ -139,20 +127,20 @@ export class AuthManager {
     }
 
     private static generateTokens(payload: TokenPayload) {
-        const accessToken = jwt.sign(payload, this.JWT_SECRET, {
-            expiresIn: this.JWT_EXPIRES_IN,
-        } as jwt.SignOptions);
+        const accessToken = jwt.sign(payload, this.getJwtSecret(), {
+            expiresIn: (process.env.JWT_EXPIRES_IN || "7d") as jwt.SignOptions["expiresIn"],
+        });
 
-        const refreshToken = jwt.sign(payload, this.JWT_REFRESH_SECRET, {
-            expiresIn: this.JWT_REFRESH_EXPIRES_IN,
-        } as jwt.SignOptions);
+        const refreshToken = jwt.sign(payload, this.getJwtRefreshSecret(), {
+            expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || "7d") as jwt.SignOptions["expiresIn"],
+        });
 
         return { accessToken, refreshToken };
     }
 
     static verifyAccessToken(token: string): TokenPayload | null {
         try {
-            return jwt.verify(token, this.JWT_SECRET) as TokenPayload;
+            return jwt.verify(token, this.getJwtSecret()) as TokenPayload;
         } catch {
             return null;
         }

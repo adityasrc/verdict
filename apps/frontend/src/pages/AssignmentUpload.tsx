@@ -92,7 +92,7 @@ const AssignmentUpload = () => {
     const [assignment, setAssignment] = useState<Assignment | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isError, setIsError] = useState(false);
-    const [error, setError] = useState<any>(null);
+    const [error, setError] = useState<{ message?: string; status?: number } | null>(null);
 
     const { socket } = useSocket();
 
@@ -207,7 +207,8 @@ const AssignmentUpload = () => {
             setErrorMessage('Please select a PDF file.');
             return;
         }
-        if (!pin || pin.length !== 4) {
+        // only require pin if assignment has one set
+        if (assignment?.accessPin && pin.length !== 4) {
             setErrorMessage('Please enter the 4-digit access PIN.');
             return;
         }
@@ -330,7 +331,7 @@ const AssignmentUpload = () => {
 
     if (isError) {
         const errorMsg = error?.message?.toLowerCase() || '';
-        const isAuthError = (error as any)?.status === 401 || errorMsg.includes('unauthorized') || errorMsg.includes('jwt') || errorMsg.includes('token');
+        const isAuthError = error?.status === 401 || errorMsg.includes('unauthorized') || errorMsg.includes('jwt') || errorMsg.includes('token');
 
         if (isAuthError) {
             return (
@@ -520,7 +521,7 @@ const AssignmentUpload = () => {
                                 variant="default"
                                 size="default"
                                 onClick={runPipeline}
-                                disabled={isUploading || gradingStatus === 'processing' || pin.length !== 4 || !file}
+                                disabled={isUploading || gradingStatus === 'processing' || (!!assignment?.accessPin && pin.length !== 4) || !file}
                                 className="w-full"
                             >
                                 <Play className="w-4 h-4 mr-1.5" />

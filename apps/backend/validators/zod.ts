@@ -42,14 +42,16 @@ export const updateRubricSchema = createRubricSchema.partial();
 export const createSubmissionSchema = z.object({
     assignmentId: z.uuid("Invalid assignment ID"),
     fileKey: z.string(),
-    pin: z.string().regex(/^\d{4}$/, "PIN must be a 4-digit number").optional(),
+    // pin is optional; if provided it must be exactly 4 digits
+    pin: z.string().regex(/^\d{4}$/, "PIN must be a 4-digit number").optional().or(z.literal("")),
 });
 
 export const uploadUrlSchema = z.object({
     fileName: z.string().min(1),
     type: z.literal("application/pdf"),
     assignmentId: z.uuid(),
-    pin: z.string().regex(/^\d{4}$/, "PIN must be a 4-digit number").optional(),
+    // pin is optional; if provided it must be exactly 4 digits
+    pin: z.string().regex(/^\d{4}$/, "PIN must be a 4-digit number").optional().or(z.literal("")),
 });
 
 export const submissionActionSchema = z.object({
