@@ -122,7 +122,7 @@ const RubricManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <div className="bg-surface w-full max-w-5xl border border-border rounded-xl shadow-elevated flex flex-col max-h-[90vh] overflow-hidden">
                 <div className="p-5 border-b border-border flex justify-between items-center bg-surface-raised/50 flex-shrink-0">
                     <div>
-                        <p className="text-label-sm uppercase tracking-wider text-text-muted font-medium mb-1">Assessment schema</p>
+                        <p className="text-label-sm uppercase tracking-wider text-text-muted font-medium mb-1">Rubric details</p>
                         <h2 className="text-heading-md font-semibold text-text-primary tracking-tight">
                             Rubric Manager
                         </h2>

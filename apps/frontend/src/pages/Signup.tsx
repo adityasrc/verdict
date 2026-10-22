@@ -23,7 +23,7 @@ const ROLES = [
   {
     value: "TEACHER" as const,
     title: "Teacher",
-    description: "Create rubrics and manage assessments",
+    description: "Create rubrics and manage assignments",
     icon: GraduationCap,
   },
   {

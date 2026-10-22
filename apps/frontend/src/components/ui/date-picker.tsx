@@ -141,7 +141,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
             <X className="h-3.5 w-3.5" />
           </button>
         ) : (
-          <span className="text-text-muted/40 font-mono text-[10px]">PICK</span>
+          <span className="text-text-muted font-mono text-[10px]">PICK</span>
         )}
       </div>
 
@@ -223,9 +223,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                     'h-8 w-full rounded-md text-[13px] flex items-center justify-center transition-all font-mono',
                     isSelected && 'bg-text-primary text-canvas font-semibold shadow-sm',
                     !isSelected && isCurrentMonth && !isDisabled && 'text-text-primary hover:bg-surface-raised hover:text-text-primary',
-                    !isSelected && !isCurrentMonth && !isDisabled && 'text-text-muted/40 hover:bg-surface-raised/40 hover:text-text-muted',
+                    !isSelected && !isCurrentMonth && !isDisabled && 'text-text-muted hover:bg-surface-raised/40 hover:text-text-primary',
                     !isSelected && isCurrentDay && 'border border-accent/40 font-medium text-accent',
-                    isDisabled && 'text-text-muted/20 cursor-not-allowed pointer-events-none'
+                    isDisabled && 'text-text-muted/60 cursor-not-allowed pointer-events-none'
                   )}
                 >
                   {format(day, 'd')}

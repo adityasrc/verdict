@@ -9,7 +9,6 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error?: Error;
 }
 
 class ErrorBoundary extends Component<Props, State> {
@@ -18,8 +17,8 @@ class ErrorBoundary extends Component<Props, State> {
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -35,17 +34,13 @@ class ErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="h-6 w-6 text-error" />
               </div>
 
-              <p className="font-semibold text-[72px] leading-none tracking-tight text-text-muted/20 select-none">
-                ERR
-              </p>
-
               <h1 className="text-heading-sm font-semibold text-text-primary tracking-tight -mt-2 mb-6">
-                Execution Halted
+                Something went wrong
               </h1>
 
               <div className="bg-canvas border border-border rounded-lg p-4 mb-8 text-left overflow-x-auto">
-                <p className="font-mono text-mono-sm text-error break-words">
-                  &gt; {this.state.error?.message || "Critical system failure encountered."}
+                <p className="text-body-sm text-text-secondary">
+                  An unexpected error stopped this page from loading. Reload to try again.
                 </p>
               </div>
 
@@ -56,7 +51,7 @@ class ErrorBoundary extends Component<Props, State> {
                 onClick={() => window.location.reload()}
               >
                 <RotateCcw className="h-4 w-4" />
-                Reinitialize Session
+                Reload page
               </Button>
           </div>
         </div>

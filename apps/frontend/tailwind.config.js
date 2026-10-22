@@ -15,7 +15,7 @@ export default {
 
                 'text-primary': '#ffffff',
                 'text-secondary': '#a1a1aa',
-                'text-muted': '#52525b',
+                'text-muted': '#85858f',
 
                 // Brand signature color (the red 'V' mark)
                 brand: '#e05c5c',

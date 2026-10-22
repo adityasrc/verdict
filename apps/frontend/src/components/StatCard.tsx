@@ -10,7 +10,7 @@ interface StatCardProps {
 }
 
 export const StatCard: React.FC<StatCardProps> = ({ label, value, icon: Icon, className }) => (
-    <Card className={className}>
+    <Card className={`dashboard-stat-card ${className || ''}`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-body-sm font-medium text-text-secondary">{label}</CardTitle>
             <Icon className="h-4 w-4 text-text-muted shrink-0" />

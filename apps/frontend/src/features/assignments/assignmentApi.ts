@@ -37,6 +37,7 @@ export const getAssignmentSubmissions = (assignmentId: string) =>
 
 export const getUploadUrl = (data: {
     fileName: string;
+    fileSize: number;
     type: string;
     assignmentId: string;
     pin?: string;

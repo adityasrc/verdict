@@ -15,6 +15,13 @@ const venvPath = [
 
 const PYTHON_BIN = process.env.PYTHON_BIN || venvPath || "python3";
 
+const pythonDir = [
+    path.resolve(currentFolder, "python"),
+    path.resolve(currentFolder, "workers/python"),
+    path.resolve(process.cwd(), "workers/python"),
+    path.resolve(process.cwd(), "dist/workers/python"),
+].find((dir) => fs.existsSync(dir)) || path.resolve(currentFolder, "python");
+
 export interface ParsedPage {
     page_number: number;
     text: string;
@@ -23,6 +30,7 @@ export interface ParsedPage {
 
 export interface GeminiEvaluation {
     score: number;
+    criteria: { name: string; score: number; maxPoints: number; feedback: string }[];
     strengths?: string[];
     weaknesses?: string[];
     feedback: string;
@@ -64,7 +72,7 @@ export class PythonService {
         } = options;
 
         return new Promise<T>((resolve, reject) => {
-            const scriptPath = path.join(currentFolder, "python", scriptName);
+            const scriptPath = path.join(pythonDir, scriptName);
             let result: T | undefined;
             let pythonError = "";
             let stderrOutput = "";
@@ -72,7 +80,7 @@ export class PythonService {
 
             // spawn the python process in the background
             const proc = spawn(PYTHON_BIN, [scriptPath, ...args], {
-                cwd: path.join(currentFolder, "python"),
+                cwd: pythonDir,
                 env: env ? { ...process.env, ...env } : process.env,
             });
 

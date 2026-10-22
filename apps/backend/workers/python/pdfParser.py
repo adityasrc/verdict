@@ -1,105 +1,100 @@
-import pymupdf
-import os
-import sys
 import json
+import sys
 from pathlib import Path
+
+import pymupdf
+
 
 pymupdf.TOOLS.mupdf_display_errors(False)
 
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+
 def publish(event):
-    """Prints a single-line JSON event to stdout for the Node.js worker."""
     print(json.dumps(event), flush=True)
 
-MAX_IMAGE_BYTES = 5 * 1024 * 1024  # skip images larger than 5MB (before resize)
 
-def extract_page_images(doc, page, page_num, output_dir):
-    """Extracts diagrams and charts from a page, skipping tiny icons and huge raw images."""
-    page_images = []
-    for img_index, img in enumerate(page.get_images(full=True)):
+def extract_images(document, page, page_number, output_dir):
+    image_paths = []
+
+    for image_number, image_info in enumerate(page.get_images(full=True), start=1):
         try:
-            xref = img[0]
-            base_image = doc.extract_image(xref)
-            if not base_image:
+            image = document.extract_image(image_info[0])
+            if not image:
                 continue
 
-            width = base_image.get("width", 0)
-            height = base_image.get("height", 0)
-            # skip bullet icons and decorative spacers (both dimensions must be tiny)
-            if width < 24 or height < 24:
+            width = image.get("width", 0)
+            height = image.get("height", 0)
+            data = image.get("image")
+            if width < 24 or height < 24 or not data:
                 continue
 
-            image_bytes = base_image.get("image")
-            ext = base_image.get("ext", "png")
-
-            if not image_bytes:
+            if len(data) > MAX_IMAGE_BYTES:
+                size_kb = len(data) // 1024
+                publish({
+                    "warning": f"Skipped oversized image {image_number} on page {page_number} ({size_kb}KB)"
+                })
                 continue
 
-            # skip absurdly large raw images (e.g. embedded bitmaps in some PDFs)
-            if len(image_bytes) > MAX_IMAGE_BYTES:
-                publish({"warning": f"Skipped oversized image {img_index} on page {page_num} ({len(image_bytes)//1024}KB)"})
-                continue
-
-            image_filename = f"p{page_num}_img{img_index + 1}.{ext}"
-            image_path = os.path.join(output_dir, image_filename)
-            with open(image_path, "wb") as f:
-                f.write(image_bytes)
-            page_images.append(image_path)
-        except Exception as e:
-            publish({"warning": f"Skipped image {img_index} on page {page_num}: {str(e)}"})
-
-    return page_images
-
-def main():
-    if len(sys.argv) < 3:
-        publish({"error": "Missing args. Usage: python pdfParser.py <pdf_path> <submission_id>"})
-        sys.exit(1)
-
-    pdf_path = sys.argv[1]
-    submission_id = sys.argv[2]
-
-    try:
-        doc = pymupdf.open(pdf_path)
-    except Exception as e:
-        publish({"error": f"Failed to open PDF: {str(e)}"})
-        sys.exit(1)
-
-    total_pages = len(doc)
-    if total_pages == 0:
-        publish({"error": "PDF is empty"})
-        sys.exit(1)
-
-    publish({"step": "parsing_started", "total_pages": total_pages})
-
-    output_dir = Path(pdf_path).resolve().parent / "extracted_images" / submission_id
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    extracted_data = []
-
-    for page_num in range(total_pages):
-        current_page = page_num + 1
-        try:
-            page = doc[page_num]
-            text = page.get_text()
-            images = extract_page_images(doc, page, current_page, str(output_dir))
-
-            extracted_data.append({
-                "page_number": current_page,
-                "text": text,
-                "images": images,
+            image_path = output_dir / f"p{page_number}_img{image_number}.{image.get('ext', 'png')}"
+            image_path.write_bytes(data)
+            image_paths.append(str(image_path))
+        except Exception as error:
+            publish({
+                "warning": f"Skipped image {image_number} on page {page_number}: {error}"
             })
 
-            # emit progress every page for smooth frontend progress bar
-            publish({"step": "page_parsed", "page": current_page, "total_pages": total_pages})
+    return image_paths
 
-        except Exception as page_err:
-            publish({"warning": f"Page {current_page} skipped due to error: {str(page_err)}"})
 
-    doc.close()
+def parse_pdf(pdf_path, submission_id):
+    try:
+        document = pymupdf.open(pdf_path)
+    except Exception as error:
+        publish({"error": f"Failed to open PDF: {error}"})
+        return None
 
-    publish({
-        "step": "parsing_completed",
-        "result": extracted_data,
-    })
+    with document:
+        total_pages = len(document)
+        if total_pages == 0:
+            publish({"error": "PDF is empty"})
+            return None
+
+        publish({"step": "parsing_started", "total_pages": total_pages})
+
+        output_dir = Path(pdf_path).resolve().parent / "extracted_images" / submission_id
+        output_dir.mkdir(parents=True, exist_ok=True)
+        pages = []
+
+        for page_index in range(total_pages):
+            page_number = page_index + 1
+            try:
+                page = document[page_index]
+                pages.append({
+                    "page_number": page_number,
+                    "text": page.get_text(),
+                    "images": extract_images(document, page, page_number, output_dir),
+                })
+                publish({
+                    "step": "page_parsed",
+                    "page": page_number,
+                    "total_pages": total_pages,
+                })
+            except Exception as error:
+                publish({"warning": f"Page {page_number} skipped: {error}"})
+
+    publish({"step": "parsing_completed", "result": pages})
+    return pages
+
+
+def main():
+    if len(sys.argv) != 3:
+        publish({"error": "Usage: python pdfParser.py <pdf_path> <submission_id>"})
+        return 1
+
+    result = parse_pdf(sys.argv[1], sys.argv[2])
+    return 0 if result is not None else 1
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

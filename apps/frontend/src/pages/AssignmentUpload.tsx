@@ -231,7 +231,7 @@ const AssignmentUpload = () => {
             return;
         }
         // only require pin if assignment has one set
-        if (assignment?.accessPin && pin.length !== 4) {
+        if (pin.length !== 4) {
             setErrorMessage('Please enter the 4-digit access PIN.');
             return;
         }
@@ -240,6 +240,7 @@ const AssignmentUpload = () => {
         try {
             const urlResult = await assignmentApi.getUploadUrl({
                 fileName: file.name,
+                fileSize: file.size,
                 type: file.type,
                 assignmentId: assignmentId!,
                 pin,
@@ -423,6 +424,15 @@ const AssignmentUpload = () => {
         );
     }
 
+    if (!assignment.rubric?.criteria?.length) {
+        return (
+            <div className="mx-auto max-w-md rounded-xl border border-border bg-surface p-8 text-center">
+                <h1 className="text-heading-sm font-semibold text-text-primary">Rubric unavailable</h1>
+                <p className="mt-2 text-body-sm text-text-secondary">This assignment needs a grading rubric before students can submit work. Please contact your teacher.</p>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full max-w-6xl mx-auto space-y-5 lg:space-y-6">
             <header className="border-b border-border pb-4">
@@ -549,7 +559,7 @@ const AssignmentUpload = () => {
                                 variant="default"
                                 size="default"
                                 onClick={runPipeline}
-                                disabled={isUploading || gradingStatus === 'processing' || (!!assignment?.accessPin && pin.length !== 4) || !file}
+                                disabled={isUploading || gradingStatus === 'processing' || pin.length !== 4 || !file}
                                 className="w-full h-10 text-sm font-semibold"
                             >
                                 <Play className="w-4 h-4 mr-2" />

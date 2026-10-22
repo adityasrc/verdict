@@ -169,14 +169,17 @@ export const TeacherDashboard: React.FC = () => {
         : 0;
 
     return (
-        <div className="w-full space-y-8">
+        <div className="dashboard-atmosphere w-full space-y-8">
             <CreateAssignmentModal
                 isOpen={isCreateModalOpen}
                 onClose={() => {
                     setIsCreateModalOpen(false);
                     fetchAssignments();
                 }}
-                onOpenRubricManager={() => setIsRubricManagerOpen(true)}
+                onOpenRubricManager={() => {
+                    setIsCreateModalOpen(false);
+                    setIsRubricManagerOpen(true);
+                }}
             />
 
             {isRubricManagerOpen && <RubricManager onClose={() => setIsRubricManagerOpen(false)} />}
@@ -197,13 +200,13 @@ export const TeacherDashboard: React.FC = () => {
                     </Button>
                     <Button variant="default" onClick={() => setIsCreateModalOpen(true)}>
                         <Plus className="h-4 w-4 mr-1.5" />
-                        New Assessment
+                        New Assignment
                     </Button>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Assessments" value={activeAssignments.length} icon={FileSpreadsheet} />
+                <StatCard label="Assignments" value={activeAssignments.length} icon={FileSpreadsheet} />
                 <StatCard label="In Queue" value={pendingCount} icon={Clock} />
                 <StatCard label="Graded" value={gradedCount} icon={CheckCheck} />
                 <StatCard label="Average Score" value={`${avgScore}%`} icon={TrendingUp} />
@@ -213,7 +216,7 @@ export const TeacherDashboard: React.FC = () => {
                 <div className="lg:col-span-2 flex flex-col gap-4">
                     <div className="flex justify-between items-center border-b border-border pb-3">
                         <h2 className="text-body-md font-semibold text-text-primary">
-                            Active Assessments
+                            Assignments
                         </h2>
                         <span className="font-mono text-[11px] text-text-muted">
                             {activeAssignments.length} total
@@ -221,14 +224,14 @@ export const TeacherDashboard: React.FC = () => {
                     </div>
 
                     {isAssignmentsLoading ? (
-                        <p className="text-body-sm text-text-muted animate-pulse py-4">Loading assessments…</p>
+                        <p className="text-body-sm text-text-muted animate-pulse py-4">Loading assignments…</p>
                     ) : activeAssignments.length === 0 ? (
                         <div className="border border-dashed border-border rounded-xl p-12 text-center bg-surface/40">
-                            <p className="text-body-md text-text-primary font-medium mb-1">No active assessments</p>
+                            <p className="text-body-md text-text-primary font-medium mb-1">No assignments yet</p>
                             <p className="text-body-sm text-text-muted mb-5">Create your first assignment to begin receiving submissions.</p>
                             <Button variant="default" size="default" onClick={() => setIsCreateModalOpen(true)}>
                                 <Plus className="h-4 w-4 mr-1.5" />
-                                New Assessment
+                                New Assignment
                             </Button>
                         </div>
                     ) : (
@@ -253,7 +256,7 @@ export const TeacherDashboard: React.FC = () => {
                                     >
                                         {showAllAssignments
                                             ? 'Show Less'
-                                            : `View All ${activeAssignments.length} Assessments`}
+                                            : `View All ${activeAssignments.length} Assignments`}
                                     </Button>
                                 </div>
                             )}
@@ -271,7 +274,7 @@ export const TeacherDashboard: React.FC = () => {
                         </span>
                     </div>
 
-                    <Card className="flex-1 flex flex-col min-h-[320px] max-h-[480px]">
+                    <Card className="dashboard-panel flex-1 flex flex-col min-h-[320px] max-h-[480px]">
                         <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-label-sm font-medium text-text-secondary">
                                 Recent Submissions
@@ -317,7 +320,7 @@ export const TeacherDashboard: React.FC = () => {
                                                 >
                                                     {statusText}
                                                 </span>
-                                                <span className="font-mono text-xs text-text-muted/60 block">
+                                                <span className="font-mono text-xs text-text-muted block">
                                                     {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
@@ -333,7 +336,7 @@ export const TeacherDashboard: React.FC = () => {
             <Dialog open={!!deleteAssignmentId} onOpenChange={(open) => !open && setDeleteAssignmentId(null)}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Delete Assessment</DialogTitle>
+                        <DialogTitle>Delete Assignment</DialogTitle>
                         <DialogDescription>
                             Are you sure you want to delete this assignment? All associated student submissions and grading results will be permanently removed.
                         </DialogDescription>

@@ -62,7 +62,7 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
         description,
         dueDate: dueDate || undefined,
         maxScore: parsedScore,
-        rubricId: selectedRubricId && selectedRubricId !== 'none' ? selectedRubricId : undefined,
+        rubricId: selectedRubricId,
       });
       toast.success('Assignment created!');
       handleClose();
@@ -88,9 +88,9 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>New Assessment</DialogTitle>
+          <DialogTitle>New Assignment</DialogTitle>
           <DialogDescription>
-            Configure assignment details, deadline, and optional grading rubric.
+            Add assignment details and choose the rubric used to calculate grades.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 mt-2">
@@ -150,23 +150,34 @@ export const CreateAssignmentModal: React.FC<Props> = ({ isOpen, onClose, onOpen
                 Create Rubric
               </button>
             </div>
-            <Select value={selectedRubricId} onValueChange={setSelectedRubricId}>
-              <SelectTrigger>
-                <SelectValue placeholder="No rubric" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No Rubric</SelectItem>
-                {rubrics.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {rubrics.length > 0 ? (
+              <Select value={selectedRubricId} onValueChange={setSelectedRubricId}>
+                <SelectTrigger aria-label="Select a grading rubric">
+                  <SelectValue placeholder="Select a rubric" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rubrics.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="rounded-md border border-border bg-surface-raised/40 p-3">
+                <p className="text-body-sm text-text-secondary">Create a rubric before setting up this assignment.</p>
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={onOpenRubricManager}>
+                  Manage rubrics
+                </Button>
+              </div>
+            )}
+            {rubrics.length > 0 && (
+              <p className="text-xs text-text-muted">If rubric points differ from the maximum score, the final score is scaled to match.</p>
+            )}
           </div>
 
           <Button
             type="submit"
             variant="default"
-            disabled={isLoading}
+            disabled={isLoading || !selectedRubricId}
             className="w-full mt-4"
           >
             {isLoading ? 'Creating...' : 'Create Assignment'}

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_PDF_BYTES } from "../utils/limits.js";
 
 export const registerSchema = z.object({
     email: z.email().trim().toLowerCase(),
@@ -20,7 +21,7 @@ export const createAssignmentSchema = z.object({
     description: z.string().trim().max(3000, "Description cannot exceed 3000 characters").optional(),
     maxScore: z.number().int().positive().max(1000, "Max score cannot exceed 1000").default(100),
     dueDate: z.coerce.date().optional(),
-    rubricId: z.uuid().optional(),
+    rubricId: z.uuid(),
 });
 
 export const createRubricSchema = z.object({
@@ -48,6 +49,7 @@ export const createSubmissionSchema = z.object({
 
 export const uploadUrlSchema = z.object({
     fileName: z.string().min(1),
+    fileSize: z.number().int().positive().max(MAX_PDF_BYTES, "PDF files must be 10 MB or smaller"),
     type: z.literal("application/pdf"),
     assignmentId: z.uuid(),
     // pin is optional; if provided it must be exactly 4 digits

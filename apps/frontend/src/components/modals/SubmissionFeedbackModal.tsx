@@ -56,6 +56,24 @@ export const SubmissionFeedbackModal = ({ submission, onClose }: Props) => {
                   </div>
                 )}
 
+                {structured.criteria?.length > 0 && (
+                  <section>
+                    <h3 className="text-label-sm uppercase tracking-wider text-text-muted font-medium mb-2">Rubric breakdown</h3>
+                    <div className="divide-y divide-border rounded-lg border border-border bg-surface-raised/50 px-4">
+                      {structured.criteria.map((criterion, index) => (
+                        <div key={`${criterion.name}-${index}`} className="py-3">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span className="text-body-sm font-medium text-text-primary">{criterion.name}</span>
+                            <span className="shrink-0 font-mono text-body-sm text-text-primary">{criterion.score}/{criterion.maxPoints}</span>
+                          </div>
+                          {criterion.feedback && <p className="mt-1 text-body-sm text-text-secondary">{criterion.feedback}</p>}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-text-muted">Criterion scores determine the final score shown above.</p>
+                  </section>
+                )}
+
                 {structured.strengths?.length > 0 && (
                   <div>
                     <h3 className="text-label-sm uppercase tracking-wider text-success font-medium mb-2 flex items-center gap-1.5">

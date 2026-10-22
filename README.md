@@ -10,12 +10,12 @@ Teachers create assignments and grading rubrics. Students submit PDF assignments
 
 ## Features
 
-- Rubric-based AI grading via Gemini 3.8 Flash
+- Rubric-based AI-assisted grading via Gemini 3.8 Flash; the server checks criterion caps and calculates the final score
 - PDF submission, parsing, and image extraction (PyMuPDF)
 - Asynchronous grading pipeline with BullMQ workers
 - Real-time grading progress via WebSockets (Socket.IO + Redis Pub/Sub)
-- JWT authentication with access and refresh tokens
-- Teacher and student role-separated workflows
+- JWT authentication with access and refresh token endpoints
+- Teacher and student role-separated workflows with per-teacher data ownership
 - Assignment creation, rubric management, and submission review
 - CSV gradebook export
 - PIN-gated assignment access
@@ -130,13 +130,16 @@ Infrastructure services (PostgreSQL, Redis, MinIO) can be started with:
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-To build and run the full application in containers:
+To build and run the API and worker in separate containers:
 
 ```bash
-docker compose up -d
+cp .env.example apps/backend/.env
+docker compose up -d --build
 ```
 
-The `docker-compose.yml` expects an `apps/backend/.env` file with production credentials.
+The API applies Prisma migrations before it starts. Existing databases created with `prisma db push` need a one-time migration baseline before switching to `migrate deploy`; do not point the new startup command at an unbaselined existing database.
+
+The Render Blueprint defines a web service and a separate background worker. Render does not offer a free compute plan for background workers, so the worker service uses a paid plan. See [Render's plan details](https://render.com/docs/compute-plans).
 
 ---
 
@@ -158,7 +161,9 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `PUBLIC_ENDPOINT` | Yes | Public base URL for stored files |
 | `CORS_ORIGIN` | No | Allowed origin(s), comma-separated |
 | `GEMINI_MODEL` | No | Gemini model name (default: `gemini-3.8-flash`) |
-| `PYTHON_BIN` | No | Python binary name (default: `python3`) |
+| `PYTHON_BIN` | No | Python binary name used by the worker (default: `python3`) |
+| `VITE_API_URL` | Production | API base URL, including `/api` (set at frontend build time) |
+| `VITE_WS_URL` | Production | Backend origin used for Socket.IO (set at frontend build time) |
 
 ---
 
@@ -178,18 +183,17 @@ Full API reference is at [`apps/backend/API_DOCS.md`](apps/backend/API_DOCS.md).
 
 ---
 
-## Design Decisions
+## Portfolio scope and limits
 
-### PIN Access Control
+- Anyone can choose the teacher role at signup. A teacher can access only assignments, rubrics, and submissions owned by that account. There is no invitation or approval flow.
+- PIN checks run when a student requests an upload URL and registers a submission. Failed attempts are not rate limited; adding a Redis counter is a possible next step if the app becomes public.
+- Gemini suggests a score for each rubric criterion. The server checks each score against its point cap and calculates the assignment total. Feedback is AI-generated and should be reviewed by a teacher; manual score edits are not implemented.
+- Re-evaluation uses the rubric currently attached to the assignment. Rubric history is not snapshotted.
+- The API refuses upload URLs for files larger than 10 MB, checks the stored object before queueing it, and the worker enforces the same limit while downloading. A presigned upload can be reused until it expires. Oversized files are not graded, but can remain in the bucket until deleted. Upload requests do not have a separate per-user rate limit.
+- Deleting a submission removes its database record, but does not currently delete the uploaded object from R2.
+- Database changes are tracked as Prisma migrations. A database previously created with `prisma db push` needs a one-time migration baseline before production uses `prisma migrate deploy`.
 
-Assignment PINs are 4-digit codes teachers can set to restrict who submits. The backend validates the PIN on every submission request and returns a `403` if it doesn't match.
-
-**What we didn't implement:** A Redis-based brute-force rate limiter (e.g. lock out after 5 wrong attempts per student per assignment).
-
-**Why:** For a portfolio project this added complexity without meaningful benefit — it requires an extra Redis round-trip on every submission, adds a new failure point, and the attack surface (guessing a 4-digit code) is low risk in this context.
-
-**How to add it in production:** Store attempt counts in Redis with a key like `pin-attempts:{assignmentId}:{studentId}`, increment on each failure, expire after 15 minutes, and throw a `429` once the count hits the threshold. The `verifyPin` method in [`submission.manager.ts`](apps/backend/api/submission/submission.manager.ts) is the right place to plug this in.
-
+These limits are intentional for a small portfolio project. The items above are possible future hardening work, not features currently provided.
 ---
 
 Built for educators.

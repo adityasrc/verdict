@@ -40,7 +40,7 @@ export class AssignmentController {
         }
 
         const assignment = await AssignmentManager.getAssignmentById(id);
-        if (!assignment) {
+        if (!assignment || (req.user!.role === "TEACHER" && assignment.teacherId !== req.user!.id)) {
             throw new AppError("Assignment not found", 404);
         }
 

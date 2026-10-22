@@ -1,4 +1,4 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { HeadObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Prisma, type SubmissionStatus } from "@prisma/client";
 import { prisma } from "../../utils/db.js";
@@ -6,6 +6,7 @@ import { submissionQueue } from "../../utils/queue.js";
 import { getIO } from "../../ws/socket.js";
 import { AppError } from "../../utils/AppError.js";
 import { s3 } from "../../utils/S3client.js";
+import { MAX_PDF_BYTES } from "../../utils/limits.js";
 
 export class SubmissionManager {
     // check if the provided pin matches the assignment pin
@@ -30,6 +31,33 @@ export class SubmissionManager {
         }
 
         SubmissionManager.verifyPin(assignment.accessPin, pin);
+        if (!assignment.rubricId) {
+            throw new AppError("This assignment does not have a grading rubric.", 400);
+        }
+
+        const bucketName = process.env.BUCKET_NAME;
+        if (!bucketName) {
+            throw new AppError("Storage configuration missing.", 500);
+        }
+
+        const expectedFileKey = `${assignmentId}/${studentId}.pdf`;
+        if (fileKey !== expectedFileKey) {
+            throw new AppError("The uploaded file does not match this submission.", 400);
+        }
+
+        let fileInfo;
+        try {
+            fileInfo = await s3.send(new HeadObjectCommand({ Bucket: bucketName, Key: fileKey }));
+        } catch {
+            throw new AppError("The uploaded PDF could not be verified. Please upload it again.", 400);
+        }
+
+        if (!fileInfo.ContentLength || fileInfo.ContentLength > MAX_PDF_BYTES) {
+            throw new AppError("PDF files must be 10 MB or smaller.", 400);
+        }
+        if (fileInfo.ContentType !== "application/pdf") {
+            throw new AppError("Only PDF files are accepted.", 400);
+        }
 
         const exists = await prisma.submission.findUnique({
             where: {
@@ -140,6 +168,7 @@ export class SubmissionManager {
 
     static async presignedUrl(data: {
         fileName: string;
+        fileSize: number;
         type: string;
         assignmentId: string;
         studentId: string;
@@ -153,6 +182,9 @@ export class SubmissionManager {
         }
 
         SubmissionManager.verifyPin(assignment.accessPin, pin);
+        if (!assignment.rubricId) {
+            throw new AppError("This assignment does not have a grading rubric.", 400);
+        }
 
         const exists = await prisma.submission.findUnique({
             where: {

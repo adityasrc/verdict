@@ -8,10 +8,10 @@ import { redis } from "../utils/redis.js";
 import type { SubmissionJobData } from "../utils/queue.js";
 import type { Prisma } from "@prisma/client";
 import { PythonService } from "./python.service.js";
+import { MAX_PDF_BYTES } from "../utils/limits.js";
 
 // path to local folder for temporary files
 const tempFolder = fileURLToPath(new URL("../temp", import.meta.url));
-
 // sends live progress to redis and caches event history
 async function publishEvent(submissionId: string, event: object): Promise<void> {
     const payload = JSON.stringify(event);
@@ -45,7 +45,16 @@ export const submissionWorker = new Worker<SubmissionJobData>(
                 throw new Error(`Failed to download submission (${response.status})`);
             }
 
+            const contentLengthHeader = response.headers.get("content-length");
+            const contentLength = contentLengthHeader ? Number(contentLengthHeader) : NaN;
+            if (!Number.isFinite(contentLength) || contentLength > MAX_PDF_BYTES) {
+                throw new Error("PDF files must be 10 MB or smaller.");
+            }
+
             const buffer = await response.arrayBuffer();
+            if (buffer.byteLength > MAX_PDF_BYTES) {
+                throw new Error("PDF files must be 10 MB or smaller.");
+            }
             await fs.writeFile(pdfPath, Buffer.from(buffer));
             await publishEvent(id, { step: "pdf_downloaded", assignmentId, studentId });
 
@@ -59,9 +68,12 @@ export const submissionWorker = new Worker<SubmissionJobData>(
                 where: { id: assignmentId },
                 include: { rubric: true },
             });
+            if (!assignment.rubric) {
+                throw new Error("This assignment does not have a grading rubric.");
+            }
 
             const context = {
-                rubric: assignment.rubric?.criteria || undefined,
+                rubric: assignment.rubric.criteria,
                 description: assignment.description || undefined,
                 title: assignment.title,
                 maxScore: assignment.maxScore,

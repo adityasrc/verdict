@@ -17,7 +17,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
     onReview,
 }) => {
     return (
-        <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 card-interactive hover:bg-surface-raised/40 transition-colors">
+        <div className="dashboard-assignment-row p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 card-interactive hover:bg-surface-raised/40 transition-colors">
             <div className="min-w-0 space-y-1.5">
                 <div className="flex items-center gap-2">
                     <h3
@@ -64,7 +64,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
                     size="icon-sm"
                     className="text-text-muted hover:text-error"
                     onClick={() => onDelete(assignment.id)}
-                    aria-label="Delete assessment"
+                    aria-label="Delete assignment"
                 >
                     <Trash2 className="h-3.5 w-3.5" />
                 </Button>

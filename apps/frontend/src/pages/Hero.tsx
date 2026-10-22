@@ -44,12 +44,12 @@ export const Hero: React.FC = () => {
                 <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-surface-overlay border border-border/60" />
                 <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-surface-overlay border border-border/60" />
                 <span className="ml-2 font-mono text-xs text-text-muted">
-                  verdict · grading evaluation session
+                  Verdict · sample grading run
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs text-success font-medium px-2 py-0.5 rounded bg-success-muted border border-success/20">
-                  PIPELINE COMPLETE
+                  SAMPLE EVALUATION
                 </span>
               </div>
             </div>
@@ -58,7 +58,7 @@ export const Hero: React.FC = () => {
               <div className="md:col-span-5 space-y-4">
                 <div className="p-5 rounded-xl border border-border bg-surface-raised/40 space-y-2">
                   <span className="font-mono text-xs uppercase tracking-wider text-text-muted">
-                    Assessment Result
+                    Sample Result
                   </span>
                   <h3 className="text-base font-semibold text-text-primary">
                     CS-301: Distributed Consensus
@@ -70,7 +70,7 @@ export const Hero: React.FC = () => {
                     <span className="text-sm text-text-muted">/ 100 PTS</span>
                   </div>
                   <p className="text-xs text-text-secondary pt-1">
-                    Status: <strong className="text-success font-semibold">Graded</strong> · Evaluated by Gemini
+                    Example result · <strong className="text-success font-semibold">Graded</strong> by Gemini
                   </p>
                 </div>
 
@@ -125,7 +125,7 @@ export const Hero: React.FC = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-text-primary">Parsing PDF</p>
-                        <p className="text-xs text-text-secondary">12 of 12 pages and figures extracted via PyMuPDF</p>
+                        <p className="text-xs text-text-secondary">Text and embedded images extracted with PyMuPDF</p>
                       </div>
                     </div>
 
@@ -145,7 +145,7 @@ export const Hero: React.FC = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-text-primary">Graded</p>
-                        <p className="text-xs text-text-secondary">Score recorded · gradebook updated</p>
+                        <p className="text-xs text-text-secondary">Score and feedback saved</p>
                       </div>
                     </div>
                   </div>

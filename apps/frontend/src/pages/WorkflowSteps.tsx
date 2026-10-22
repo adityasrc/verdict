@@ -21,7 +21,7 @@ export const WorkflowSteps: React.FC<WorkflowStepsProps> = ({ steps }) => {
     {
       icon: Sliders,
       title: "Rubric Configuration",
-      description: "Define weighted criteria and point caps in PostgreSQL so evaluations are strictly scoped and reproducible.",
+      description: "Set the criteria and point caps. The server checks each criterion score and calculates the final grade.",
     },
     {
       icon: ShieldCheck,
@@ -31,7 +31,7 @@ export const WorkflowSteps: React.FC<WorkflowStepsProps> = ({ steps }) => {
     {
       icon: Sparkles,
       title: "Gemini 3.8 Flash Grading",
-      description: "Extracted figures and text are evaluated by Gemini 3.8 Flash to generate structured scores, feedback, and strengths.",
+      description: "Extracted text and embedded images are evaluated by Gemini 3.8 Flash for criterion scores and feedback.",
     },
   ];
 
@@ -44,7 +44,7 @@ export const WorkflowSteps: React.FC<WorkflowStepsProps> = ({ steps }) => {
               Core Capabilities
             </p>
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
-              Engineered for rubric accuracy.
+              Clear criteria. Useful feedback.
             </h2>
             <p className="text-base md:text-lg text-text-secondary mt-3 leading-relaxed">
               Every stage is logged and visible to both educators and students.
@@ -87,7 +87,7 @@ export const WorkflowSteps: React.FC<WorkflowStepsProps> = ({ steps }) => {
               </h2>
             </div>
             <span className="font-mono text-xs uppercase tracking-wider text-text-muted">
-              5 pipeline stages
+              Setup + 4 grading steps
             </span>
           </div>
 

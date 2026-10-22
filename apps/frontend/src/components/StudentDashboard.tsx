@@ -97,7 +97,7 @@ export const StudentDashboard = () => {
 
     if (isLoading) {
         return (
-            <div className="w-full space-y-8 animate-pulse">
+            <div className="dashboard-atmosphere w-full space-y-8 animate-pulse">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 h-36 rounded-xl bg-surface border border-border" />
                     <div className="h-36 rounded-xl bg-surface border border-border" />
@@ -112,7 +112,7 @@ export const StudentDashboard = () => {
     }
 
     return (
-        <div className="w-full space-y-8">
+        <div className="dashboard-atmosphere w-full space-y-8">
             <section className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <Card className="lg:col-span-2">
@@ -239,7 +239,7 @@ export const StudentDashboard = () => {
                 {recentSubmissions.length === 0 ? (
                     <div className="border border-dashed border-border rounded-xl p-10 text-center bg-surface/30">
                         <p className="text-body-sm text-text-muted font-medium mb-1">No feedback yet</p>
-                        <p className="text-xs text-text-muted/70">Submit an assignment to receive evaluations and score breakdowns.</p>
+                        <p className="text-xs text-text-secondary">Submit an assignment to receive evaluations and score breakdowns.</p>
                     </div>
                 ) : (
                     <>

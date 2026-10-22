@@ -4,32 +4,40 @@ The API base URL is `http://localhost:4000/api` in local development. Protected 
 
 ## Setup
 
-From the repository root, install dependencies and configure `.env` from `.env.example`. The backend requires `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, and the storage and Gemini values used by the grading worker.
+From the repository root:
 
 ```bash
 pnpm install
+cp .env.example .env
 pnpm --filter verdict-backend exec prisma generate
 pnpm --filter verdict-backend exec prisma db push
 pnpm dev
 ```
 
+The root `pnpm dev` command starts the API and the separate BullMQ worker.
+
 ## Authentication
 
-| Method | Path | Authentication | Body |
+| Method | Path | Authentication | Purpose |
 | --- | --- | --- | --- |
-| POST | `/auth/register` | None | `email`, `password`, `name`, optional `role` (`STUDENT` or `TEACHER`) |
-| POST | `/auth/login` | None | `email`, `password` |
-| POST | `/auth/refresh` | None | `refreshToken` |
-| GET | `/auth/me` | Any signed-in user | None |
+| POST | `/auth/register` | None | Create a student or teacher account. `role` defaults to `STUDENT`; anyone may choose `TEACHER`. |
+| POST | `/auth/login` | None | Sign in with `email` and `password`. |
+| POST | `/auth/refresh` | None | Exchange a valid `refreshToken` for new tokens. |
+| GET | `/auth/me` | Any signed-in user | Return the current account. |
+
+This portfolio version has no teacher invitation or approval flow. Teachers can access only their own assignments, rubrics, and submissions.
 
 ## Assignments
 
 | Method | Path | Role | Purpose |
 | --- | --- | --- | --- |
-| POST | `/assignments` | Teacher | Create an assignment. Body: `title`, optional `description`, `maxScore`, `dueDate`, `rubricId`. |
+| POST | `/assignments` | Teacher | Create an assignment. `title` and `rubricId` are required; `description`, `maxScore`, and `dueDate` are optional. |
 | GET | `/assignments/teacher/my-assignments` | Teacher | List the signed-in teacher's assignments. |
-| GET | `/assignments/student/all` | Signed-in user | List published assignments. |
-| GET | `/assignments/:id` | Signed-in user | Get an assignment. The session PIN is never returned. |
+| GET | `/assignments/student/all` | Student | List assignments and their attached rubrics. |
+| GET | `/assignments/:id` | Signed-in user | Get an assignment. Teachers can access only assignments they own. The PIN is never returned. |
+| DELETE | `/assignments/:id` | Teacher | Delete an assignment they own. |
+
+Every new assignment needs a rubric. If the rubric point total differs from the assignment's `maxScore`, the final score is scaled to the assignment's score range.
 
 ## Rubrics
 
@@ -41,33 +49,35 @@ All rubric routes require the teacher role and operate only on rubrics owned by 
 | GET | `/rubrics` | List the signed-in teacher's rubrics. |
 | GET | `/rubrics/:id` | Get a rubric. |
 | PUT | `/rubrics/:id` | Update `name` and/or `criteria`. |
-| DELETE | `/rubrics/:id` | Delete a rubric. |
+| DELETE | `/rubrics/:id` | Delete an unused rubric. A rubric attached to an assignment cannot be deleted. |
 
-Each rubric criterion contains `name`, `description`, and `points`.
+Each criterion has a `name`, `description`, and positive integer `points` value.
 
 ## Submissions
 
-Student submission routes require the student role.
+| Method | Path | Role | Purpose |
+| --- | --- | --- | --- |
+| POST | `/submissions/uploadUrl` | Student | Get a 10-minute presigned PDF upload URL. Body: `fileName`, `fileSize` in bytes, `type: "application/pdf"`, `assignmentId`, and the 4-digit `pin`. The API refuses files larger than 10 MB. |
+| POST | `/submissions` | Student | Register the uploaded file and queue grading. Body: `assignmentId`, `fileKey`, and the `pin`. The API verifies that the file belongs to this student and assignment and is no larger than 10 MB. |
+| GET | `/submissions/my-submissions` | Student | List the signed-in student's submissions. |
+| GET | `/submissions/assignment/:assignmentId` | Teacher | List submissions for an assignment they own. |
+| GET | `/submissions/recent` | Student or teacher | List the signed-in user's recent submissions. |
+| POST | `/submissions/reEvaluate` | Teacher | Queue another evaluation for a submission from an assignment they own. Body: `submissionId`. |
+| POST | `/submissions/deleteSubmission` | Teacher | Delete a submission from an assignment they own. Body: `submissionId`. |
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| POST | `/submissions/uploadUrl` | Get a short-lived upload URL. Body: `fileName`, `type`, `assignmentId`, optional `pin`. |
-| POST | `/submissions` | Register a submission and queue grading. Body: `assignmentId`, `fileKey`, optional `pin`. |
-| GET | `/submissions/my-submissions` | List the signed-in student's submissions. |
-| GET | `/submissions/assignment/:assignmentId` | Teacher-only list of submissions for an assignment they own. |
-| GET | `/submissions/recent` | Recent submissions available to the signed-in user. |
-| POST | `/submissions/reEvaluate` | Teacher-only. Body: `submissionId`. |
-| POST | `/submissions/deleteSubmission` | Teacher-only. Body: `submissionId`. (also aliased to `/allowResubmission`). |
+PINs are checked when requesting an upload URL and when registering the submission. Failed PIN attempts are not rate limited in this portfolio version. The API rate limit applies to authentication endpoints only.
 
-Submission PIN checks are rate limited per assignment and student in Redis (maximum 5 failed attempts per 15-minute window before rejecting with HTTP 429). Upload URLs expire after 10 minutes.
+## Live progress
+
+Socket.IO connections require a valid access token. A student can watch their own submission; a teacher can watch submissions and assignment updates for assignments they own.
 
 ## Health check
 
-`GET /health` returns the API status and a timestamp.
+`GET /health` returns `{ "status": "ok" }`.
 
 ## Responses
 
-Successful responses use the following envelope:
+Successful responses use this envelope:
 
 ```json
 {
@@ -76,4 +86,4 @@ Successful responses use the following envelope:
 }
 ```
 
-Validation and application errors use `success: false` with a message and, where applicable, error details.
+Errors use `success: false` and include a `message`.

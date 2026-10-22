@@ -73,13 +73,19 @@ export interface CreateAssignmentRequest {
     description?: string;
     maxScore?: number;
     dueDate?: string;
-    rubricId?: string;
+    rubricId: string;
 }
 
 export type SubmissionStatus = 'PENDING' | 'EVALUATING' | 'GRADED' | 'FAILED';
 
 export interface GeminiFeedback {
     score: number;
+    criteria: {
+        name: string;
+        score: number;
+        maxPoints: number;
+        feedback: string;
+    }[];
     strengths: string[];
     weaknesses: string[];
     feedback: string;

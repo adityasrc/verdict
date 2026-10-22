@@ -30,7 +30,7 @@ export const PipelinePreview: React.FC<PipelinePreviewProps> = ({ events, stack 
           <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-8">
             <div>
               <p className="font-mono text-xs uppercase tracking-wider text-text-muted mb-1">
-                Architecture Preview
+                Example Grading Run
               </p>
               <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
                 Pipeline Architecture & Execution

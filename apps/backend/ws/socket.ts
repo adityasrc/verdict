@@ -2,6 +2,7 @@ import type { Server as HTTPServer } from "http";
 import { Server, type Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { redis } from "../utils/redis.js";
+import { prisma } from "../utils/db.js";
 
 export interface AuthenticatedSocket extends Socket {
     userId: string;
@@ -11,10 +12,14 @@ export interface AuthenticatedSocket extends Socket {
 let io: Server;
 
 export const initSocket = (httpServer: HTTPServer): Server => {
-    // setup socket.io server with cors
+    // Use the same allowed origins as the HTTP API.
+    const corsOrigin = process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
+        : "http://localhost:5173";
+
     io = new Server(httpServer, {
         cors: {
-            origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : true,
+            origin: corsOrigin,
             methods: ["GET", "POST"],
             credentials: true,
         },
@@ -48,9 +53,20 @@ export const initSocket = (httpServer: HTTPServer): Server => {
         const socket = rawSocket as AuthenticatedSocket;
 
         socket.on("watch-submission", async (submissionId: string) => {
-            socket.join(submissionId);
-
             try {
+                const submission = await prisma.submission.findFirst({
+                    where: {
+                        id: submissionId,
+                        OR: [
+                            { studentId: socket.userId },
+                            { assignment: { teacherId: socket.userId } },
+                        ],
+                    },
+                    select: { id: true },
+                });
+                if (!submission) return;
+
+                socket.join(submissionId);
                 const cachedEvents = await redis.lrange(`submission_events:${submissionId}`, 0, -1);
                 for (const raw of cachedEvents) {
                     try {
@@ -65,9 +81,18 @@ export const initSocket = (httpServer: HTTPServer): Server => {
             }
         });
 
-        socket.on("watch-assignment", (assignmentId: string) => {
+        socket.on("watch-assignment", async (assignmentId: string) => {
             if (socket.role !== "TEACHER") return;
-            socket.join(`assignment:${assignmentId}`);
+
+            try {
+                const assignment = await prisma.assignment.findFirst({
+                    where: { id: assignmentId, teacherId: socket.userId },
+                    select: { id: true },
+                });
+                if (assignment) socket.join(`assignment:${assignmentId}`);
+            } catch (err) {
+                console.error(`Failed to authorize assignment room ${assignmentId}:`, err);
+            }
         });
 
         socket.on("unwatch-assignment", (assignmentId: string) => {

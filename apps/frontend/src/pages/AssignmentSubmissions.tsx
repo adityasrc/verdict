@@ -205,7 +205,7 @@ const AssignmentSubmissions: React.FC = () => {
             ) : submissions.length === 0 ? (
                 <div className="border border-dashed border-border rounded-xl p-12 md:p-16 text-center bg-surface/30">
                     <p className="text-heading-sm font-medium text-text-muted">No submissions yet</p>
-                    <p className="text-body-sm text-text-muted/70 mt-1">
+                    <p className="text-body-sm text-text-secondary mt-1">
                         Share the assignment link with students to receive submissions.
                     </p>
                 </div>

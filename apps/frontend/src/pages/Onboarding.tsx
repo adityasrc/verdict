@@ -11,7 +11,7 @@ export const WORKFLOW_STEPS = [
     step: "01",
     title: "Rubric configuration",
     description:
-      "Define named criteria and point allocations. Evaluations are strictly scoped to these criteria. A submission cannot be graded without an attached rubric.",
+      "Choose named criteria and point caps. Each returned score is checked against its cap, and the server calculates the final grade. A rubric is required.",
     detail: "Weighted criteria · stored in PostgreSQL",
   },
   {
@@ -25,26 +25,26 @@ export const WORKFLOW_STEPS = [
     step: "03",
     title: "Async PDF parsing",
     description:
-      "A BullMQ worker downloads the PDF and runs a Python script (pdfParser.py using PyMuPDF) that extracts text and images page by page. Progress events are published via Redis.",
+      "A BullMQ worker downloads the PDF and runs a Python script (pdfParser.py using PyMuPDF) that extracts text and embedded images page by page. Progress events are published via Redis.",
     detail: "BullMQ · Python · PyMuPDF",
   },
   {
     step: "04",
     title: "Gemini evaluation",
     description:
-      "The extracted content and rubric are sent to geminiGrader.py, which calls Gemini 3.8 Flash and returns a structured result: score, per-criterion feedback, strengths, and weaknesses.",
+      "The extracted content and rubric go to Gemini 3.8 Flash. It suggests a score and feedback for each criterion; the server checks the scores and calculates the final grade.",
     detail: "Gemini 3.8 Flash · structured JSON output",
   },
   {
     step: "05",
     title: "Results & export",
     description:
-      "Scores and feedback are saved to the database. Teachers can review submissions, adjust scores manually, and export the full class gradebook as a CSV.",
+      "Scores and feedback are saved to the database. Teachers can review submissions and export scores to a CSV file.",
     detail: "Score · feedback · CSV export",
   },
 ] as const;
 
-// Representative preview of the real event stream from submissionWorker.ts & python scripts
+// Example event sequence emitted by submissionWorker.ts and the Python scripts.
 export const PREVIEW_EVENTS = [
   { step: "submission_started", label: "Job queued · status set to EVALUATING", status: "info" as const },
   { step: "downloading_pdf", label: "Downloading PDF from Cloudflare R2…", status: "info" as const },

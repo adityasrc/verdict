@@ -46,6 +46,14 @@ export class RubricManager {
     }
 
     static async deleteRubric(id: string, teacherId: string) {
+        const assigned = await prisma.assignment.findFirst({
+            where: { rubricId: id, teacherId },
+            select: { id: true },
+        });
+        if (assigned) {
+            throw new AppError("This rubric is used by an assignment. Delete the assignment before deleting its rubric.", 409);
+        }
+
         const result = await prisma.rubric.deleteMany({
             where: { id, teacherId },
         });
