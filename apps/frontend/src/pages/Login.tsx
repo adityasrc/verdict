@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { authApi } from "../features/auth/authApi";
 import { useAuth } from "../hooks/useAuth";
 import { BrandMark } from "../components/BrandMark";
@@ -14,6 +14,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const Login = () => {
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage("");
     try {
       const response = await authApi.login({ email, password });
       login({
@@ -32,10 +34,22 @@ const Login = () => {
       });
       navigate(redirectTo);
     } catch (err) {
-      toast.error(parseApiError(err, "Login failed. Please check your credentials."));
+      const message = parseApiError(err, "Login failed. Please check your credentials.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    if (errorMessage) setErrorMessage("");
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    if (errorMessage) setErrorMessage("");
   };
 
   return (
@@ -61,7 +75,7 @@ const Login = () => {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={handleEmailChange}
                   placeholder="name@example.com"
                   required
                   className="h-10 pl-10"
@@ -77,7 +91,7 @@ const Login = () => {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handlePasswordChange}
                   placeholder="••••••••"
                   required
                   className="h-10 pl-10 pr-10"
@@ -92,6 +106,13 @@ const Login = () => {
                 </button>
               </div>
             </div>
+
+            {errorMessage && (
+              <div className="p-3 bg-error-muted border border-error/20 rounded-lg flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-error shrink-0 mt-0.5" />
+                <p className="text-error text-body-sm leading-snug">{errorMessage}</p>
+              </div>
+            )}
 
             <Button type="submit" variant="default" disabled={isLoading} className="w-full h-10 mt-1">
               {isLoading ? "Signing in…" : "Sign In"}

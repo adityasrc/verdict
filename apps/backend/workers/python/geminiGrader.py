@@ -1,3 +1,4 @@
+import time
 import sys
 import json
 import os
@@ -137,18 +138,28 @@ def main():
 
     try:
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=[prompt_text, *images],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                system_instruction=(
-                    "You are an expert academic evaluator. Evaluate assignments strictly and objectively against the provided rubric. "
-                    "Always return a single valid JSON object adhering precisely to the requested schema with detailed, actionable, and point-wise feedback. "
-                    "No markdown fences around the JSON."
-                ),
-            ),
-        )
+        response = None
+        for attempt in range(1, 4):
+            try:
+                response = client.models.generate_content(
+                    model=MODEL_NAME,
+                    contents=[prompt_text, *images],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        system_instruction=(
+                            "You are an expert academic evaluator. Evaluate assignments strictly and objectively against the provided rubric. "
+                            "Always return a single valid JSON object adhering precisely to the requested schema with detailed, actionable, and point-wise feedback. "
+                            "No markdown fences around the JSON."
+                        ),
+                    ),
+                )
+                break
+            except Exception as call_err:
+                err_str = str(call_err)
+                if ("503" in err_str or "UNAVAILABLE" in err_str or "429" in err_str) and attempt < 3:
+                    time.sleep(2 * attempt)
+                    continue
+                raise call_err
 
         response_text = response.text if response else ""
         if not response_text:

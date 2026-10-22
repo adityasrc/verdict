@@ -10,7 +10,7 @@ import rubricRoutes from "./routes/rubric.js";
 
 const app = express();
 
-// trust first proxy (Render / Cloudflare) for rate limiter and accurate IP tracking
+// trust first proxy (Render | Cloudflare) for rate limiter and accurate IP tracking
 app.set("trust proxy", 1);
 
 app.use(express.urlencoded({ extended: true }));

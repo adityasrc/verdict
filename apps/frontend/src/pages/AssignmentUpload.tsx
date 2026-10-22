@@ -125,6 +125,26 @@ const AssignmentUpload = () => {
                 }
             });
 
+        // check if student already has a submission for this assignment
+        assignmentApi.getMySubmissions()
+            .then((res) => {
+                if (mounted && res.data) {
+                    const existing = res.data.find((s) => s.assignmentId === assignmentId);
+                    if (existing && existing.status === 'GRADED') {
+                        setGradingStatus('completed');
+                        setCurrentStage('graded');
+                        setCompletedScore(existing.score ?? null);
+                        setStageMessage(`Graded: ${existing.score} pts`);
+                    } else if (existing && existing.status === 'EVALUATING') {
+                        setGradingStatus('processing');
+                        setWatchingSubmissionId(existing.id);
+                    }
+                }
+            })
+            .catch(() => {
+                // ignore if unauthenticated or student has no submissions yet
+            });
+
         return () => {
             mounted = false;
         };
@@ -139,6 +159,9 @@ const AssignmentUpload = () => {
                 setErrorMessage(event.error);
                 return;
             }
+
+            // clear any prior error if a progress or completion event arrives
+            setErrorMessage('');
 
             if (event.step === 'page_parsed' && event.page && event.total_pages) {
                 setGradingStatus('processing');
@@ -232,7 +255,12 @@ const AssignmentUpload = () => {
         } catch (err) {
             setGradingStatus('failed');
             setCurrentStage('upload');
-            setErrorMessage(parseApiError(err, 'Failed to start upload.'));
+            const apiErr = parseApiError(err, 'Failed to start upload.');
+            if ((err as any)?.status === 409 || apiErr.toLowerCase().includes('already submitted')) {
+                setErrorMessage('You have already submitted this assignment. Check your Dashboard for your score and feedback.');
+            } else {
+                setErrorMessage(apiErr);
+            }
         }
     };
 
@@ -396,43 +424,43 @@ const AssignmentUpload = () => {
     }
 
     return (
-        <div className="w-full max-w-6xl mx-auto space-y-8">
-            <header className="border-b border-border pb-6">
-                <p className="font-mono text-mono-sm text-text-muted uppercase tracking-wider mb-2">
+        <div className="w-full max-w-6xl mx-auto space-y-5 lg:space-y-6">
+            <header className="border-b border-border pb-4">
+                <p className="font-mono text-xs text-text-muted uppercase tracking-wider mb-1.5">
                     Assignment Submission
                 </p>
-                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
                     <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary tracking-tight">
                         {assignment.title}
                     </h1>
-                    <div className="flex items-center gap-4 text-body-sm text-text-secondary">
-                        <span className="flex items-center gap-1.5 font-mono text-mono-sm text-text-muted">
-                            <Clock className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-3 text-body-sm text-text-secondary">
+                        <span className="flex items-center gap-1.5 font-mono text-xs sm:text-sm text-text-muted">
+                            <Clock className="w-4 h-4" />
                             Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'Open'}
                         </span>
-                        <span className="font-mono text-mono-sm text-text-muted">
+                        <span className="font-mono text-xs sm:text-sm text-text-muted">
                             {assignment.maxScore ?? 100} pts max
                         </span>
                     </div>
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <div className="lg:col-span-5 flex flex-col gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
+                <div className="lg:col-span-5 flex flex-col gap-4">
                     {assignment.rubric?.criteria && Array.isArray(assignment.rubric.criteria) && assignment.rubric.criteria.length > 0 && (
                         <Card>
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-body-sm font-semibold flex items-center gap-2">
+                            <CardHeader className="py-3 px-5 pb-2">
+                                <CardTitle className="text-xs uppercase tracking-wider text-text-muted font-semibold flex items-center gap-2">
                                     <FileText className="w-4 h-4 text-text-muted" />
                                     Evaluation Rubric
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-2.5">
-                                <div className="space-y-2">
+                            <CardContent className="px-5 pb-3.5 pt-1">
+                                <div className="space-y-2 max-h-44 overflow-y-auto pr-1.5">
                                     {assignment.rubric.criteria.map((c, idx) => (
-                                        <div key={idx} className="flex items-baseline justify-between gap-2 text-body-sm">
+                                        <div key={idx} className="flex items-baseline justify-between gap-3 text-sm">
                                             <span className="text-text-secondary truncate" title={c.name}>{c.name}</span>
-                                            <span className="font-mono text-mono-sm text-text-muted shrink-0">{c.points} pts</span>
+                                            <span className="font-mono text-xs text-text-muted shrink-0">{c.points} pts</span>
                                         </div>
                                     ))}
                                 </div>
@@ -441,13 +469,13 @@ const AssignmentUpload = () => {
                     )}
 
                     <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-body-sm font-semibold">PDF Document</CardTitle>
+                        <CardHeader className="py-3 px-5 pb-2">
+                            <CardTitle className="text-xs uppercase tracking-wider text-text-muted font-semibold">PDF Document</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-5 pb-4 pt-1">
                             <div
                                 className={`
-                                    relative flex flex-col items-center justify-center text-center p-7
+                                    relative flex flex-col items-center justify-center text-center p-5 sm:p-6
                                     border border-dashed border-border rounded-lg bg-surface-raised/30 hover:bg-surface-raised/60
                                     hover:border-border-strong transition-colors
                                     ${isUploading || gradingStatus === 'processing' ? 'border-accent/30' : ''}
@@ -462,38 +490,38 @@ const AssignmentUpload = () => {
                                     disabled={isUploading || gradingStatus === 'processing'}
                                 />
 
-                                <div className="w-10 h-10 rounded-lg bg-surface-raised border border-border flex items-center justify-center mb-3">
+                                <div className="w-9 h-9 rounded-lg bg-surface-raised border border-border flex items-center justify-center mb-2.5">
                                     <Upload className="w-4 h-4 text-text-muted" />
                                 </div>
 
                                 {file ? (
-                                    <div className="space-y-1">
-                                        <p className="text-body-sm text-text-primary font-medium">{file.name}</p>
-                                        <p className="font-mono text-[11px] text-text-muted">
+                                    <div className="space-y-0.5">
+                                        <p className="text-sm text-text-primary font-medium truncate max-w-[280px]">{file.name}</p>
+                                        <p className="font-mono text-xs text-text-muted">
                                             {(file.size / (1024 * 1024)).toFixed(2)} MB · Ready
                                         </p>
                                     </div>
                                 ) : (
                                     <>
-                                        <p className="text-body-sm text-text-primary font-medium mb-1">Click or drag PDF here</p>
-                                        <p className="font-mono text-[11px] text-text-muted">PDF up to 10 MB</p>
+                                        <p className="text-sm text-text-primary font-medium mb-0.5">Click or drag PDF here</p>
+                                        <p className="font-mono text-xs text-text-muted">PDF up to 10 MB</p>
                                     </>
                                 )}
 
                                 {fileError && (
-                                    <p className="text-error font-mono text-mono-sm font-medium mt-3">{fileError}</p>
+                                    <p className="text-error font-mono text-xs font-medium mt-2">{fileError}</p>
                                 )}
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-body-sm font-semibold">Submission Verification</CardTitle>
+                        <CardHeader className="py-3 px-5 pb-2">
+                            <CardTitle className="text-xs uppercase tracking-wider text-text-muted font-semibold">Submission Verification</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="px-5 pb-5 pt-1 space-y-3.5">
                             <div>
-                                <label htmlFor="access-pin" className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-2">
+                                <label htmlFor="access-pin" className="font-mono text-xs uppercase tracking-wider text-text-muted block mb-1.5">
                                     4-Digit Access PIN
                                 </label>
                                 <input
@@ -504,16 +532,16 @@ const AssignmentUpload = () => {
                                     placeholder="••••"
                                     value={pin}
                                     onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                    className="w-full px-4 py-2.5 border border-border rounded-lg bg-surface-raised font-mono text-xl tracking-[0.4em] text-center text-text-primary focus:outline-none focus:border-border-strong transition-colors"
+                                    className="w-full px-4 py-2 border border-border rounded-lg bg-surface-raised font-mono text-xl tracking-[0.4em] text-center text-text-primary focus:outline-none focus:border-border-strong transition-colors"
                                     disabled={isUploading || gradingStatus === 'processing'}
                                     autoComplete="off"
                                 />
-                                <p className="font-mono text-[11px] text-text-muted mt-1.5">Enter the PIN provided by your teacher</p>
+                                <p className="font-mono text-xs text-text-muted mt-1.5">Enter the PIN provided by your teacher</p>
                             </div>
 
                             {errorMessage && gradingStatus !== 'failed' && (
                                 <div className="p-3 bg-error-muted border border-error/20 rounded-md">
-                                    <p className="text-error text-body-sm">{errorMessage}</p>
+                                    <p className="text-error text-xs">{errorMessage}</p>
                                 </div>
                             )}
 
@@ -522,9 +550,9 @@ const AssignmentUpload = () => {
                                 size="default"
                                 onClick={runPipeline}
                                 disabled={isUploading || gradingStatus === 'processing' || (!!assignment?.accessPin && pin.length !== 4) || !file}
-                                className="w-full"
+                                className="w-full h-10 text-sm font-semibold"
                             >
-                                <Play className="w-4 h-4 mr-1.5" />
+                                <Play className="w-4 h-4 mr-2" />
                                 {isUploading ? 'Uploading…' : gradingStatus === 'processing' ? 'Evaluation in progress…' : 'Submit & Evaluate'}
                             </Button>
                         </CardContent>
@@ -533,38 +561,38 @@ const AssignmentUpload = () => {
 
                 <div className="lg:col-span-7 flex flex-col">
                     <Card className="flex-1 flex flex-col shadow-elevated">
-                        <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border">
+                        <CardHeader className="flex flex-row items-center justify-between py-3.5 px-5 sm:px-6 border-b border-border">
                             <div>
-                                <CardTitle className="text-body-md font-semibold">Evaluation Progress</CardTitle>
-                                <p className="text-[12px] text-text-muted mt-0.5">Automated rubric grading status</p>
+                                <CardTitle className="text-base font-semibold">Evaluation Progress</CardTitle>
+                                <p className="text-xs text-text-muted mt-0.5">Automated rubric grading status</p>
                             </div>
                             <div>
                                 {gradingStatus === 'processing' && (
-                                    <span className="font-mono text-[11px] text-accent font-medium px-2 py-0.5 rounded bg-accent-muted border border-accent/20">
+                                    <span className="font-mono text-xs text-accent font-medium px-2.5 py-0.5 rounded bg-accent-muted border border-accent/20">
                                         IN PROGRESS
                                     </span>
                                 )}
                                 {gradingStatus === 'completed' && (
-                                    <span className="font-mono text-[11px] text-success font-medium px-2 py-0.5 rounded bg-success-muted border border-success/20">
+                                    <span className="font-mono text-xs text-success font-medium px-2.5 py-0.5 rounded bg-success-muted border border-success/20">
                                         GRADED
                                     </span>
                                 )}
                                 {gradingStatus === 'failed' && (
-                                    <span className="font-mono text-[11px] text-error font-medium px-2 py-0.5 rounded bg-error-muted border border-error/20">
+                                    <span className="font-mono text-xs text-error font-medium px-2.5 py-0.5 rounded bg-error-muted border border-error/20">
                                         FAILED
                                     </span>
                                 )}
                                 {gradingStatus === 'idle' && (
-                                    <span className="font-mono text-[11px] text-text-muted px-2 py-0.5 rounded bg-surface-raised border border-border">
+                                    <span className="font-mono text-xs text-text-muted px-2.5 py-0.5 rounded bg-surface-raised border border-border">
                                         STANDBY
                                     </span>
                                 )}
                             </div>
                         </CardHeader>
 
-                        <CardContent className="p-6 flex-1 flex flex-col justify-between">
-                            <div className="relative py-2">
-                                <div className="absolute left-4 top-5 bottom-5 -translate-x-1/2 border-l-2 border-border pointer-events-none" />
+                        <CardContent className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
+                            <div className="relative py-1">
+                                <div className="absolute left-4 top-4 bottom-4 -translate-x-1/2 border-l-2 border-border pointer-events-none" />
 
                                 <div className="space-y-0">
                                     {STAGES.map((stage) => {
@@ -572,7 +600,7 @@ const AssignmentUpload = () => {
                                         const detail = getStageDetail(stage.key, status, assignment.maxScore ?? 100);
 
                                         return (
-                                            <div key={stage.key} className="relative flex items-start gap-4 py-4">
+                                            <div key={stage.key} className="relative flex items-start gap-3.5 py-3">
                                                 <div
                                                     className={`
                                                         relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors
@@ -588,7 +616,7 @@ const AssignmentUpload = () => {
                                                     {status === 'pending' && <span className="w-2 h-2 rounded-full bg-text-muted/40" />}
                                                 </div>
 
-                                                <div className="min-w-0 flex-1 pt-1">
+                                                <div className="min-w-0 flex-1 pt-0.5">
                                                     <div className="flex items-center justify-between gap-2">
                                                         <p
                                                             className={`text-sm font-semibold ${status === 'active'
@@ -603,12 +631,12 @@ const AssignmentUpload = () => {
                                                             {stage.title}
                                                         </p>
                                                     </div>
-                                                    <p className="text-sm text-text-secondary mt-0.5">
+                                                    <p className="text-xs text-text-secondary mt-0.5">
                                                         {detail}
                                                     </p>
 
                                                     {stage.key === 'parsing' && status === 'active' && parsingProgress && (
-                                                        <div className="mt-2.5 w-full max-w-xs space-y-1">
+                                                        <div className="mt-2 w-full max-w-xs space-y-1">
                                                             <div className="h-1.5 w-full bg-surface-raised rounded-full overflow-hidden border border-border/50">
                                                                 <div
                                                                     className="h-full bg-accent transition-all duration-300 ease-out"
@@ -630,8 +658,8 @@ const AssignmentUpload = () => {
                             </div>
 
                             {gradingStatus === 'completed' && (
-                                <div className="mt-6 p-4 rounded-xl border border-border bg-surface-raised/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div className="space-y-1">
+                                <div className="mt-4 p-3.5 rounded-xl border border-border bg-surface-raised/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="space-y-0.5">
                                         <div className="flex items-center gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                                             <span className="text-sm font-semibold text-text-primary">
@@ -643,14 +671,14 @@ const AssignmentUpload = () => {
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="text-sm text-text-secondary">
+                                        <p className="text-xs text-text-secondary">
                                             Your submission has been evaluated and recorded against the rubric.
                                         </p>
                                     </div>
                                     <Button
                                         variant="default"
                                         size="sm"
-                                        className="shrink-0"
+                                        className="shrink-0 h-9 text-xs font-medium"
                                         onClick={() => navigate('/dashboard')}
                                     >
                                         View Feedback
@@ -659,13 +687,13 @@ const AssignmentUpload = () => {
                             )}
 
                             {gradingStatus === 'failed' && (
-                                <div className="mt-6 p-4 rounded-xl border border-error/20 bg-error/5 flex items-start gap-3">
+                                <div className="mt-4 p-3.5 rounded-xl border border-error/20 bg-error/5 flex items-start gap-3">
                                     <AlertCircle className="w-4 h-4 text-error shrink-0 mt-0.5" />
-                                    <div className="space-y-1">
+                                    <div className="space-y-0.5">
                                         <p className="text-sm font-semibold text-error">
                                             Evaluation Failed
                                         </p>
-                                        <p className="text-sm text-text-secondary">
+                                        <p className="text-xs text-text-secondary">
                                             {errorMessage || 'The worker encountered an error during evaluation. Please try again or contact your instructor.'}
                                         </p>
                                     </div>
@@ -673,7 +701,7 @@ const AssignmentUpload = () => {
                             )}
 
                             {gradingStatus === 'idle' && (
-                                <div className="mt-6 p-3 rounded-xl border border-border/40 bg-surface-raised/20 text-center">
+                                <div className="mt-4 p-3 rounded-xl border border-border/40 bg-surface-raised/20 text-center">
                                     <p className="text-xs text-text-muted">
                                         Select your PDF file and enter the 4-digit PIN to begin grading.
                                     </p>

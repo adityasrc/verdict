@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
+  AlertCircle,
   Eye,
   EyeOff,
   GraduationCap,
@@ -39,6 +40,7 @@ const Signup = () => {
   const [name, setName] = useState("");
   const [role, setRole] = useState<"STUDENT" | "TEACHER">("STUDENT");
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -48,6 +50,7 @@ const Signup = () => {
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage("");
     try {
       const response = await authApi.signup({ email, password, name, role });
       login({
@@ -57,10 +60,32 @@ const Signup = () => {
       });
       navigate(redirectTo);
     } catch (err: unknown) {
-      toast.error(parseApiError(err, "Signup failed. Please try again."));
+      const message = parseApiError(err, "Signup failed. Please try again.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
+    if (errorMessage) setErrorMessage("");
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    if (errorMessage) setErrorMessage("");
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    if (errorMessage) setErrorMessage("");
+  };
+
+  const handleRoleSelect = (selectedRole: "STUDENT" | "TEACHER") => {
+    setRole(selectedRole);
+    if (errorMessage) setErrorMessage("");
   };
 
   return (
@@ -88,7 +113,7 @@ const Signup = () => {
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => setRole(option.value)}
+                      onClick={() => handleRoleSelect(option.value)}
                       className={`rounded-lg border p-3 text-left transition-colors ${
                         selected
                           ? "border-border-strong bg-surface-raised text-text-primary"
@@ -120,7 +145,7 @@ const Signup = () => {
                   id="name"
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={handleNameChange}
                   placeholder="Full name"
                   required
                   className="h-10 pl-10"
@@ -136,7 +161,7 @@ const Signup = () => {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={handleEmailChange}
                   placeholder="name@example.com"
                   required
                   className="h-10 pl-10"
@@ -152,7 +177,7 @@ const Signup = () => {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handlePasswordChange}
                   placeholder="••••••••"
                   required
                   className="h-10 pl-10 pr-10"
@@ -171,6 +196,13 @@ const Signup = () => {
                 </button>
               </div>
             </div>
+
+            {errorMessage && (
+              <div className="p-3 bg-error-muted border border-error/20 rounded-lg flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-error shrink-0 mt-0.5" />
+                <p className="text-error text-body-sm leading-snug">{errorMessage}</p>
+              </div>
+            )}
 
             <Button
               type="submit"

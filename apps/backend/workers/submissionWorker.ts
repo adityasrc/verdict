@@ -111,6 +111,7 @@ export const submissionWorker = new Worker<SubmissionJobData>(
 );
 
 console.log("[Worker] Listening for jobs on 'grade_assignment' queue");
-// log worker completion and failure events
+// log worker completion, failure, and connection events
 submissionWorker.on("completed", (job) => console.log(`[Worker] Job ${job.id} completed`));
 submissionWorker.on("failed", (job, err) => console.error(`[Worker] Job ${job?.id} failed:`, err.message));
+submissionWorker.on("error", (err) => console.warn(`[Worker] Connection warning:`, err.message));
