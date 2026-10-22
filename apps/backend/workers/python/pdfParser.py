@@ -10,8 +10,10 @@ def publish(event):
     """Prints a single-line JSON event to stdout for the Node.js worker."""
     print(json.dumps(event), flush=True)
 
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # skip images larger than 5MB (before resize)
+
 def extract_page_images(doc, page, page_num, output_dir):
-    """Extracts diagrams and charts from a page, skipping tiny icons (<24x24)."""
+    """Extracts diagrams and charts from a page, skipping tiny icons and huge raw images."""
     page_images = []
     for img_index, img in enumerate(page.get_images(full=True)):
         try:
@@ -22,18 +24,26 @@ def extract_page_images(doc, page, page_num, output_dir):
 
             width = base_image.get("width", 0)
             height = base_image.get("height", 0)
-            if width < 24 and height < 24:
-                continue  # Skip bullet icons and decorative spacers
+            # skip bullet icons and decorative spacers (both dimensions must be tiny)
+            if width < 24 or height < 24:
+                continue
 
             image_bytes = base_image.get("image")
             ext = base_image.get("ext", "png")
 
-            if image_bytes:
-                image_filename = f"p{page_num}_img{img_index + 1}.{ext}"
-                image_path = os.path.join(output_dir, image_filename)
-                with open(image_path, "wb") as f:
-                    f.write(image_bytes)
-                page_images.append(image_path)
+            if not image_bytes:
+                continue
+
+            # skip absurdly large raw images (e.g. embedded bitmaps in some PDFs)
+            if len(image_bytes) > MAX_IMAGE_BYTES:
+                publish({"warning": f"Skipped oversized image {img_index} on page {page_num} ({len(image_bytes)//1024}KB)"})
+                continue
+
+            image_filename = f"p{page_num}_img{img_index + 1}.{ext}"
+            image_path = os.path.join(output_dir, image_filename)
+            with open(image_path, "wb") as f:
+                f.write(image_bytes)
+            page_images.append(image_path)
         except Exception as e:
             publish({"warning": f"Skipped image {img_index} on page {page_num}: {str(e)}"})
 
@@ -78,9 +88,8 @@ def main():
                 "images": images,
             })
 
-            # Emit progress every 5 pages or on the last page
-            if current_page % 5 == 0 or current_page == total_pages:
-                publish({"step": "page_parsed", "page": current_page, "total_pages": total_pages})
+            # emit progress every page for smooth frontend progress bar
+            publish({"step": "page_parsed", "page": current_page, "total_pages": total_pages})
 
         except Exception as page_err:
             publish({"warning": f"Page {current_page} skipped due to error: {str(page_err)}"})

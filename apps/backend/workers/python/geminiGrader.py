@@ -2,6 +2,7 @@ import time
 import sys
 import json
 import os
+import io
 import logging
 
 # Suppress noisy SDK automatic function calling warning
@@ -49,6 +50,18 @@ Criteria:
 """
     return rubric_text, max_score
 
+MAX_CHARS_PER_PAGE = 4000   # cap per page so we don't blow up token budget
+MAX_IMAGES = 8             # max images sent inline to Gemini
+MAX_IMAGE_DIM = 1024       # resize any image larger than this (to stay under 20MB req limit)
+
+def resize_image(img: PIL.Image.Image) -> PIL.Image.Image:
+    """Resizes a PIL image so its longest side is at most MAX_IMAGE_DIM px."""
+    if max(img.size) <= MAX_IMAGE_DIM:
+        return img
+    img = img.copy()
+    img.thumbnail((MAX_IMAGE_DIM, MAX_IMAGE_DIM), PIL.Image.LANCZOS)
+    return img
+
 def build_prompt(title, description, rubric_text, extracted_data, max_score):
     """Assembles prompt with title, description, rubric, page text, and evaluation schema."""
     prompt = f"""You are an expert academic evaluator. Grade rigorously, constructively, and objectively according to the rubric.
@@ -65,7 +78,7 @@ def build_prompt(title, description, rubric_text, extracted_data, max_score):
 """
 
     for page in extracted_data:
-        text = page.get("text", "")
+        text = page.get("text", "")[:MAX_CHARS_PER_PAGE]  # cap per page to avoid huge prompts
         if text.strip():
             prompt += f"\n[Page {page.get('page_number', 0)} Text]:\n{text}\n"
 
@@ -96,13 +109,19 @@ Respond with ONLY a valid JSON object in this exact schema:
     return prompt
 
 def load_images(extracted_data):
-    """Loads extracted diagram/chart images from disk into PIL Images."""
+    """Loads extracted images from disk, resizes them, and caps total count at MAX_IMAGES."""
     images = []
     for page in extracted_data:
+        if len(images) >= MAX_IMAGES:
+            break
         for image_path in page.get("images", []):
+            if len(images) >= MAX_IMAGES:
+                break
             if os.path.exists(image_path):
                 try:
-                    images.append(PIL.Image.open(image_path))
+                    img = PIL.Image.open(image_path).convert("RGB")
+                    img = resize_image(img)
+                    images.append(img)
                 except Exception as img_err:
                     publish({"warning": f"Could not load image {image_path}: {str(img_err)}"})
     return images
@@ -190,9 +209,11 @@ def main():
             sys.exit(1)
 
     except Exception as e:
+        raw = str(e)
         publish({
             "step": "gemini_failed",
-            "error": map_api_error(str(e)),
+            "error": map_api_error(raw),
+            "detail": raw[:300],  # raw error logged for debugging
         })
         sys.exit(1)
 
